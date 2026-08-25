@@ -1,0 +1,152 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+
+/**
+ * Claim submission and supplementary evidence upload handler.
+ *
+ * Two modes of operation:
+ *   1. NEW CLAIM — when no existing active claim exists for the report pair
+ *   2. SUPPLEMENTARY EVIDENCE — when claim.status === 'evidence_requested'
+ *      and the claimant uploads additional proof
+ *
+ * Security:
+ *   - Only the lost-item reporter (reporter_id) can submit/supplement
+ *   - Finders cannot claim their own found report
+ *   - Duplicate active claims on the same report pair are blocked
+ */
+export default async function(req) {
+  try {
+    const base44 = createClientFromRequest(req);
+    const db = globalThis.__B44_DB__ || base44;
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (user.account_status === 'suspended') return Response.json({ error: 'Account suspended' }, { status: 403 });
+
+    const { matchId, lostReportId, foundReportId, evidence = [], claimId } = await req.json();
+
+    // ── MODE 2: Supplementary evidence for existing claim ──────────
+    if (claimId) {
+      const claim = await base44.asServiceRole.entities.Claims.get(claimId);
+
+      // Only the original claimant can add evidence
+      if (claim.claimant_id !== user.id) {
+        return Response.json({ error: 'Only the claimant can submit additional evidence' }, { status: 403 });
+      }
+
+      // Only accept supplementary evidence when it's been requested or claim is under review
+      if (!['evidence_requested', 'submitted', 'under_review'].includes(claim.status)) {
+        return Response.json({ error: `Cannot add evidence to a claim in status "${claim.status}"` }, { status: 409 });
+      }
+
+      // Validate and clean evidence
+      const clean = evidence
+        .slice(0, 5)
+        .filter(e => e.evidence_type && (e.text_description || e.file_url))
+        .map(e => ({
+          claim_id: claim.id,
+          evidence_type: e.evidence_type,
+          file_url: e.file_url || '',
+          text_description: (e.text_description || '').slice(0, 2000),
+          submitted_by: user.id,
+          verified: false,
+        }));
+
+      if (!clean.length) {
+        return Response.json({ error: 'At least one valid piece of evidence is required' }, { status: 400 });
+      }
+
+      await db.asServiceRole.entities.OwnershipEvidence.bulkCreate(clean);
+
+      // If evidence was requested, move back to under_review
+      if (claim.status === 'evidence_requested') {
+        await base44.asServiceRole.entities.Claims.update(claim.id, {
+          status: 'under_review',
+        });
+      }
+
+      // Notify admins that new evidence has been submitted
+      await base44.asServiceRole.entities.Notifications.create({
+        user_id: claim.claimant_id, // will also be visible to admins via RLS
+        type: 'claim_update',
+        title: 'Additional evidence submitted',
+        message: `The claimant submitted ${clean.length} new piece(s) of evidence for review.`,
+        related_entity_type: 'Claims',
+        related_entity_id: claim.id,
+        is_read: false,
+      });
+
+      return Response.json({
+        claim: { ...claim, status: claim.status === 'evidence_requested' ? 'under_review' : claim.status },
+        evidenceAdded: clean.length,
+      });
+    }
+
+    // ── MODE 1: New claim submission ───────────────────────────────
+    const match = matchId ? await base44.asServiceRole.entities.AIMatches.get(matchId) : null;
+    const lostId = lostReportId || match?.lost_report_id;
+    const foundId = foundReportId || match?.found_report_id;
+
+    if (!lostId || !foundId) {
+      return Response.json({ error: 'Matched reports are required' }, { status: 400 });
+    }
+
+    const lost = await base44.asServiceRole.entities.LostReports.get(lostId);
+    const found = await base44.asServiceRole.entities.FoundReports.get(foundId);
+
+    // Ownership check: only the lost-item reporter can claim
+    if (lost.reporter_id!==user.id || found.finder_id===user.id) {
+      return Response.json({ error: 'Only the original lost-item reporter may claim this item' }, { status: 403 });
+    }
+
+    // Match state check
+    if (match && ['rejected', 'expired'].includes(match.status)) {
+      return Response.json({ error: 'This match is no longer claimable' }, { status: 409 });
+    }
+
+    // Duplicate active claim prevention
+    const active = await base44.asServiceRole.entities.Claims.filter(
+      { lost_report_id: lost.id, found_report_id: found.id }, '-created_date', 20
+    );
+    if (active.some(c => !['rejected', 'completed'].includes(c.status))) {
+      return Response.json({ error: 'An active claim already exists for these reports' }, { status: 409 });
+    }
+
+    // Create claim
+    const claim = await base44.asServiceRole.entities.Claims.create({
+      match_id: matchId,
+      lost_report_id: lost.id,
+      found_report_id: found.id,
+      claimant_id: user.id,
+      status: 'submitted',
+    });
+
+    // Validate and persist initial evidence
+    const clean = evidence
+      .slice(0, 5)
+      .filter(e => e.evidence_type && (e.text_description || e.file_url))
+      .map(e => ({
+        claim_id: claim.id,
+        evidence_type: e.evidence_type,
+        file_url: e.file_url || '',
+        text_description: (e.text_description || '').slice(0, 2000),
+        submitted_by: user.id,
+        verified: false,
+      }));
+
+    if (clean.length) {
+      await db.asServiceRole.entities.OwnershipEvidence.bulkCreate(clean);
+    }
+
+    // Update report and match statuses
+    await Promise.all([
+      base44.asServiceRole.entities.LostReports.update(lost.id, { status: 'claim_pending' }),
+      base44.asServiceRole.entities.FoundReports.update(found.id, { status: 'claim_pending' }),
+      matchId
+        ? base44.asServiceRole.entities.AIMatches.update(matchId, { status: 'claim_submitted' })
+        : Promise.resolve(),
+    ]);
+
+    return Response.json({ claim });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}

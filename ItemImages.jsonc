@@ -1,0 +1,74 @@
+{
+  "name": "ItemImages",
+  "type": "object",
+  "properties": {
+    "report_id": {
+      "type": "string"
+    },
+    "report_type": {
+      "type": "string",
+      "enum": [
+        "lost",
+        "found"
+      ]
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "uploaded_by": {
+      "type": "string"
+    },
+    "is_primary": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "report_id",
+    "report_type",
+    "image_url",
+    "uploaded_by",
+    "is_primary"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.uploaded_by": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "data.uploaded_by": "{{user.id}}"
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

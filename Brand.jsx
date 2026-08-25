@@ -1,0 +1,2 @@
+import { Sparkles } from 'lucide-react';
+export default function Brand({light=false}){return <div className="flex items-center gap-2 font-bold tracking-tight"><span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-white"><Sparkles className="h-4 w-4"/></span><span className={light?'text-white':'text-[#0F1F3D]'}>FindBack <span className="text-violet-600">AI</span></span></div>}

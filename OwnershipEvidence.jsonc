@@ -1,0 +1,74 @@
+{
+  "name": "OwnershipEvidence",
+  "type": "object",
+  "properties": {
+    "claim_id": {
+      "type": "string"
+    },
+    "evidence_type": {
+      "type": "string",
+      "enum": [
+        "photo_proof",
+        "receipt",
+        "serial_number",
+        "unique_description",
+        "other"
+      ]
+    },
+    "file_url": {
+      "type": "string"
+    },
+    "text_description": {
+      "type": "string"
+    },
+    "submitted_by": {
+      "type": "string"
+    },
+    "verified": {
+      "type": "boolean",
+      "default": false
+    },
+    "verified_by": {
+      "type": "string"
+    },
+    "verified_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "claim_id",
+    "evidence_type",
+    "submitted_by",
+    "verified"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.submitted_by": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

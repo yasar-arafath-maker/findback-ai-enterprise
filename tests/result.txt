@@ -1,0 +1,105 @@
+﻿
+ΓòöΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòù
+Γòæ       FindBack AI ΓÇö QA & Security Audit Test Runner         Γòæ
+ΓòÜΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò¥
+
+ΓöÇΓöÇ CANONICAL DEMO DATASET SCORE ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  User A (Lost):  "Black leather wallet" | Bags | 2026-08-20
+  User B (Found): "Black leather wallet" | Bags | 2026-08-20
+  Category       : 100/100  (exact match)
+  Location       : 50/100  (no GPS ΓåÆ neutral 50)
+  Time           : 100/100  (same-day)
+  Simulated AI   : 75/100  (textΓëê90, image=50 no-image)
+  Confidence     : HIGH
+
+ΓöÇΓöÇ STEP-BY-STEP TEST EXECUTION LOG ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+  [+] [TC-01] Dependencies install cleanly (no peer-conflict)
+      All 65 production dependencies declared; npm install exits 0
+
+  [+] [TC-02] npm run build ΓÇô vite.config.js loads without errors
+      base44 imported from @base44/vite-plugin and registered; build config is valid
+
+  [+] [TC-03] Env vars & fallback mock config present in all backend functions
+      All 4 backend functions carry globalThis.__B44_DB__ fallback mock; AuthContext uses appParams token
+
+  [+] [TC-04] User Registration & Login (email/password + token verification)
+      Register, Login pages have password; AuthContext calls db.auth.me() with token
+
+  [X] [TC-05] Suspended User Block ΓÇô 403 on all 4 backend functions
+      Suspended check missing in: runMatching
+
+  [+] [TC-06] Protected Route Guard ΓÇô unauthenticated navigates to /login
+      All private routes wrapped in <ProtectedRoute unauthenticatedElement={<Navigate to="/login">}>; guard verified
+
+  [+] [TC-07] AdminGuard resilience ΓÇô safe on null user / network timeout
+      AdminGuard: u?.role optional chain + .catch(()=>setState("denied")) ΓÇô safe for null user & network failure
+
+  [+] [TC-08] Privilege Escalation Prevention ΓÇô role field protected by RLS/FLS
+      User.jsonc rls.update contains disallowed_fields:["role","account_status"] ΓÇô privilege escalation blocked
+
+  [+] [TC-09] Lost & Found report creation with valid payload + RLS create binding
+      Both schemas validate payload; RLS create binds reporter/finder ID to authenticated user
+
+  [+] [TC-10] Deterministic Filtering ΓÇô category match, <=14 days, <=50 km filters
+      Demo passes all 3 filters (cat=100, days=0.00, km=nullΓåÆneutral). Edge cases verified
+
+  [+] [TC-11] Multi-modal AI formula weights match spec
+      Formula weights correct. Demo overall=72 (conservative text=80, image=50) ΓåÆ confidence: MEDIUM
+
+  [+] [TC-12] Threshold checks ΓÇô High>=75, Medium 50-74, Low 30-49, <30 discarded
+      All threshold bands verified: high>=75, medium 50-74, low 30-49, <30 discarded
+
+  [+] [TC-13] Deduplication ΓÇô identical report pairs do not create duplicate AIMatches
+      runMatching queries existing AIMatches by (lost_id, found_id); reuses record and skips creation if found
+
+  [+] [TC-14] Owner-only Claim ΓÇô blocks if lost.reporter_id !== user.id
+      submitClaim rejects with 403 when lost.reporter_id !== user.id
+
+  [+] [TC-15] Finder Self-Claim Block ΓÇô blocks if found.finder_id === user.id
+      submitClaim blocks when lost.reporter_id !== user.id OR found.finder_id === user.id
+
+  [+] [TC-16] Evidence Injection Block ΓÇô OwnershipEvidence only writable via submitClaim backend
+      OwnershipEvidence.create RLS = admin only; submitClaim uses asServiceRole ΓåÆ client SDK writes blocked
+
+  [+] [TC-17] Privacy ΓÇô finder CANNOT view claimant's OwnershipEvidence
+      OwnershipEvidence read restricted to submitted_by or admin; finder_id absent ΓåÆ finder cannot read evidence
+
+  [+] [TC-18] Admin Guard Enforcement ΓÇô non-admin receives 403
+      decideClaim checks admin.role !== "admin" ΓåÆ 403 Forbidden before any logic
+
+  [+] [TC-19] Self-Approval Prevention ΓÇô admin cannot approve own claim
+      decideClaim returns 403 when admin.id === claim.claimant_id
+
+  [+] [TC-20] Zero-Evidence Approval Block ΓÇô server-side rejection if evidence missing
+      decideClaim fetches evidence; returns 400 "Cannot approve without evidence" if list is empty
+
+  [+] [TC-21] Re-decision Block ΓÇô already decided claims cannot be re-evaluated
+      decideClaim only acts on [submitted, under_review, evidence_requested]; returns 409 otherwise
+
+  [+] [TC-22] Approval Side-Effects ΓÇô Handover, 6-digit code, notifications, AdminActions
+      All approval side-effects: Handover created, crypto 6-digit code, bulkCreate notifications, AdminActions logged
+
+  [+] [TC-23] Code Validation ΓÇô reject incorrect code AND time-based expiry present
+      Code validated via strict string comparison; 48h time-based expiry returns 410 Gone if elapsed
+
+  [+] [TC-24] State Machine Integrity ΓÇô cancelled/disputed handovers cannot be completed
+      completeHandover blocks completed/cancelled/disputed states with 409; only valid states proceed
+
+  [+] [TC-25] Final State Transition ΓÇô all 4 entities updated atomically on completion
+      All 4 state transitions (ClaimΓåÆcompleted, LostΓåÆclosed, FoundΓåÆreturned, HandoverΓåÆcompleted) run inside Promise.all
+
+  [+] [TC-26] Append-Only Audit Log ΓÇô regular users cannot insert/modify AdminActions
+      AdminActions CUD locked to admin; backend functions call only .create() ΓÇö true append-only audit log
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  EXECUTIVE SUMMARY
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  Total  : 26
+  PASSED : 25
+  FAILED : 1
+  RATE   : 96%
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+  FAILING TESTS:
+    [X] TC-05: Suspended check missing in: runMatching

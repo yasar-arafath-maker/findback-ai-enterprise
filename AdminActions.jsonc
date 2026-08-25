@@ -1,0 +1,59 @@
+{
+  "name": "AdminActions",
+  "type": "object",
+  "properties": {
+    "admin_id": {
+      "type": "string"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "claim_approved",
+        "claim_rejected",
+        "evidence_requested",
+        "evidence_verified",
+        "handover_managed",
+        "report_flagged",
+        "duplicate_merged",
+        "user_suspended"
+      ]
+    },
+    "target_entity_type": {
+      "type": "string"
+    },
+    "target_entity_id": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "admin_id",
+    "action_type",
+    "target_entity_type",
+    "target_entity_id"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

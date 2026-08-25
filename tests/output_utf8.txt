@@ -1,0 +1,145 @@
+﻿
+ΓòöΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòù
+Γòæ    FindBack AI ΓÇô QA Audit Test Runner    Γòæ
+ΓòÜΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò¥
+
+
+ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  CANONICAL DEMO DATASET ΓÇô Flow Simulation
+ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  User A (Lost):  Black leather wallet | Bags | KRCT Campus | 2026-08-20
+  User B (Found): Black leather wallet | Bags | KRCT Campus | 2026-08-20
+
+  Deterministic Scores:
+    Category Match   : 100 / 100 (exact match)
+    Location Score   : 50 / 100 (no coords ΓåÆ neutral 50)
+    Time Score       : 100 / 100 (same-day ΓåÆ 100)
+    Pre-AI Score     : 90 / 100
+
+  With LLM (estimated text=90, image=50 due to no images):
+    overall = 50├ù0.35 + 90├ù0.30 + 100├ù0.15 + 50├ù0.10 + 100├ù0.10 = 75
+    Confidence: HIGH Γ£ô
+  Expected flow: Report ΓåÆ runMatching ΓåÆ HIGH match ΓåÆ submitClaim ΓåÆ decideClaim ΓåÆ completeHandover
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ STEP-BY-STEP EXECUTION LOG
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+Γ£à [TC-01] Dependencies install cleanly (no peer-dep conflicts)
+   All 65 dependencies declared; npm install exited 0
+
+Γ¥î [TC-02] Vite build compiles cleanly
+   vite.config.js calls base44() plugin but never imports it. Missing: `import base44 from "@base44/vite-plugin"`. Build exits with: "failed to load config ΓÇô base44 is not defined"
+
+Γ£à [TC-03] Environment variables and fallback mock configuration load properly
+   All 4 backend functions carry the globalThis.__B44_DB__ fallback mock; AuthContext uses appParams for token config
+
+Γ£à [TC-04] User Registration & Login (Email/Password with token verification)
+   Register.jsx and Login.jsx have password field; AuthContext calls db.auth.me() after token present
+
+Γ¥î [TC-05] Suspended User Block ΓÇô all 4 backend functions
+   Missing suspended check in: runMatching
+
+Γ£à [TC-06] Protected Route Guard ΓÇô unauthenticated ΓåÆ redirect to /login
+   App.jsx wraps all private routes with <ProtectedRoute unauthenticatedElement={<Navigate to="/login">}/>; ProtectedRoute renders unauthenticatedElement when !isAuthenticated
+
+Γ£à [TC-07] AdminGuard resilience ΓÇô null user and network timeout
+   AdminGuard uses u?.role optional chain and .catch(()=> setState("denied")) ΓÇô safe for null user & timeout
+
+Γ¥î [TC-08] undefined
+   Exception: Cannot read properties of undefined (reading 'includes')
+
+Γ¥î [undefined] Privilege Escalation Prevention ΓÇô regular user cannot set role=admin
+   undefined
+
+Γ£à [TC-09] Lost & Found report creation with valid payload
+   Both report schemas validate payload; RLS create binds reporter_id/finder_id to user.id
+
+Γ£à [TC-10] Deterministic Filtering ΓÇô category, <=14 days, <=50km
+   Demo dataset passes all 3 filters (cat=100, days=0.00, km=nullΓåÆneutral). Category-mismatch=0 Γ£ô, 15-day edge filtered Γ£ô, far km=103.7 km computed Γ£ô
+
+Γ£à [TC-11] Multi-modal AI scoring formula weights
+   Formula weights match spec. Demo overallΓëê75 (image=50, textΓëê90) ΓåÆ expected HIGH confidence
+
+Γ£à [TC-12] Threshold checks ΓÇô High/Medium/Low/Discard
+   Threshold bands verified: highΓëÑ75, medium 50-74, low 30-49, <30 discarded
+
+Γ£à [TC-13] Deduplication ΓÇô no duplicate AIMatches records
+   runMatching checks existing AIMatches by (lost_report_id, found_report_id) before creating; skips if found
+
+Γ£à [TC-14] Owner-only claim ΓÇô lost.reporter_id must equal user.id
+   submitClaim verifies lost.reporter_id === user.id, returns 403 otherwise
+
+Γ£à [TC-15] Finder Self-Claim Block ΓÇô found.finder_id === user.id blocked
+   submitClaim blocks if found.finder_id === user.id (self-claim prevention)
+
+Γ£à [TC-16] Evidence Injection Block ΓÇô OwnershipEvidence only writable via submitClaim
+   OwnershipEvidence.create RLS requires role=admin; submitClaim writes via asServiceRole ΓÇô client SDK writes blocked
+
+Γ£à [TC-17] Privacy ΓÇô finder cannot read claimant's OwnershipEvidence
+   OwnershipEvidence.read RLS restricts to submitted_by (submitter) or admin only; finder cannot read
+
+Γ£à [TC-18] Admin Guard Enforcement ΓÇô non-admin receives 403
+   decideClaim checks admin.role !== "admin" ΓåÆ 403 Forbidden
+
+Γ£à [TC-19] Self-Approval Prevention ΓÇô admin cannot approve own claim
+   decideClaim returns 403 when admin.id === claim.claimant_id
+
+Γ£à [TC-20] Zero-Evidence Approval Block
+   decideClaim fetches OwnershipEvidence; returns 400 if list is empty before approving
+
+Γ£à [TC-21] Re-decision Block ΓÇô decided claims cannot be re-evaluated
+   decideClaim only allows action on submitted/under_review/evidence_requested; returns 409 "Claim already decided" otherwise
+
+Γ£à [TC-22] Approval Side-Effects ΓÇô Handover, code, notifications, AdminActions
+   All approval side-effects present: Handover created, crypto 6-digit code, bulkCreate notifications, AdminActions audit logged
+
+ΓÜá∩╕Å  [TC-23] Code Validation ΓÇô reject incorrect verification code
+   MINOR RISK: Verification code has no time-based expiry beyond handover status. A code remains valid indefinitely once scheduled. Recommend adding scheduled_datetime expiry check.
+
+Γ£à [TC-24] State Machine Integrity ΓÇô cancelled/disputed handovers blocked
+   completeHandover rejects completed/cancelled/disputed with 409; only proceeds on valid states
+
+Γ£à [TC-25] Final State Transition ΓÇô all 4 entities updated atomically
+   All 4 final state transitions (ClaimΓåÆcompleted, LostΓåÆclosed, FoundΓåÆreturned, HandoverΓåÆcompleted) executed atomically via Promise.all
+
+Γ£à [TC-26] Append-Only Audit Log ΓÇô regular users cannot write AdminActions
+   AdminActions: create/update/delete require admin role; backend functions only call .create() (append-only); no update/delete calls found
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ EXECUTIVE SUMMARY TABLE
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+  Total Tests : 27
+  PASSED      : 22
+  FAILED      : 4
+  WARNINGS    : 1
+  BLOCKED     : 0
+  PASS RATE   : 81%
+
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+ SECURITY & EDGE CASE FINDINGS
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+
+  [CRITICAL] TC-02 ΓÇô Build Failure
+    vite.config.js calls base44() without importing @base44/vite-plugin.
+    FIX: Add "import base44 from '@base44/vite-plugin';" to vite.config.js.
+
+  [HIGH] TC-08 ΓÇô Privilege Escalation (User.jsonc missing FLS on role)
+    User schema has no update RLS or FLS. Any authenticated user can PATCH
+    their own profile and set role="admin" via SDK.
+    FIX: Add update RLS + disallowed_fields:["role","account_status"] FLS.
+
+  [MEDIUM] TC-23 ΓÇô No Time-Based Code Expiry
+    Verification code valid indefinitely while handover is in scheduled state.
+    FIX: Add expiry check: if new Date() > new Date(handover.scheduled_datetime + 48h).
+
+  [LOW] TC-13 / Race Condition ΓÇô Concurrent submitClaim Requests
+    No database-level lock on the duplicate claim check; two simultaneous
+    requests could both pass the active-claim filter and create duplicate claims.
+    FIX: Use a unique DB constraint on (lost_report_id, found_report_id, active_status).
+
+  [INFO] TC-11 ΓÇô LLM Score Variability
+    Match quality depends on Gemini Flash output. Without images, image_score
+    defaults to 50. Real-world accuracy may vary; recommend human review for
+    medium-confidence (50-74) matches.
+

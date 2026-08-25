@@ -1,0 +1,76 @@
+{
+  "name": "Claims",
+  "type": "object",
+  "properties": {
+    "match_id": {
+      "type": "string"
+    },
+    "lost_report_id": {
+      "type": "string"
+    },
+    "found_report_id": {
+      "type": "string"
+    },
+    "claimant_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "submitted",
+        "under_review",
+        "evidence_requested",
+        "approved",
+        "rejected",
+        "handover_scheduled",
+        "completed"
+      ],
+      "default": "submitted"
+    },
+    "reviewed_by": {
+      "type": "string"
+    },
+    "review_notes": {
+      "type": "string"
+    },
+    "decision_date": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "lost_report_id",
+    "found_report_id",
+    "claimant_id",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.claimant_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "name": "Handovers",
+  "type": "object",
+  "properties": {
+    "claim_id": {
+      "type": "string"
+    },
+    "lost_owner_id": {
+      "type": "string"
+    },
+    "found_reporter_id": {
+      "type": "string"
+    },
+    "scheduled_location": {
+      "type": "string"
+    },
+    "scheduled_datetime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "confirmed_by_owner",
+        "confirmed_by_finder",
+        "completed",
+        "cancelled",
+        "disputed"
+      ],
+      "default": "scheduled"
+    },
+    "verification_code": {
+      "type": "string"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "admin_supervised": {
+      "type": "boolean",
+      "default": true
+    },
+    "receipt_hash": {
+      "type": "string"
+    },
+    "previous_receipt_hash": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "claim_id",
+    "lost_owner_id",
+    "found_reporter_id",
+    "scheduled_location",
+    "scheduled_datetime",
+    "status",
+    "verification_code",
+    "admin_supervised"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.lost_owner_id": "{{user.id}}",
+          "hidden_fields": ["verification_code"]
+        },
+        {
+          "data.found_reporter_id": "{{user.id}}",
+          "hidden_fields": ["verification_code"]
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

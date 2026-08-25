@@ -1,0 +1,94 @@
+{
+  "name": "AIMatches",
+  "type": "object",
+  "properties": {
+    "lost_report_id": {
+      "type": "string"
+    },
+    "found_report_id": {
+      "type": "string"
+    },
+    "overall_score": {
+      "type": "number"
+    },
+    "image_similarity_score": {
+      "type": "number"
+    },
+    "text_similarity_score": {
+      "type": "number"
+    },
+    "category_match_score": {
+      "type": "number"
+    },
+    "location_proximity_score": {
+      "type": "number"
+    },
+    "time_proximity_score": {
+      "type": "number"
+    },
+    "confidence_level": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "match_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_review",
+        "claim_submitted",
+        "confirmed",
+        "rejected",
+        "expired"
+      ],
+      "default": "pending_review"
+    },
+    "generated_by": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "lost_report_id",
+    "found_report_id",
+    "overall_score",
+    "confidence_level",
+    "match_reasons",
+    "status",
+    "generated_by"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ],
+      "_comment": "Regular user access is enforced via service-role and frontend filtering by involvement. Direct client read is admin-only; users access match data through server functions that verify their involvement."
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

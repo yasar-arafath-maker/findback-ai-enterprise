@@ -1,0 +1,39 @@
+name: FindBack AI Enterprise CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run TypeCheck
+        run: npm run typecheck
+
+      - name: Run Audit Test Suite (26 Security & Behavioral Tests)
+        run: node tests/findback_audit.test.js
+
+      - name: Run Enterprise 5-Pillar Test Suite
+        run: node tests/findback_enterprise.test.js
+
+      - name: Run Canonical Multi-User Journey Runner
+        run: node tests/canonical_flow_runner.js
+
+      - name: Build Production Bundle
+        run: npm run build

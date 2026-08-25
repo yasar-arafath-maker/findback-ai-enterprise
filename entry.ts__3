@@ -1,0 +1,289 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { compareTextFingerprints, extractTextFeatures } from './textFingerprint.js';
+import { computeSpatialProximityScore, haversineDistanceKm, latLngToSpatialCell } from './spatialIndexer.js';
+import {
+  categoryScore,
+  temporalScore,
+  computeImageScore,
+  computeTextScore,
+  computeOverallScore,
+  confidenceLevel,
+  isViableCandidate,
+  preRankScore,
+} from './matchScore.js';
+import { notificationService } from './notificationService.js';
+const db = globalThis.__B44_DB__ || {};
+
+// ── PII Stripping ─────────────────────────────────────────────────────
+
+function stripPII(text) {
+  if (!text || typeof text !== 'string') return text || '';
+  let s = text;
+  s = s.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '[EMAIL_REDACTED]');
+  s = s.replace(/(?:\+?\d{1,3}[\s\-.]?)?\(?\d{2,4}\)?[\s\-.]?\d{3,4}[\s\-.]?\d{3,4}/g, '[PHONE_REDACTED]');
+  s = s.replace(/\b\d{10,15}\b/g, '[PHONE_REDACTED]');
+  return s;
+}
+
+function safePromptPayload(report) {
+  return {
+    category: report.category,
+    title: stripPII(report.title),
+    description: stripPII(report.description),
+    brand: stripPII(report.brand),
+    color: report.color,
+    marks: stripPII(report.distinguishing_marks),
+  };
+}
+
+// ── Main Handler ──────────────────────────────────────────────────────
+
+export default async function(req) {
+  try {
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (user.account_status === 'suspended') return Response.json({ error: 'Account suspended' }, { status: 403 });
+
+    const { reportId, reportType } = await req.json();
+    if (!reportId || !['lost', 'found'].includes(reportType)) {
+      return Response.json({ error: 'Valid reportId and reportType are required' }, { status: 400 });
+    }
+
+    const sourceEntity = reportType === 'lost' ? 'LostReports' : 'FoundReports';
+    const targetEntity = reportType === 'lost' ? 'FoundReports' : 'LostReports';
+    const source = await base44.asServiceRole.entities[sourceEntity].get(reportId);
+    const ownerId = reportType === 'lost' ? source.reporter_id : source.finder_id;
+    if (ownerId !== user.id && user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // ── Extract text features for the source report ──────────────────
+    const sourceFeat = extractTextFeatures(source.title, source.color, source.description);
+
+    // ── Persist source embedding (upsert) ────────────────────────────
+    const sourceReportType = reportType;
+    const existingSourceEmb = await base44.asServiceRole.entities.ItemEmbeddings
+      .filter({ report_id: source.id, report_type: sourceReportType }, '-created_date', 1)
+      .catch(() => []);
+    if (!existingSourceEmb.length) {
+      await base44.asServiceRole.entities.ItemEmbeddings.create({
+        report_id: source.id,
+        report_type: sourceReportType,
+        phash: sourceFeat.fingerprint,
+        structural_hash: sourceFeat.structuralHash,
+        spatial_cell_h3: latLngToSpatialCell(source.location_lat, source.location_lng, source.location_text) || '',
+        color_vector: sourceFeat.color,
+      }).catch(() => {}); // non-critical; don't fail the match
+    }
+
+    // ── Fetch and pre-rank candidates with cheap pre-filtering ─────────
+    const candidates = await base44.asServiceRole.entities[targetEntity].filter(
+      { status: 'active' }, '-created_date', 100
+    );
+    const sourceDate = source.lost_date || source.found_date;
+
+    const ranked = candidates
+      .filter(item => {
+        // 1. Cheap Category Pre-Filter
+        const catScore = categoryScore(source.category, item.category);
+        if (catScore === 0) return false;
+
+        // 2. Cheap Haversine Bounding-Box Pre-Filter (~0.5 deg ≈ 55 km)
+        if (source.location_lat != null && source.location_lng != null &&
+            item.location_lat != null && item.location_lng != null) {
+          const dLat = Math.abs(source.location_lat - item.location_lat);
+          const dLng = Math.abs(source.location_lng - item.location_lng);
+          if (dLat > 0.5 || dLng > 0.5) return false;
+        }
+
+        return true;
+      })
+      .map(item => {
+        const catScore = categoryScore(source.category, item.category);
+        const days = sourceDate && (item.lost_date || item.found_date)
+          ? Math.abs(new Date(sourceDate).getTime() - new Date(item.lost_date || item.found_date).getTime()) / 86_400_000
+          : 14; // assume worst-case if dates missing
+        const km = haversineDistanceKm(
+          source.location_lat, source.location_lng,
+          item.location_lat, item.location_lng
+        );
+        const geoScore = computeSpatialProximityScore(source, item);
+        const timeScore = temporalScore(sourceDate, item.lost_date || item.found_date);
+
+        if (!isViableCandidate({ catScore, days, km })) return null;
+
+        return {
+          item, catScore, days, km, geoScore, timeScore,
+          preRank: preRankScore(catScore, geoScore, timeScore),
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.preRank - a.preRank)
+      .slice(0, 3);
+
+    // ── Score each candidate with LLM ────────────────────────────────
+    const saved = [];
+
+    for (const candidate of ranked) {
+      const lost  = reportType === 'lost' ? source : candidate.item;
+      const found = reportType === 'found' ? source : candidate.item;
+
+      // Skip if match already exists
+      const existing = await base44.asServiceRole.entities.AIMatches.filter({lost_report_id:lost.id,found_report_id:found.id});
+      if (existing.length) { saved.push(existing[0]); continue; }
+
+      // ── Text fingerprint comparison ──────────────────────────────
+      const candFeat = extractTextFeatures(
+        candidate.item.title, candidate.item.color, candidate.item.description
+      );
+      const fingerprintSimilarity = compareTextFingerprints(
+        sourceFeat.fingerprint, candFeat.fingerprint
+      );
+
+      // ── Persist candidate embedding ──────────────────────────────
+      const candReportType = reportType === 'lost' ? 'found' : 'lost';
+      const existingCandEmb = await base44.asServiceRole.entities.ItemEmbeddings
+        .filter({ report_id: candidate.item.id, report_type: candReportType }, '-created_date', 1)
+        .catch(() => []);
+      if (!existingCandEmb.length) {
+        await base44.asServiceRole.entities.ItemEmbeddings.create({
+          report_id: candidate.item.id,
+          report_type: candReportType,
+          phash: candFeat.fingerprint,
+          structural_hash: candFeat.structuralHash,
+          spatial_cell_h3: latLngToSpatialCell(
+            candidate.item.location_lat, candidate.item.location_lng, candidate.item.location_text
+          ) || '',
+          color_vector: candFeat.color,
+        }).catch(() => {});
+      }
+
+      // ── LLM analysis ─────────────────────────────────────────────
+      const hasBothImages = Boolean(lost.primary_image_url && found.primary_image_url);
+      const safeLost = safePromptPayload(lost);
+      const safeFound = safePromptPayload(found);
+
+      const prompt = [
+        'Assess similarity only; never decide ownership.',
+        `LOST: ${JSON.stringify(safeLost)}.`,
+        `FOUND: ${JSON.stringify(safeFound)}.`,
+        'Return conservative 0-100 text and image similarity plus 2-4 human-readable potential-match reasons.',
+        hasBothImages
+          ? 'Compare attached images.'
+          : 'One or both images are unavailable; set image_similarity_score to 50 and mention image comparison was unavailable.',
+      ].join(' ');
+
+      let ai;
+      try {
+        ai = await base44.asServiceRole.integrations.Core.InvokeLLM({
+          model: 'gemini_3_flash',
+          prompt,
+          file_urls: hasBothImages ? [lost.primary_image_url, found.primary_image_url] : null,
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              text_similarity_score: { type: 'number' },
+              image_similarity_score: { type: 'number' },
+              match_reasons: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['text_similarity_score', 'image_similarity_score', 'match_reasons'],
+          },
+        });
+      } catch (llmErr) {
+        // Graceful degradation: if LLM fails, use fingerprint-only scoring
+        ai = {
+          text_similarity_score: fingerprintSimilarity,
+          image_similarity_score: 50,
+          match_reasons: ['LLM analysis unavailable; scored via text fingerprint and metadata only.'],
+        };
+      }
+
+      // ── Compute component scores via scoring utility ─────────────
+      const { score: imageScore, image_unavailable } = computeImageScore({
+        llmImageScore: ai.image_similarity_score,
+        textFingerprintSimilarity: fingerprintSimilarity,
+        hasBothImages,
+      });
+      const textScore = computeTextScore(ai.text_similarity_score, fingerprintSimilarity);
+
+      // Multi-modal AI formula weights: image*.35+text*.30 + candidate.category*.15 + candidate.location*.10 + candidate.time*.10
+      const overall = computeOverallScore({
+        imageScore,
+        textScore,
+        geoScore: candidate.geoScore,
+        categoryScore: candidate.catScore,
+        timeScore: candidate.timeScore,
+      });
+
+      if (overall<30) continue;
+      const confLevel = overall>=75?'high':overall>=50?'medium':'low';
+
+      // ── Build detailed reasons ───────────────────────────────────
+      const detReasons = [];
+      if (candidate.km == null) {
+        detReasons.push('Location coordinates were not provided; geo-proximity estimate is neutral.');
+      } else {
+        detReasons.push(`Haversine distance: approximately ${Math.round(candidate.km)} km apart.`);
+      }
+      detReasons.push(`Category: ${candidate.catScore === 100 ? 'exact match' : 'related category'}.`);
+      detReasons.push(`Reported dates are within ${Math.round(candidate.days)} day(s) of each other.`);
+      detReasons.push(`Text fingerprint (SimHash) similarity: ${fingerprintSimilarity}%.`);
+      if (image_unavailable) {
+        detReasons.push('Image comparison was unavailable; image score set to neutral 50%.');
+      }
+      const reasons = [...detReasons, ...(ai.match_reasons || [])];
+
+      // ── Persist match ────────────────────────────────────────────
+      const match = await base44.asServiceRole.entities.AIMatches.create({
+        lost_report_id: lost.id,
+        found_report_id: found.id,
+        overall_score: overall,
+        image_similarity_score: imageScore,
+        text_similarity_score: textScore,
+        category_match_score: candidate.catScore,
+        location_proximity_score: candidate.geoScore,
+        time_proximity_score: candidate.timeScore,
+        confidence_level: confidenceLevel(overall),
+        match_reasons: reasons,
+        status: 'pending_review',
+        generated_by: 'gemini_3_flash',
+      });
+      saved.push(match);
+
+      // ── Notify involved users ────────────────────────────────────
+      if (overall >= 50) {
+        await base44.asServiceRole.entities.Notifications.bulkCreate([
+          {
+            user_id: lost.reporter_id,
+            type: 'match_found',
+            title: 'Potential match found',
+            message: `FindBack AI identified a potential match with ${overall}% confidence.`,
+            related_entity_type: 'AIMatches',
+            related_entity_id: match.id,
+            is_read: false,
+          },
+          {
+            user_id: found.finder_id,
+            type: 'match_found',
+            title: 'Potential match found',
+            message: `A reported lost item may match your found item with ${overall}% confidence.`,
+            related_entity_type: 'AIMatches',
+            related_entity_id: match.id,
+            is_read: false,
+          },
+        ]);
+        if (overall >= 75) {
+          notificationService.notifyMatchFound(lost.reporter_id, {
+            score: overall,
+            title: lost.title,
+          });
+        }
+      }
+    }
+
+    return Response.json({ matches: saved, count: saved.length });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}

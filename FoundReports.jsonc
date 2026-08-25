@@ -1,0 +1,132 @@
+{
+  "name": "FoundReports",
+  "type": "object",
+  "properties": {
+    "finder_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Electronics",
+        "Bags",
+        "Documents",
+        "Jewelry",
+        "Keys",
+        "Pets",
+        "Clothing",
+        "Other"
+      ]
+    },
+    "description": {
+      "type": "string"
+    },
+    "brand": {
+      "type": "string"
+    },
+    "color": {
+      "type": "string"
+    },
+    "distinguishing_marks": {
+      "type": "string"
+    },
+    "location_text": {
+      "type": "string"
+    },
+    "location_lat": {
+      "type": "number"
+    },
+    "location_lng": {
+      "type": "number"
+    },
+    "found_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "found_time": {
+      "type": "string"
+    },
+    "current_holder_location": {
+      "type": "string"
+    },
+    "primary_image_url": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "matched",
+        "claim_pending",
+        "returned",
+        "closed",
+        "duplicate"
+      ],
+      "default": "active"
+    },
+    "is_duplicate_of": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "finder_id",
+    "title",
+    "category",
+    "description",
+    "location_text",
+    "found_date",
+    "current_holder_location",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.finder_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "data.finder_id": "{{user.id}}"
+    },
+    "update": {
+      "$or": [
+        {
+          "$and": [
+            {
+              "created_by_id": "{{user.id}}"
+            },
+            {
+              "data.status": "active"
+            }
+          ]
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}

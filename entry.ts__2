@@ -1,0 +1,214 @@
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { evaluateABAC } from './abacEngine.js';
+import { notificationService } from './notificationService.js';
+const db = globalThis.__B44_DB__ || {};
+
+/**
+ * Admin claim decision handler.
+ * Accepts three decisions: approve, reject, request_evidence.
+ *
+ * State machine (valid transitions):
+ *   submitted / under_review / evidence_requested → approved
+ *   submitted / under_review / evidence_requested → rejected
+ *   submitted / under_review                      → evidence_requested
+ *
+ * Approval requires at least one piece of submitted OwnershipEvidence.
+ * Rejection and evidence requests do not.
+ */
+export default async function(req) {
+  try {
+    const base44 = createClientFromRequest(req);
+    const admin = await base44.auth.me();
+    if (!admin) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (admin.role!=='admin') return Response.json({ error: 'Forbidden' }, {status:403});
+    if (admin.account_status === 'suspended') return Response.json({ error: 'Account suspended' }, { status: 403 });
+
+    const { claimId, decision, notes = '' } = await req.json();
+
+    // ── Validate decision value ────────────────────────────────────
+    const VALID_DECISIONS = ['approve', 'reject', 'request_evidence'];
+    if (!claimId || !VALID_DECISIONS.includes(decision)) {
+      return Response.json({ error: 'Valid claimId and decision (approve | reject | request_evidence) required' }, { status: 400 });
+    }
+
+    // ── Load claim and enforce state machine ───────────────────────
+    const claim = await base44.asServiceRole.entities.Claims.get(claimId);
+
+    // Self-decision prevention
+    if (admin.id===claim.claimant_id) {
+      return Response.json({ error: 'Admins cannot decide their own claims' }, { status: 403 });
+    }
+
+    // Allowed source states for each decision
+    if (!['submitted','under_review','evidence_requested'].includes(claim.status)) {
+      return Response.json({ error: 'Claim already decided' }, { status: 409 });
+    }
+
+    // evidence_requested can only be issued from submitted / under_review
+    if (decision === 'request_evidence' && claim.status === 'evidence_requested') {
+      return Response.json({ error: 'Evidence has already been requested for this claim' }, { status: 409 });
+    }
+
+    // ── ABAC policy check ──────────────────────────────────────────
+    const abacRes = evaluateABAC('decideClaim', admin, claim);
+    if (!abacRes.authorized) {
+      return Response.json({ error: abacRes.reason }, { status: 403 });
+    }
+
+    const now = new Date().toISOString();
+
+    // ── REJECT ─────────────────────────────────────────────────────
+    if (decision === 'reject') {
+      await base44.asServiceRole.entities.Claims.update(claim.id, {
+        status: 'rejected',
+        reviewed_by: admin.id,
+        review_notes: notes,
+        decision_date: now,
+      });
+
+      // Reset report statuses back to active so they can be re-matched
+      await Promise.all([
+        base44.asServiceRole.entities.LostReports.update(claim.lost_report_id, { status: 'active' }).catch(() => {}),
+        base44.asServiceRole.entities.FoundReports.update(claim.found_report_id, { status: 'active' }).catch(() => {}),
+        claim.match_id
+          ? base44.asServiceRole.entities.AIMatches.update(claim.match_id, { status: 'pending_review' }).catch(() => {})
+          : Promise.resolve(),
+      ]);
+
+      await base44.asServiceRole.entities.Notifications.create({
+        user_id: claim.claimant_id,
+        type: 'claim_update',
+        title: 'Claim not approved',
+        message: notes
+          ? `Your claim was not approved. Reviewer notes: "${notes.slice(0, 200)}"`
+          : 'Your claim was not approved. Review notes are available.',
+        related_entity_type: 'Claims',
+        related_entity_id: claim.id,
+        is_read: false,
+      });
+
+      await base44.asServiceRole.entities.AdminActions.create({
+        admin_id: admin.id,
+        action_type: 'claim_rejected',
+        target_entity_type: 'Claims',
+        target_entity_id: claim.id,
+        notes,
+      });
+
+      return Response.json({ status: 'rejected' });
+    }
+
+    // ── REQUEST EVIDENCE ───────────────────────────────────────────
+    if (decision === 'request_evidence') {
+      if (!notes.trim()) {
+        return Response.json({ error: 'Notes are required when requesting additional evidence' }, { status: 400 });
+      }
+
+      await base44.asServiceRole.entities.Claims.update(claim.id, {
+        status: 'evidence_requested',
+        reviewed_by: admin.id,
+        review_notes: notes,
+        decision_date: now,
+      });
+
+      await base44.asServiceRole.entities.Notifications.create({
+        user_id: claim.claimant_id,
+        type: 'claim_update',
+        title: 'More evidence requested',
+        message: `An admin has requested additional proof for your claim: "${notes.slice(0, 200)}"`,
+        related_entity_type: 'Claims',
+        related_entity_id: claim.id,
+        is_read: false,
+      });
+
+      await base44.asServiceRole.entities.AdminActions.create({
+        admin_id: admin.id,
+        action_type: 'evidence_requested',
+        target_entity_type: 'Claims',
+        target_entity_id: claim.id,
+        notes,
+      });
+
+      return Response.json({ status: 'evidence_requested' });
+    }
+
+    // ── APPROVE ────────────────────────────────────────────────────
+    // Zero-evidence approval guard
+    const evidenceList = await base44.asServiceRole.entities.OwnershipEvidence.filter({claim_id:claim.id});
+    if(!evidenceList.length) {
+      return Response.json({ error: 'Cannot approve a claim without submitted ownership evidence' }, { status: 400 });
+    }
+
+    const found = await base44.asServiceRole.entities.FoundReports.get(claim.found_report_id);
+    const code = crypto.getRandomValues(new Uint32Array(1))[0].toString().slice(-6).padStart(6, '0');
+    const scheduled = new Date(Date.now() + 86_400_000).toISOString();
+
+    // Update claim status
+    await base44.asServiceRole.entities.Claims.update(claim.id, {
+      status: 'approved',
+      reviewed_by: admin.id,
+      review_notes: notes,
+      decision_date: now,
+    });
+
+    // Update report statuses for consistency
+    await Promise.all([
+      base44.asServiceRole.entities.LostReports.update(claim.lost_report_id, { status: 'claim_pending' }).catch(() => {}),
+      base44.asServiceRole.entities.FoundReports.update(claim.found_report_id, { status: 'claim_pending' }).catch(() => {}),
+      claim.match_id
+        ? base44.asServiceRole.entities.AIMatches.update(claim.match_id, { status: 'confirmed' }).catch(() => {})
+        : Promise.resolve(),
+    ]);
+
+    // Create handover
+    const handover = await base44.asServiceRole.entities.Handovers.create({
+      claim_id: claim.id,
+      lost_owner_id: claim.claimant_id,
+      found_reporter_id: found.finder_id,
+      scheduled_location: 'To be arranged securely with admin',
+      scheduled_datetime: scheduled,
+      status: 'scheduled',
+      verification_code: code,
+      admin_supervised: true,
+    });
+
+    // Notify both parties
+    await base44.asServiceRole.entities.Notifications.bulkCreate([
+      {
+        user_id: claim.claimant_id,
+        type: 'handover_scheduled',
+        title: 'Claim approved',
+        message: 'Your ownership claim was approved. A supervised handover is ready to arrange.',
+        related_entity_type: 'Handovers',
+        related_entity_id: handover.id,
+        is_read: false,
+      },
+      {
+        user_id: found.finder_id,
+        type: 'handover_scheduled',
+        title: 'Handover ready',
+        message: 'A claim was verified by an admin. Follow the supervised handover instructions.',
+        related_entity_type: 'Handovers',
+        related_entity_id: handover.id,
+        is_read: false,
+      },
+    ]);
+
+    await base44.asServiceRole.entities.AdminActions.create({
+      admin_id: admin.id,
+      action_type: 'claim_approved',
+      target_entity_type: 'Claims',
+      target_entity_id: claim.id,
+      notes,
+    });
+
+    notificationService.notifyClaimApproved(claim.claimant_id, {
+      claimId: claim.id,
+      title: 'Item Claim Approved',
+    });
+
+    return Response.json({ status: 'approved', handoverId: handover.id });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}
