@@ -54,6 +54,17 @@ const devBypassDb = {
   },
 };
 
+// Polyfill localStorage when running in Node.js runtime environment
+if (typeof localStorage === 'undefined') {
+  const memoryStore = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => memoryStore.get(key) || null,
+    setItem: (key, val) => memoryStore.set(key, String(val)),
+    removeItem: (key) => memoryStore.delete(key),
+    clear: () => memoryStore.clear(),
+  };
+}
+
 // Helper for local storage persistence in standalone / native app mode
 const getStoredUser = () => {
   try {
@@ -126,6 +137,7 @@ const standaloneAuthClient = {
       const user = {
         id: 'user-' + Date.now(),
         email,
+        full_name: data?.full_name || email.split('@')[0],
         role: 'user',
         account_status: 'active',
       };
@@ -174,10 +186,12 @@ const standaloneAuthClient = {
     logout: (redirectUrl) => {
       setStoredToken(null);
       setStoredUser(null);
-      if (redirectUrl) window.location.href = redirectUrl;
+      if (redirectUrl && typeof window !== 'undefined') window.location.href = redirectUrl;
     },
     redirectToLogin: (redirectUrl) => {
-      window.location.href = '/login' + (redirectUrl ? '?returnTo=' + encodeURIComponent(redirectUrl) : '');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login' + (redirectUrl ? '?returnTo=' + encodeURIComponent(redirectUrl) : '');
+      }
     },
     resetPasswordRequest: async (email) => {
       if (email) {
@@ -189,10 +203,26 @@ const standaloneAuthClient = {
   },
   entities: new Proxy({}, {
     get: (target, entityName) => ({
-      filter: async () => {
+      filter: async (query = {}, orderBy = '', limit = 100) => {
         try {
           const raw = localStorage.getItem(`entity_${entityName}`);
-          return raw ? JSON.parse(raw) : [];
+          let list = raw ? JSON.parse(raw) : [];
+
+          if (query && typeof query === 'object') {
+            const keys = Object.keys(query);
+            if (keys.length > 0) {
+              list = list.filter(item => {
+                return keys.every(key => String(item[key]) === String(query[key]));
+              });
+            }
+          }
+
+          if (typeof orderBy === 'string' && orderBy.startsWith('-')) {
+            const field = orderBy.substring(1);
+            list.sort((a, b) => String(b[field] || '').localeCompare(String(a[field] || '')));
+          }
+
+          return list.slice(0, limit);
         } catch (e) { return []; }
       },
       get: async (id) => {
@@ -203,7 +233,7 @@ const standaloneAuthClient = {
         } catch (e) { return null; }
       },
       create: async (data) => {
-        const newItem = { id: 'id-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4), ...data };
+        const newItem = { id: 'id-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4), created_date: new Date().toISOString(), status: 'active', ...data };
         try {
           const raw = localStorage.getItem(`entity_${entityName}`);
           const list = raw ? JSON.parse(raw) : [];
@@ -213,13 +243,20 @@ const standaloneAuthClient = {
         return newItem;
       },
       update: async (id, data) => {
+        let updatedItem = null;
         try {
           const raw = localStorage.getItem(`entity_${entityName}`);
           let list = raw ? JSON.parse(raw) : [];
-          list = list.map(item => item.id === id ? { ...item, ...data } : item);
+          list = list.map(item => {
+            if (item.id === id) {
+              updatedItem = { ...item, ...data, updated_date: new Date().toISOString() };
+              return updatedItem;
+            }
+            return item;
+          });
           localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
         } catch (e) {}
-        return { id, ...data };
+        return updatedItem || { id, ...data };
       },
       delete: async (id) => {
         try {
@@ -228,7 +265,7 @@ const standaloneAuthClient = {
           list = list.filter(item => item.id !== id);
           localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
         } catch (e) {}
-        return {};
+        return { id, deleted: true };
       },
     }),
   }),

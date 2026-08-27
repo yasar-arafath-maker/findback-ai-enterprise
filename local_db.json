@@ -1,0 +1,28 @@
+{
+  "User": [
+    {
+      "id": "user-default-1",
+      "email": "user@example.com",
+      "full_name": "Demo User",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T14:09:48.286Z"
+    },
+    {
+      "id": "admin-default-1",
+      "email": "admin@findback.app",
+      "full_name": "Admin Supervisor",
+      "role": "admin",
+      "account_status": "active",
+      "created_date": "2026-08-27T14:09:48.286Z"
+    }
+  ],
+  "LostReports": [],
+  "FoundReports": [],
+  "AIMatches": [],
+  "Claims": [],
+  "OwnershipEvidence": [],
+  "Handovers": [],
+  "Notifications": [],
+  "Sessions": {}
+}
