@@ -1,21 +1,30 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ProGuard / R8 Hardening Rules for ZEXO Capacitor Release App
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Preserve Capacitor & WebView Javascript Interfaces
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Preserve Capacitor core, plugins, and web view bridge
+-keep class com.getcapacitor.** { *; }
+-keep interface com.getcapacitor.** { *; }
+-keep class com.capacitorjs.plugins.** { *; }
+-keep class capacitor.cordova.android.plugins.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Preserve Native Camera, Location, Haptics, Preferences, and Status Bar plugin classes
+-keep class com.capacitorjs.plugins.camera.** { *; }
+-keep class com.capacitorjs.plugins.geolocation.** { *; }
+-keep class com.capacitorjs.plugins.haptics.** { *; }
+-keep class com.capacitorjs.plugins.preferences.** { *; }
+-keep class com.capacitorjs.plugins.statusbar.** { *; }
+
+# Preserve Google Services & Firebase Auth
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.getcapacitor.**
+
+# Suppress non-critical third-party warnings
+-dontwarn org.apache.http.**
+-dontwarn javax.annotation.**

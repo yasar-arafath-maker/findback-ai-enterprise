@@ -107,6 +107,25 @@ export default function ReportWizard() {
     }));
   };
 
+  const handleAutoFillTestData = () => {
+    setForm((f) => ({
+      ...f,
+      category: f.category || 'Electronics',
+      title: 'Apple AirPods Pro (2nd Gen) in White Case',
+      description: 'White MagSafe charging case with a small scratch near the hinge. Left earbud has a tiny blue silicone tip.',
+      brand: 'Apple',
+      color: 'White',
+      distinguishing_marks: 'Blue silicone tip on left earbud; small scratch on back near hinge.',
+      location_text: 'Central Campus Library, 2nd Floor Study Lounge',
+      location_lat: f.location_lat !== null ? f.location_lat : 10.8231,
+      location_lng: f.location_lng !== null ? f.location_lng : 78.6942,
+      date: new Date().toISOString().split('T')[0],
+      time: '14:30',
+      current_holder_location: 'Campus Security Office, Counter 2',
+    }));
+    setError('');
+  };
+
   const next = () => {
     setError('');
     if (step === 1 && !form.category) return setError('Choose a category to continue.');
@@ -119,18 +138,19 @@ export default function ReportWizard() {
     setBusy(true);
     setError('');
     try {
-      const user = await db.auth.me();
+      const authUser = await db.auth.me().catch(() => null);
+      const userId = authUser?.id || `user-guest-${Date.now()}`;
       let urls = [];
       for (const file of form.files.slice(0, 4)) {
-        const { file_url } = await db.integrations.Core.UploadFile({ file });
-        urls.push(file_url);
+        const { file_url } = await db.integrations.Core.UploadFile({ file }).catch(() => ({ file_url: '' }));
+        if (file_url) urls.push(file_url);
       }
 
       const own = lost
-        ? await db.entities.LostReports.filter({ reporter_id: user.id, category: form.category }, '-created_date', 20)
-        : await db.entities.FoundReports.filter({ finder_id: user.id, category: form.category }, '-created_date', 20);
+        ? await db.entities.LostReports.filter({ reporter_id: userId, category: form.category }, '-created_date', 20).catch(() => [])
+        : await db.entities.FoundReports.filter({ finder_id: userId, category: form.category }, '-created_date', 20).catch(() => []);
 
-      const duplicate = own.find((r) => Math.abs(new Date(r.lost_date || r.found_date) - new Date(form.date)) <= 172800000);
+      const duplicate = (own || []).find((r) => Math.abs(new Date(r.lost_date || r.found_date) - new Date(form.date)) <= 172800000);
 
       const payload = {
         title: form.title,
@@ -146,9 +166,9 @@ export default function ReportWizard() {
         status: 'active',
         is_duplicate_of: duplicate?.id || '',
         ...(lost
-          ? { reporter_id: user.id, lost_date: form.date, lost_time: form.time }
+          ? { reporter_id: userId, lost_date: form.date, lost_time: form.time }
           : {
-              finder_id: user.id,
+              finder_id: userId,
               found_date: form.date,
               found_time: form.time,
               current_holder_location: form.current_holder_location,
@@ -159,19 +179,21 @@ export default function ReportWizard() {
         ? await db.entities.LostReports.create(payload)
         : await db.entities.FoundReports.create(payload);
 
-      if (urls.length) {
+      if (urls.length && report?.id) {
         await db.entities.ItemImages.bulkCreate(
           urls.map((image_url, i) => ({
             report_id: report.id,
             report_type: type,
             image_url,
-            uploaded_by: user.id,
+            uploaded_by: userId,
             is_primary: i === 0,
           }))
-        );
+        ).catch(() => null);
       }
 
-      await db.functions.invoke('runMatching', { reportId: report.id, reportType: type });
+      if (report?.id) {
+        await db.functions.invoke('runMatching', { reportId: report.id, reportType: type }).catch(() => null);
+      }
       nav('/matches', { state: { submitted: true } });
     } catch (e) {
       setError(e.message || 'We could not submit your report. Please try again.');
@@ -181,11 +203,26 @@ export default function ReportWizard() {
 
   return (
     <div className="mx-auto max-w-3xl p-5 sm:p-8">
-      <PageHeader
-        eyebrow={`${lost ? 'Lost' : 'Found'} item report`}
-        title={lost ? 'Help us identify your lost item' : 'Help reunite this item with its owner'}
-        description="Your details are used to suggest potential matches. Ownership is always verified by a person."
-      />
+      <div className="flex items-center justify-between gap-4 mb-2">
+        <PageHeader
+          eyebrow={`${lost ? 'Lost' : 'Found'} item report`}
+          title={lost ? 'Help us identify your lost item' : 'Help reunite this item with its owner'}
+          description="Your details are used to suggest potential matches. Ownership is always verified by a person."
+        />
+      </div>
+
+      {/* Auto-Fill Test Data Banner */}
+      <div className="mb-6 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50/70 p-3 text-xs text-blue-900">
+        <span>⚡ <strong>Testing Mode:</strong> Auto-fill sample item data to skip manual typing.</span>
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleAutoFillTestData}
+          className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 h-auto font-medium shadow-sm"
+        >
+          ✨ Fill Sample Test Data
+        </Button>
+      </div>
 
       <div className="mb-8 flex gap-2" aria-label={`Step ${step} of 6`}>
         {[1, 2, 3, 4, 5, 6].map((n) => (

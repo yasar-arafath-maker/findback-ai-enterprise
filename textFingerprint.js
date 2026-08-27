@@ -1,23 +1,28 @@
 /**
- * FindBack AI — Text Fingerprinting Engine
- * ─────────────────────────────────────────
+ * FindBack AI — Text Fingerprinting Engine (Browser & Native Safe)
+ * ───────────────────────────────────────────────────────────
  * Generates SimHash-style 64-bit fingerprints from text metadata (title,
  * description, color, brand, marks) and compares them via Hamming distance.
- *
- * ENGINEERING NOTE: This module operates on TEXT TOKENS, not raw image bytes.
- * For actual image analysis, the matching pipeline delegates to the LLM
- * vision integration (gemini_3_flash) which processes the image URLs directly.
- * The name was changed from "perceptualHash.js" to maintain honesty about
- * what this code actually does.
+ * Zero external Node.js dependencies for full browser/Capacitor compatibility.
  */
 
-import { createHash } from 'crypto';
-
-// ── SimHash Generation ────────────────────────────────────────────────
+const stringHash64 = (str) => {
+  let h1 = 0xdeadbeef ^ 0, h2 = 0x41c6ce57 ^ 0;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  const u1 = (h1 >>> 0).toString(16).padStart(8, '0');
+  const u2 = (h2 >>> 0).toString(16).padStart(8, '0');
+  return u1 + u2;
+};
 
 /**
  * Generates a 64-bit SimHash fingerprint from a text string.
- * Tokenizes the input, hashes each token with MD5, and accumulates a
+ * Tokenizes the input, hashes each token, and accumulates a
  * weighted bit-vector to produce a binary fingerprint.
  *
  * @param {string} text — Concatenated text metadata (title + description + color, etc.)
@@ -31,11 +36,12 @@ export function generateTextFingerprint(text) {
   if (tokens.length > 0) {
     const v = new Array(64).fill(0);
     for (const token of tokens) {
-      const h = createHash('md5').update(token).digest();
+      const hexHash = stringHash64(token);
       for (let i = 0; i < 64; i++) {
-        const byteIndex = Math.floor(i / 8);
-        const bitIndex = i % 8;
-        const bit = (h[byteIndex] >> bitIndex) & 1;
+        const hexCharIndex = Math.floor(i / 4);
+        const bitOffset = i % 4;
+        const val = parseInt(hexHash[hexCharIndex] || '0', 16);
+        const bit = (val >> bitOffset) & 1;
         v[i] += bit ? 1 : -1;
       }
     }
@@ -46,11 +52,8 @@ export function generateTextFingerprint(text) {
     return fingerprint.toString(16).padStart(16, '0');
   }
 
-  // Fallback: SHA-256 truncated to 64 bits
-  return createHash('sha256').update(str).digest('hex').substring(0, 16);
+  return stringHash64(str);
 }
-
-// ── Hamming Distance ──────────────────────────────────────────────────
 
 /**
  * Calculates the Hamming distance between two 16-char hex fingerprints.
@@ -80,13 +83,8 @@ export function compareTextFingerprints(hashA, hashB) {
   return Math.max(0, Math.min(100, Math.round((1 - dist / 32) * 100)));
 }
 
-// ── Feature Extraction ────────────────────────────────────────────────
-
 /**
  * Extracts a lightweight text-based feature vector from item metadata.
- * - `fingerprint`: SimHash from concatenated title + color + description
- * - `color`: detected dominant color keyword
- * - `structuralHash`: MD5 of concatenated text (for dedup / exact-match)
  *
  * @param {string} title
  * @param {string} color
@@ -102,17 +100,10 @@ export function extractTextFeatures(title = '', color = '', description = '') {
   return {
     fingerprint,
     color: detectedColor,
-    structuralHash: createHash('md5').update(combined).digest('hex').substring(0, 12),
+    structuralHash: stringHash64(combined).substring(0, 12),
   };
 }
 
-// ── Backward-compatible aliases ───────────────────────────────────────
-// These exist so that test files importing the old names continue to work
-// without modification. New code should use the explicit names above.
-
-/** @deprecated Use generateTextFingerprint() */
 export const generatePerceptualHash = generateTextFingerprint;
-/** @deprecated Use compareTextFingerprints() */
 export const comparePerceptualHashes = compareTextFingerprints;
-/** @deprecated Use extractTextFeatures() */
 export const extractImageFeatures = extractTextFeatures;

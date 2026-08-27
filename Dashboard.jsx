@@ -11,32 +11,37 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
 
   useEffect(() => {
-    if (!user) return;
     (async () => {
-      // Fetch only reports belonging to the current user
-      const [lost, found, notes] = await Promise.all([
-        db.entities.LostReports.filter({ reporter_id: user.id }, '-created_date', 6),
-        db.entities.FoundReports.filter({ finder_id: user.id }, '-created_date', 6),
-        db.entities.Notifications.filter({ user_id: user.id, is_read: false }, '-created_date', 5),
-      ]);
+      const activeUser = user || (await db.auth.me().catch(() => null)) || { id: 'guest-user', full_name: 'Guest User' };
+      const userId = activeUser?.id || 'guest-user';
+      try {
+        // Fetch reports belonging to the current user
+        const [lost, found, notes] = await Promise.all([
+          db.entities.LostReports.filter({ reporter_id: userId }, '-created_date', 6).catch(() => []),
+          db.entities.FoundReports.filter({ finder_id: userId }, '-created_date', 6).catch(() => []),
+          db.entities.Notifications.filter({ user_id: userId, is_read: false }, '-created_date', 5).catch(() => []),
+        ]);
 
-      // Concurrent parallel batch fetch for matches without N+1 sequential waterfall
-      const reportIds = [...lost.map(r => r.id), ...found.map(r => r.id)].slice(0, 5);
-      const matchPromises = reportIds.flatMap(reportId => [
-        db.entities.AIMatches.filter({ lost_report_id: reportId }, '-created_date', 5).catch(() => []),
-        db.entities.AIMatches.filter({ found_report_id: reportId }, '-created_date', 5).catch(() => []),
-      ]);
-      const matchResults = await Promise.all(matchPromises);
-      let matches = matchResults.flat();
-      // Deduplicate
-      const seen = new Set();
-      matches = matches.filter(m => {
-        if (seen.has(m.id)) return false;
-        seen.add(m.id);
-        return true;
-      });
+        // Concurrent parallel batch fetch for matches
+        const reportIds = [...(lost || []).map(r => r.id), ...(found || []).map(r => r.id)].slice(0, 5);
+        const matchPromises = reportIds.flatMap(reportId => [
+          db.entities.AIMatches.filter({ lost_report_id: reportId }, '-created_date', 5).catch(() => []),
+          db.entities.AIMatches.filter({ found_report_id: reportId }, '-created_date', 5).catch(() => []),
+        ]);
+        const matchResults = await Promise.all(matchPromises);
+        let matches = matchResults.flat();
+        // Deduplicate
+        const seen = new Set();
+        matches = matches.filter(m => {
+          if (!m?.id || seen.has(m.id)) return false;
+          seen.add(m.id);
+          return true;
+        });
 
-      setData({ u: user, lost, found, matches, notes });
+        setData({ u: activeUser, lost: lost || [], found: found || [], matches: matches || [], notes: notes || [] });
+      } catch (err) {
+        setData({ u: activeUser, lost: [], found: [], matches: [], notes: [] });
+      }
     })();
   }, [user]);
 

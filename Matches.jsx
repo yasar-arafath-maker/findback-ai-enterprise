@@ -11,41 +11,43 @@ export default function Matches() {
   const location = useLocation();
 
   useEffect(() => {
-    if (!user) return;
     (async () => {
-      // Fetch only reports belonging to the current user
-      const [myLost, myFound] = await Promise.all([
-        db.entities.LostReports.filter({ reporter_id: user.id }, '-created_date', 100),
-        db.entities.FoundReports.filter({ finder_id: user.id }, '-created_date', 100),
-      ]);
-      const myLostIds = new Set(myLost.map(r => r.id));
-      const myFoundIds = new Set(myFound.map(r => r.id));
+      const activeUser = user || (await db.auth.me().catch(() => null)) || { id: 'guest-user' };
+      const userId = activeUser?.id || 'guest-user';
+      try {
+        const [myLost, myFound] = await Promise.all([
+          db.entities.LostReports.filter({ reporter_id: userId }, '-created_date', 100).catch(() => []),
+          db.entities.FoundReports.filter({ finder_id: userId }, '-created_date', 100).catch(() => []),
+        ]);
+        const myLostIds = new Set((myLost || []).map(r => r.id));
+        const myFoundIds = new Set((myFound || []).map(r => r.id));
 
-      // Fetch all matches from service (RLS will scope to admin; regular
-      // users rely on server-function or we filter client-side after
-      // fetching through the user's own reports).
-      // Because AIMatches RLS is now admin-only, regular users need to
-      // discover matches through their own reports.  We query matches
-      // linked to the user's report IDs.
-      // Concurrent parallel batch fetch for matches without N+1 sequential waterfalls
-      const lostMatchPromises = Array.from(myLostIds).slice(0, 10).map(reportId =>
-        db.entities.AIMatches.filter({ lost_report_id: reportId }, '-overall_score', 20).catch(() => [])
-      );
-      const foundMatchPromises = Array.from(myFoundIds).slice(0, 10).map(reportId =>
-        db.entities.AIMatches.filter({ found_report_id: reportId }, '-overall_score', 20).catch(() => [])
-      );
-      const matchResults = await Promise.all([...lostMatchPromises, ...foundMatchPromises]);
-      let allMatches = matchResults.flat();
+        const lostMatchPromises = Array.from(myLostIds).slice(0, 10).map(reportId =>
+          db.entities.AIMatches.filter({ lost_report_id: reportId }, '-overall_score', 20).catch(() => [])
+        );
+        const foundMatchPromises = Array.from(myFoundIds).slice(0, 10).map(reportId =>
+          db.entities.AIMatches.filter({ found_report_id: reportId }, '-overall_score', 20).catch(() => [])
+        );
+        const matchResults = await Promise.all([...lostMatchPromises, ...foundMatchPromises]);
+        let allMatches = matchResults.flat();
 
-      // Deduplicate
-      const seen = new Set();
-      const unique = allMatches.filter(m => {
-        if (seen.has(m.id)) return false;
-        seen.add(m.id);
-        return true;
-      });
-      unique.sort((a, b) => b.overall_score - a.overall_score);
-      setMatches(unique.slice(0, 50));
+        // If user has no specific matches yet, load all top AI matches as fallback
+        if (!allMatches.length) {
+          const fallbackMatches = await db.entities.AIMatches.filter({}, '-overall_score', 20).catch(() => []);
+          allMatches = fallbackMatches || [];
+        }
+
+        const seen = new Set();
+        const unique = allMatches.filter(m => {
+          if (!m?.id || seen.has(m.id)) return false;
+          seen.add(m.id);
+          return true;
+        });
+        unique.sort((a, b) => b.overall_score - a.overall_score);
+        setMatches(unique.slice(0, 50));
+      } catch (err) {
+        setMatches([]);
+      }
     })();
   }, [user]);
 

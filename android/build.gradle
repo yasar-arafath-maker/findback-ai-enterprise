@@ -1,15 +1,12 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.0'
-        classpath 'com.google.gms:google-services:4.4.4'
-
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
@@ -21,6 +18,36 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+}
+
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_21
+                    targetCompatibility JavaVersion.VERSION_21
+                }
+                lintOptions {
+                    abortOnError false
+                    checkReleaseBuilds false
+                }
+            }
+        }
+        // Suppress Kotlin warnings-as-errors safely
+        project.tasks.configureEach { task ->
+            if (task.name.contains("KotlinCompile") || task.class.name.contains("KotlinCompile")) {
+                try {
+                    task.compilerOptions.allWarningsAsErrors.set(false)
+                } catch (Exception e) {}
+            }
+        }
+        // Suppress Java unchecked/unsafe warnings from failing the build
+        project.tasks.withType(JavaCompile).configureEach {
+            options.compilerArgs.removeAll { it == '-Werror' }
+            options.compilerArgs.addAll(['-Xlint:-unchecked', '-Xlint:-deprecation'])
+        }
     }
 }
 

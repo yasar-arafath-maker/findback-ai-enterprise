@@ -46,6 +46,7 @@ const flatRootResolver = () => ({
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: './',
   resolve: {
     alias: {
       // Fallback: @/ → project root for any case the plugin misses
