@@ -29,6 +29,7 @@ import AdminReports from '@/pages/AdminReports';
 import AdminClaims from '@/pages/AdminClaims';
 import AdminHandovers from '@/pages/AdminHandovers';
 import EnterpriseTelemetryViewer from './EnterpriseTelemetryViewer';
+import EnterpriseAdminDashboard from './EnterpriseAdminDashboard';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -61,6 +62,8 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/enterprise-admin" element={<EnterpriseAdminDashboard />} />
+      <Route path="/admin-console" element={<EnterpriseAdminDashboard />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AppShell />}>
           <Route path="/dashboard" element={<Dashboard />} />
