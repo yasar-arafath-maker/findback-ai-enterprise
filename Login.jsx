@@ -25,10 +25,12 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      await db.auth.loginViaEmailPassword(email, password);
-      // Validate session before navigating
+      const res = await db.auth.loginViaEmailPassword(email, password);
+      if (res?.access_token) {
+        db.auth.setToken(res.access_token);
+      }
       await checkUserAuth();
-      navigate(returnTo);
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err?.message || "Invalid email or password");
     } finally {

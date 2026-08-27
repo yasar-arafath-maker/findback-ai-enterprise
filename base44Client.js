@@ -133,7 +133,7 @@ const standaloneAuthClient = {
     },
     register: async (data) => {
       const email = data?.email || 'user@example.com';
-      await sendOtpEmail(email);
+      const otpRes = await sendOtpEmail(email);
       const user = {
         id: 'user-' + Date.now(),
         email,
@@ -142,7 +142,7 @@ const standaloneAuthClient = {
         account_status: 'active',
       };
       setStoredUser(user);
-      return { status: 'success', email: user.email };
+      return { status: 'success', email: user.email, code: otpRes?.code };
     },
     loginViaEmailPassword: async (email) => {
       const user = {

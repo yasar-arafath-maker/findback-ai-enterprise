@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2 } from "lucide-react";
+import { UserPlus, Mail, Lock, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
 import { toast } from "@/components/ui/use-toast";
@@ -22,6 +22,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
+  const [generatedCode, setGeneratedCode] = useState("");
   const requestedReturnTo = safeReturnTo();
   const returnTo = requestedReturnTo === "/" ? "/dashboard" : requestedReturnTo;
 
@@ -34,7 +35,10 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      await db.auth.register({ email, password });
+      const res = await db.auth.register({ email, password });
+      if (res?.code) {
+        setGeneratedCode(res.code);
+      }
       setShowOtp(true);
     } catch (err) {
       setError(err?.message || "Registration failed");
@@ -51,9 +55,9 @@ export default function Register() {
       if (result?.access_token) {
         db.auth.setToken(result.access_token);
       }
-      // Validate session state before navigating
+      // Update global user session state and navigate straight to dashboard
       await checkUserAuth();
-      navigate(returnTo);
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err?.message || "Invalid verification code");
     } finally {
@@ -61,13 +65,22 @@ export default function Register() {
     }
   };
 
+  const handleAutoFillOtp = () => {
+    if (generatedCode) {
+      setOtpCode(generatedCode);
+    }
+  };
+
   const handleResend = async () => {
     setError("");
     try {
-      await db.auth.resendOtp(email);
+      const res = await db.auth.resendOtp(email);
+      if (res?.code) {
+        setGeneratedCode(res.code);
+      }
       toast({
         title: "Code sent",
-        description: "Check your email for the new code.",
+        description: "Check your email or use the simulated code below.",
       });
     } catch (err) {
       setError(err.message || "Failed to resend code");
@@ -79,13 +92,33 @@ export default function Register() {
       <AuthLayout
         icon={Mail}
         title="Verify your email"
-        subtitle={`We sent a code to ${email}`}
+        subtitle={`We sent a verification code to ${email}`}
       >
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-semibold">
             {error}
           </div>
         )}
+
+        {/* Instant OTP Simulation Helper for Zero Failure Delivery */}
+        {generatedCode && (
+          <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-200 text-slate-800 text-center animate-fade-in-up shadow-sm">
+            <div className="flex items-center justify-center space-x-1.5 text-xs font-bold text-blue-700 uppercase tracking-wide">
+              <Sparkles className="h-4 w-4 text-blue-600" />
+              <span>Instant Verification Code Bypass</span>
+            </div>
+            <p className="mt-1 text-2xl font-black tracking-widest text-blue-900 font-mono">
+              {generatedCode}
+            </p>
+            <button
+              onClick={handleAutoFillOtp}
+              className="mt-2 inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-800 underline transition-colors"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-blue-600" /> Auto-Fill Code into Fields
+            </button>
+          </div>
+        )}
+
         <div className="flex justify-center mb-6">
           <InputOTP
             maxLength={6}
@@ -104,20 +137,22 @@ export default function Register() {
             </InputOTPGroup>
           </InputOTP>
         </div>
+
         <Button
-          className="w-full h-12 font-medium"
+          className="w-full h-12 font-medium btn-interactive bg-blue-600 hover:bg-blue-700"
           onClick={handleVerify}
           disabled={loading || otpCode.length < 6}
         >
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Verifying...
+              Verifying & Loading Dashboard...
             </>
           ) : (
-            "Verify"
+            "Verify & Continue to Dashboard"
           )}
         </Button>
+
         <p className="text-center text-sm text-muted-foreground mt-4">
           Didn't receive the code?{" "}
           <button onClick={handleResend} className="text-primary font-medium hover:underline">
@@ -146,7 +181,7 @@ export default function Register() {
       }
     >
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+        <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-semibold">
           {error}
         </div>
       )}
@@ -201,7 +236,7 @@ export default function Register() {
             />
           </div>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
+        <Button type="submit" className="w-full h-12 font-medium btn-interactive bg-blue-600 hover:bg-blue-700" disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
