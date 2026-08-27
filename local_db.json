@@ -15,6 +15,66 @@
       "role": "admin",
       "account_status": "active",
       "created_date": "2026-08-27T14:09:48.286Z"
+    },
+    {
+      "id": "user-1787845458602",
+      "email": "keerthi@gmail.com",
+      "full_name": "Keerthi User",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:44:18.602Z"
+    },
+    {
+      "id": "user-1787845468927",
+      "email": "test.user.1787845468740@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:44:28.928Z"
+    },
+    {
+      "id": "user-1787845477990",
+      "email": "test.user.1787845477697@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:44:37.990Z"
+    },
+    {
+      "id": "user-1787845508314",
+      "email": "test.user.1787845508071@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:45:08.314Z"
+    },
+    {
+      "id": "user-1787845523575",
+      "email": "test.user.1787845523358@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:45:23.575Z"
+    },
+    {
+      "id": "user-1787845533018",
+      "email": "test.user.1787845532807@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:45:33.018Z"
+    },
+    {
+      "id": "user-1787845543328",
+      "email": "test.user.1787845543129@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:45:43.328Z"
     }
   ],
   "LostReports": [],
@@ -24,5 +84,69 @@
   "OwnershipEvidence": [],
   "Handovers": [],
   "Notifications": [],
-  "Sessions": {}
+  "Sessions": {
+    "token_1787845458602_qoyq": {
+      "id": "user-1787845458602",
+      "email": "keerthi@gmail.com",
+      "full_name": "Keerthi User",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:44:18.602Z"
+    },
+    "token_1787845468928_byf5": {
+      "id": "user-1787845468927",
+      "email": "test.user.1787845468740@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:44:28.928Z"
+    },
+    "token_1787845468943_vkn5": {
+      "id": "user-1787845468927",
+      "email": "test.user.1787845468740@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:44:28.928Z"
+    },
+    "token_1787845477990_dgv1": {
+      "id": "user-1787845477990",
+      "email": "test.user.1787845477697@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:44:37.990Z"
+    },
+    "token_1787845478000_zih9": {
+      "id": "user-1787845477990",
+      "email": "test.user.1787845477697@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:44:37.990Z"
+    },
+    "token_1787845508314_topj": {
+      "id": "user-1787845508314",
+      "email": "test.user.1787845508071@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:45:08.314Z"
+    },
+    "token_1787845508328_dbn9": {
+      "id": "user-1787845508314",
+      "email": "test.user.1787845508071@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-27T15:45:08.314Z"
+    }
+  }
 }

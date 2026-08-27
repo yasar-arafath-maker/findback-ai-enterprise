@@ -30,9 +30,10 @@ export default function EnterpriseAdminDashboard() {
 
   const fetchLiveTelemetry = async () => {
     try {
+      const ts = Date.now();
       const [healthRes, consoleRes] = await Promise.all([
-        fetch('http://localhost:5000/api/health').catch(() => null),
-        fetch('http://localhost:5000/api/enterprise-console').catch(() => null),
+        fetch(`http://localhost:5000/api/health?t=${ts}`, { cache: 'no-store' }).catch(() => null),
+        fetch(`http://localhost:5000/api/enterprise-console?t=${ts}`, { cache: 'no-store' }).catch(() => null),
       ]);
 
       if (healthRes && healthRes.ok) {

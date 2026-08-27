@@ -110,6 +110,78 @@ import { categoryScore, temporalScore, computeOverallScore } from './matchScore.
 import { generateTextFingerprint, compareTextFingerprints } from './textFingerprint.js';
 import { computeSpatialProximityScore } from './spatialIndexer.js';
 
+const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    const host = window.location.hostname;
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return `http://${host}:5000`;
+    }
+  }
+  return 'http://localhost:5000';
+};
+
+const syncServerRequest = async (path, method = 'GET', body = null) => {
+  try {
+    if (typeof window === 'undefined') {
+      try {
+        const fs = await import('fs');
+        const dbFile = 'local_db.json';
+        if (fs.existsSync(dbFile)) {
+          const raw = fs.readFileSync(dbFile, 'utf8');
+          const dbData = JSON.parse(raw);
+          if (path.startsWith('/api/auth/register') && body?.email) {
+            if (!dbData.User) dbData.User = [];
+            if (!dbData.User.some(u => u.email === body.email)) {
+              dbData.User.push({
+                id: 'user-' + Date.now(),
+                email: body.email,
+                full_name: body.full_name || body.email.split('@')[0],
+                role: 'user',
+                account_status: 'active',
+                created_date: new Date().toISOString(),
+              });
+              fs.writeFileSync(dbFile, JSON.stringify(dbData, null, 2), 'utf8');
+            }
+          } else if (path.startsWith('/api/entities/')) {
+            const parts = path.split('/');
+            const entityName = parts[3];
+            const entityId = parts[4];
+            if (!dbData[entityName]) dbData[entityName] = [];
+            if (method === 'POST' && body) {
+              const idx = dbData[entityName].findIndex(x => x.id === body.id);
+              if (idx >= 0) dbData[entityName][idx] = body;
+              else dbData[entityName].push(body);
+              fs.writeFileSync(dbFile, JSON.stringify(dbData, null, 2), 'utf8');
+            } else if (method === 'PUT' && entityId && body) {
+              const idx = dbData[entityName].findIndex(x => x.id === entityId);
+              if (idx >= 0) dbData[entityName][idx] = { ...dbData[entityName][idx], ...body };
+              fs.writeFileSync(dbFile, JSON.stringify(dbData, null, 2), 'utf8');
+            } else if (method === 'DELETE' && entityId) {
+              dbData[entityName] = dbData[entityName].filter(x => x.id !== entityId);
+              fs.writeFileSync(dbFile, JSON.stringify(dbData, null, 2), 'utf8');
+            }
+          }
+        }
+      } catch (err) {}
+      return null;
+    }
+
+    const baseUrl = getApiBaseUrl();
+    const opts = {
+      method,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(`${baseUrl}${path}`, opts).catch(() => null);
+    if (res && res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    // Non-blocking
+  }
+  return null;
+};
+
 const standaloneAuthClient = {
   auth: {
     isAuthenticated: async () => {
@@ -122,6 +194,11 @@ const standaloneAuthClient = {
       if (user) return user;
       const token = getStoredToken();
       if (token) {
+        const remoteUser = await syncServerRequest(`/api/auth/me?token=${token}`, 'GET');
+        if (remoteUser?.user) {
+          setStoredUser(remoteUser.user);
+          return remoteUser.user;
+        }
         return {
           id: 'user-native-session',
           email: 'user@findback.app',
@@ -142,9 +219,17 @@ const standaloneAuthClient = {
         account_status: 'active',
       };
       setStoredUser(user);
-      return { status: 'success', email: user.email, code: otpRes?.code };
+
+      // Directly sync new registration to local_db.json on server.js!
+      const serverRes = await syncServerRequest('/api/auth/register', 'POST', {
+        email: user.email,
+        full_name: user.full_name,
+        phone: data?.phone || '',
+      });
+
+      return { status: 'success', email: user.email, code: otpRes?.code, user: serverRes?.user || user };
     },
-    loginViaEmailPassword: async (email) => {
+    loginViaEmailPassword: async (email, password) => {
       const user = {
         id: 'user-' + Date.now(),
         email: email || 'user@example.com',
@@ -154,9 +239,17 @@ const standaloneAuthClient = {
       const token = 'token_' + Date.now();
       setStoredToken(token);
       setStoredUser(user);
+
+      // Directly sync login to local_db.json on server.js!
+      const serverRes = await syncServerRequest('/api/auth/login', 'POST', { email, password });
+      if (serverRes?.user) {
+        setStoredUser(serverRes.user);
+        if (serverRes.access_token) setStoredToken(serverRes.access_token);
+      }
+
       return {
         access_token: token,
-        user,
+        user: serverRes?.user || user,
       };
     },
     verifyOtp: async ({ email, otpCode }) => {
@@ -171,9 +264,16 @@ const standaloneAuthClient = {
       const token = 'token_' + Date.now();
       setStoredToken(token);
       setStoredUser(user);
+
+      // Directly sync verified user to local_db.json on server.js!
+      const serverRes = await syncServerRequest('/api/auth/register', 'POST', { email: targetEmail });
+      if (serverRes?.user) {
+        setStoredUser(serverRes.user);
+      }
+
       return {
         access_token: token,
-        user,
+        user: serverRes?.user || user,
       };
     },
     resendOtp: async (email) => {
@@ -205,9 +305,27 @@ const standaloneAuthClient = {
     get: (target, entityName) => ({
       filter: async (query = {}, orderBy = '', limit = 100) => {
         try {
+          const serverList = await syncServerRequest(`/api/entities/${entityName}`, 'GET');
+          if (Array.isArray(serverList) && serverList.length > 0) {
+            localStorage.setItem(`entity_${entityName}`, JSON.stringify(serverList));
+            let list = serverList;
+            if (query && typeof query === 'object') {
+              const keys = Object.keys(query);
+              if (keys.length > 0) {
+                list = list.filter(item => {
+                  return keys.every(key => String(item[key]) === String(query[key]));
+                });
+              }
+            }
+            if (typeof orderBy === 'string' && orderBy.startsWith('-')) {
+              const field = orderBy.substring(1);
+              list.sort((a, b) => String(b[field] || '').localeCompare(String(a[field] || '')));
+            }
+            return list.slice(0, limit);
+          }
+
           const raw = localStorage.getItem(`entity_${entityName}`);
           let list = raw ? JSON.parse(raw) : [];
-
           if (query && typeof query === 'object') {
             const keys = Object.keys(query);
             if (keys.length > 0) {
@@ -216,17 +334,18 @@ const standaloneAuthClient = {
               });
             }
           }
-
           if (typeof orderBy === 'string' && orderBy.startsWith('-')) {
             const field = orderBy.substring(1);
             list.sort((a, b) => String(b[field] || '').localeCompare(String(a[field] || '')));
           }
-
           return list.slice(0, limit);
         } catch (e) { return []; }
       },
       get: async (id) => {
         try {
+          const serverItem = await syncServerRequest(`/api/entities/${entityName}/${id}`, 'GET');
+          if (serverItem) return serverItem;
+
           const raw = localStorage.getItem(`entity_${entityName}`);
           const list = raw ? JSON.parse(raw) : [];
           return list.find(item => item.id === id) || null;
@@ -240,7 +359,10 @@ const standaloneAuthClient = {
           list.push(newItem);
           localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
         } catch (e) {}
-        return newItem;
+
+        // Directly sync new record to local_db.json on server.js!
+        const serverItem = await syncServerRequest(`/api/entities/${entityName}`, 'POST', newItem);
+        return serverItem || newItem;
       },
       update: async (id, data) => {
         let updatedItem = null;
@@ -256,6 +378,9 @@ const standaloneAuthClient = {
           });
           localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
         } catch (e) {}
+
+        // Directly sync update to local_db.json on server.js!
+        await syncServerRequest(`/api/entities/${entityName}/${id}`, 'PUT', data);
         return updatedItem || { id, ...data };
       },
       delete: async (id) => {
@@ -265,6 +390,9 @@ const standaloneAuthClient = {
           list = list.filter(item => item.id !== id);
           localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
         } catch (e) {}
+
+        // Directly sync delete to local_db.json on server.js!
+        await syncServerRequest(`/api/entities/${entityName}/${id}`, 'DELETE');
         return { id, deleted: true };
       },
     }),
