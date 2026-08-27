@@ -178,15 +178,23 @@ export default function MyReports() {
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-100 bg-white py-16 text-center shadow-sm">
-          <Search className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-3 text-sm font-semibold text-slate-700">No reports found under this filter</p>
-          <p className="mt-1 text-xs text-slate-500">Create a lost or found report to start matching.</p>
+        <div className="rounded-3xl border border-slate-200/80 bg-white py-12 px-6 text-center shadow-sm max-w-lg mx-auto">
+          <div className="relative mx-auto w-44 h-44 mb-4 overflow-hidden rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center p-2">
+            <img
+              src="/assets/empty_state.png"
+              alt="No reports found illustration"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <h3 className="text-base font-bold text-slate-800">No Reports Found Under "{filter}"</h3>
+          <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+            You haven't logged any items under this filter yet. Create a lost or found report to trigger real-time AI matching.
+          </p>
           <div className="mt-6 flex justify-center space-x-3">
-            <Link to="/report/lost" className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white">
+            <Link to="/report/lost" className="btn-interactive rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm">
               Report Lost Item
             </Link>
-            <Link to="/report/found" className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700">
+            <Link to="/report/found" className="btn-interactive rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50">
               Report Found Item
             </Link>
           </div>

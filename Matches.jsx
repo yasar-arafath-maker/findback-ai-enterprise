@@ -115,11 +115,26 @@ export default function Matches() {
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border bg-white py-20 text-center">
-          <Sparkles className="mx-auto h-7 w-7 text-violet-400" />
-          <p className="mt-4 text-sm text-slate-500">
-            AI hasn't found a strong potential match yet.
+        <div className="rounded-3xl border border-slate-200/80 bg-white py-12 px-6 text-center shadow-sm max-w-lg mx-auto">
+          <div className="relative mx-auto w-44 h-44 mb-4 overflow-hidden rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center p-2">
+            <img
+              src="/assets/empty_state.png"
+              alt="No AI matches found illustration"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <h3 className="text-base font-bold text-slate-800">No Active AI Matches Yet</h3>
+          <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+            Our multi-modal engine continuously scans incoming lost & found reports. Log new reports to trigger instant SimHash fingerprinting and spatial proximity matching.
           </p>
+          <div className="mt-6 flex justify-center space-x-3">
+            <Link to="/report/lost" className="btn-interactive rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm">
+              Log Lost Item
+            </Link>
+            <Link to="/report/found" className="btn-interactive rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50">
+              Log Found Item
+            </Link>
+          </div>
         </div>
       )}
     </div>

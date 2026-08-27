@@ -90,6 +90,39 @@ export default function Dashboard() {
         description="Real-time multi-user item matching, 6-digit cryptographic handover verification, and community recovery workspace."
       />
 
+      {/* Holographic AI 3D Neon Hero Banner */}
+      <div className="relative mb-8 overflow-hidden rounded-3xl border border-cyan-500/20 bg-slate-900 p-6 sm:p-8 shadow-xl">
+        <div className="absolute inset-0 z-0 opacity-45 mix-blend-screen">
+          <img
+            src="/assets/ai_holographic_banner.png"
+            alt="FindBack AI Holographic Network"
+            className="h-full w-full object-cover object-center"
+          />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/85 to-transparent z-0" />
+        
+        <div className="relative z-10 max-w-2xl">
+          <div className="inline-flex items-center space-x-2 rounded-full border border-cyan-400/30 bg-cyan-950/70 px-3 py-1 text-xs font-bold text-cyan-300 backdrop-blur-md">
+            <Sparkles className="h-3.5 w-3.5 text-cyan-400 animate-pulse" />
+            <span>AI SimHash & Spatial Fingerprinting Active</span>
+          </div>
+          <h2 className="mt-3 text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+            Real-Time Multi-Modal Item Discovery
+          </h2>
+          <p className="mt-2 text-sm text-slate-300 leading-relaxed">
+            ZEXO automatically analyzes loss locations, temporal windows, and text fingerprints to discover potential lost & found matches with high-confidence scoring.
+          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Link to="/report/lost" className="btn-interactive inline-flex items-center rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-md">
+              <Search className="mr-1.5 h-4 w-4" /> Report Lost Item
+            </Link>
+            <Link to="/matches" className="btn-interactive inline-flex items-center rounded-xl border border-slate-700 bg-slate-800/80 backdrop-blur-md px-4 py-2.5 text-xs font-bold text-slate-200 hover:bg-slate-700">
+              <ShieldCheck className="mr-1.5 h-4 w-4 text-cyan-400" /> View AI Matches ({matchCount})
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* Metrics Row */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map(([v, l, Icon, colorClass]) => (
