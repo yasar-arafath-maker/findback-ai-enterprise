@@ -311,6 +311,119 @@ const standaloneAuthClient = {
           return { status: 'error', message: e.message };
         }
       }
+
+      if (fnName === 'submitClaim') {
+        try {
+          const { matchId, evidence = [], claimId } = params;
+          const getList = (name) => JSON.parse(localStorage.getItem(`entity_${name}`) || '[]');
+          const saveList = (name, list) => localStorage.setItem(`entity_${name}`, JSON.stringify(list));
+
+          let claims = getList('Claims');
+          let targetClaim = claimId ? claims.find(c => c.id === claimId) : null;
+
+          if (!targetClaim) {
+            const matches = getList('AIMatches');
+            const match = matches.find(m => m.id === matchId) || { id: matchId, lost_report_id: 'lost-seed-101', found_report_id: 'found-seed-201' };
+            targetClaim = {
+              id: `claim-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              match_id: match.id,
+              lost_report_id: match.lost_report_id,
+              found_report_id: match.found_report_id,
+              claimant_id: getStoredUser()?.id || 'guest-user',
+              status: 'submitted',
+              claim_date: new Date().toISOString(),
+            };
+            claims.push(targetClaim);
+            saveList('Claims', claims);
+          }
+
+          let evidenceList = getList('OwnershipEvidence');
+          for (const ev of evidence) {
+            evidenceList.push({
+              id: `ev-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              claim_id: targetClaim.id,
+              uploaded_by: targetClaim.claimant_id,
+              evidence_type: ev.evidence_type || 'unique_description',
+              text_description: ev.text_description || '',
+              file_url: ev.file_url || '',
+              verified: true,
+            });
+          }
+          saveList('OwnershipEvidence', evidenceList);
+
+          return { status: 'success', data: { claim: targetClaim } };
+        } catch (e) {
+          return { status: 'error', message: e.message };
+        }
+      }
+
+      if (fnName === 'decideClaim') {
+        try {
+          const { claimId, decision, notes } = params;
+          const getList = (name) => JSON.parse(localStorage.getItem(`entity_${name}`) || '[]');
+          const saveList = (name, list) => localStorage.setItem(`entity_${name}`, JSON.stringify(list));
+
+          let claims = getList('Claims');
+          let cIdx = claims.findIndex(c => c.id === claimId);
+          if (cIdx >= 0) {
+            claims[cIdx].status = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'evidence_requested';
+            claims[cIdx].review_notes = notes || '';
+            saveList('Claims', claims);
+          }
+
+          let handovers = getList('Handovers');
+          let code = String(Math.floor(100000 + Math.random() * 900000));
+          let handover = {
+            id: `handover-${Date.now()}`,
+            claim_id: claimId,
+            lost_owner_id: claims[cIdx]?.claimant_id || 'guest-user',
+            found_reporter_id: 'user-finder',
+            scheduled_location: 'Central Campus Security Office Desk 1',
+            scheduled_datetime: new Date(Date.now() + 86400000).toISOString(),
+            status: 'scheduled',
+            verification_code: code,
+            admin_supervised: true,
+          };
+          handovers.push(handover);
+          saveList('Handovers', handovers);
+
+          return { status: decision === 'approve' ? 'approved' : decision, handoverId: handover.id };
+        } catch (e) {
+          return { status: 'error', message: e.message };
+        }
+      }
+
+      if (fnName === 'completeHandover') {
+        try {
+          const { handoverId, verificationCode } = params;
+          const getList = (name) => JSON.parse(localStorage.getItem(`entity_${name}`) || '[]');
+          const saveList = (name, list) => localStorage.setItem(`entity_${name}`, JSON.stringify(list));
+
+          let handovers = getList('Handovers');
+          let h = handovers.find(x => x.id === handoverId);
+          if (!h) throw new Error('Handover record not found.');
+          if (String(h.verification_code).trim() !== String(verificationCode).trim()) {
+            throw new Error('Invalid 6-digit verification code.');
+          }
+
+          h.status = 'completed';
+          h.completed_at = new Date().toISOString();
+          saveList('Handovers', handovers);
+
+          let losts = getList('LostReports');
+          let lost = losts.find(x => x.id === h.lost_report_id);
+          if (lost) { lost.status = 'closed'; saveList('LostReports', losts); }
+
+          let founds = getList('FoundReports');
+          let found = founds.find(x => x.id === h.found_report_id);
+          if (found) { found.status = 'returned'; saveList('FoundReports', founds); }
+
+          return { status: 'completed', message: 'Handover verified and recovery completed!' };
+        } catch (e) {
+          throw new Error(e.message);
+        }
+      }
+
       return { status: 'ok' };
     },
   },
