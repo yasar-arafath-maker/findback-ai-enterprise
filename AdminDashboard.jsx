@@ -199,6 +199,34 @@ export default function AdminDashboard() {
         ))}
       </div>
 
+      {/* ── Cross-Device Live Server Sync Control Panel ───────────────── */}
+      <div className="mt-6 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-950 p-5 text-white shadow-md">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <div className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold tracking-wide text-white uppercase flex items-center gap-2">
+                ZEXO Native SSE Server Engine (0.0.0.0:5000)
+              </h3>
+              <p className="text-xs text-slate-300">
+                Live JSON persistence storage (<code className="text-emerald-300 font-mono">local_db.json</code>) with Server-Sent Events (SSE) live sync stream.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 text-xs font-mono">
+            <span className="rounded-lg bg-white/10 px-3 py-1.5 border border-white/10 text-emerald-300 font-semibold">
+              ● Server Online
+            </span>
+            <span className="rounded-lg bg-white/10 px-3 py-1.5 border border-white/10 text-cyan-300 font-semibold">
+              Multi-Device Live Sync
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* ── Middle Section: User Governance & Action Log ──────────── */}
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         {/* User Governance & Account Controls */}
