@@ -28,6 +28,7 @@ import AdminDashboard from '@/pages/AdminDashboard';
 import AdminReports from '@/pages/AdminReports';
 import AdminClaims from '@/pages/AdminClaims';
 import AdminHandovers from '@/pages/AdminHandovers';
+import EnterpriseTelemetryViewer from './EnterpriseTelemetryViewer';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -77,6 +78,7 @@ const AuthenticatedApp = () => {
             <Route path="/admin/reports" element={<AdminReports />} />
             <Route path="/admin/claims" element={<AdminClaims />} />
             <Route path="/admin/handovers" element={<AdminHandovers />} />
+            <Route path="/admin/telemetry" element={<EnterpriseTelemetryViewer />} />
           </Route>
         </Route>
       </Route>

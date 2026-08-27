@@ -154,6 +154,26 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  // ── Read-Only Enterprise Telemetry Viewer Endpoint ──
+  if (pathname === '/api/enterprise-console' && req.method === 'GET') {
+    dbStore = loadDatabase();
+    return sendJSON(res, 200, {
+      status: 'active',
+      server: 'ZEXO Enterprise Telemetry Engine',
+      database_file: DB_FILE,
+      timestamp: new Date().toISOString(),
+      collections: {
+        users: dbStore.User || [],
+        lost_reports: dbStore.LostReports || [],
+        found_reports: dbStore.FoundReports || [],
+        ai_matches: dbStore.AIMatches || [],
+        claims: dbStore.Claims || [],
+        handovers: dbStore.Handovers || [],
+        notifications: dbStore.Notifications || [],
+      },
+    });
+  }
+
   // ── Real-Time SSE Stream Endpoint ──
   if (pathname === '/api/events') {
     res.writeHead(200, {
