@@ -9,6 +9,7 @@
 import React, { useEffect, useState } from 'react';
 import { Database, ShieldCheck, RefreshCw, FileText, Users, Sparkles, CheckCircle2, Layers } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
+import { getApiBaseUrl } from './networkClient.js';
 
 export default function EnterpriseTelemetryViewer() {
   const [telemetry, setTelemetry] = useState(null);
@@ -18,7 +19,8 @@ export default function EnterpriseTelemetryViewer() {
   const fetchTelemetry = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/enterprise-console').catch(() => null);
+      const baseUrl = getApiBaseUrl().replace(/\/api$/, '');
+      const res = await fetch(`${baseUrl}/api/enterprise-console`).catch(() => null);
       if (res && res.ok) {
         const data = await res.json();
         setTelemetry(data);

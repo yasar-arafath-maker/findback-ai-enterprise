@@ -198,6 +198,15 @@
       "role": "user",
       "account_status": "active",
       "created_date": "2026-08-29T07:29:04.042Z"
+    },
+    {
+      "id": "user-1787998412586",
+      "email": "test.user.1787998412266@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-29T10:13:32.586Z"
     }
   ],
   "LostReports": [

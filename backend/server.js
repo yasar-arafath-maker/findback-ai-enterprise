@@ -3,13 +3,14 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Designed for 1-Click Deployment on Render.com & Supabase / PostgreSQL.
  * Features:
+ *   - Universal Route Normalization (supports /api/*, /*, /api/api/*, and entity shorthands)
  *   - PostgreSQL Database Engine (Connection Pool, SQL Transactions, Prepared Statements)
  *   - Automatic Fallback Engine for offline development / test environments
  *   - Zero-Downtime Health Check Probes (/api/health, /healthz, /)
  *   - Real-Time Server-Sent Events (SSE) Stream (/api/events) with Keep-Alive Pings
  *   - Multi-Modal AI SimHash + Spatial Indexing Matching Engine (/api/functions/runMatching)
  *   - Cryptographic SHA-256 Handover Engine with SQL BEGIN...COMMIT Transactions (/api/functions/completeHandover)
- *   - Full REST Entity CRUD & Session Authentication
+ *   - Full REST Entity CRUD & Direct Shorthand Aliases
  *   - Node SMTP Nodemailer Integration
  */
 
@@ -68,20 +69,26 @@ const ENTITY_TABLE_MAP = {
   users: 'users',
   LostReports: 'lost_reports',
   lost_reports: 'lost_reports',
+  'lost-reports': 'lost_reports',
   FoundReports: 'found_reports',
   found_reports: 'found_reports',
+  'found-reports': 'found_reports',
   AIMatches: 'ai_matches',
   ai_matches: 'ai_matches',
+  'ai-matches': 'ai_matches',
+  matches: 'ai_matches',
   Claims: 'claims',
   claims: 'claims',
   OwnershipEvidence: 'ownership_evidence',
   ownership_evidence: 'ownership_evidence',
+  'ownership-evidence': 'ownership_evidence',
   Handovers: 'handovers',
   handovers: 'handovers',
   Notifications: 'notifications',
   notifications: 'notifications',
   AdminActions: 'admin_actions',
   admin_actions: 'admin_actions',
+  'admin-actions': 'admin_actions',
   Sessions: 'sessions',
   sessions: 'sessions',
 };
@@ -140,7 +147,7 @@ const saveFallbackDb = (dbData, updatedEntity = '') => {
 
 let fallbackDbStore = loadFallbackDb();
 
-// Initialize Postgres if pool available
+// Initialize Postgres schema if connected
 initSchema().catch(() => {});
 
 const sendJSON = (res, statusCode, data) => {
@@ -182,10 +189,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   const reqUrl = new URL(req.url, `http://localhost:${PORT}`);
-  const pathname = reqUrl.pathname;
+  
+  // ── Universal Route Normalization ──
+  // Strip duplicate slashes and duplicate /api/api prefixes
+  let pathname = reqUrl.pathname.replace(/\/+/g, '/');
+  while (pathname.startsWith('/api/api/')) {
+    pathname = pathname.replace('/api/api/', '/api/');
+  }
 
   // ── Render Root & Health Check Probes ──
-  if (pathname === '/' || pathname === '/healthz' || pathname === '/api/health') {
+  if (pathname === '/' || pathname === '/healthz' || pathname === '/health' || pathname === '/api/health' || pathname === '/api/healthz') {
     let dbStatus = 'file_fallback';
     if (isDbConnected()) {
       try {
@@ -208,7 +221,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Stats Endpoint ──
-  if (pathname === '/api/stats' && req.method === 'GET') {
+  if ((pathname === '/api/stats' || pathname === '/stats') && req.method === 'GET') {
     if (isDbConnected()) {
       try {
         const u = await query('SELECT COUNT(*) FROM users').catch(() => ({ rows: [{ count: 0 }] }));
@@ -246,8 +259,82 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  // ── Real-Time SSE Stream Endpoint ──
-  if (pathname === '/api/events') {
+  // ── Enterprise Telemetry Console Endpoint ──
+  if ((pathname === '/api/enterprise-console' || pathname === '/enterprise-console') && req.method === 'GET') {
+    if (isDbConnected()) {
+      try {
+        const [u, l, f, m, c, h, n, a] = await Promise.all([
+          query('SELECT * FROM users ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM lost_reports ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM found_reports ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM ai_matches ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM claims ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM handovers ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM notifications ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM admin_actions ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+        ]);
+
+        return sendJSON(res, 200, {
+          status: 'active',
+          server: 'FindBack AI Enterprise Telemetry Engine (PostgreSQL)',
+          timestamp: new Date().toISOString(),
+          collections: {
+            users: u.rows,
+            lost_reports: l.rows,
+            found_reports: f.rows,
+            ai_matches: m.rows,
+            claims: c.rows,
+            handovers: h.rows,
+            notifications: n.rows,
+            admin_actions: a.rows,
+          },
+        });
+      } catch (err) {}
+    }
+
+    fallbackDbStore = loadFallbackDb();
+    return sendJSON(res, 200, {
+      status: 'active',
+      server: 'FindBack AI Enterprise Telemetry Engine (Fallback)',
+      database_file: DB_FILE,
+      timestamp: new Date().toISOString(),
+      collections: {
+        users: fallbackDbStore.User || [],
+        lost_reports: fallbackDbStore.LostReports || [],
+        found_reports: fallbackDbStore.FoundReports || [],
+        ai_matches: fallbackDbStore.AIMatches || [],
+        claims: fallbackDbStore.Claims || [],
+        handovers: fallbackDbStore.Handovers || [],
+        notifications: fallbackDbStore.Notifications || [],
+        admin_actions: fallbackDbStore.AdminActions || [],
+      },
+    });
+  }
+
+  // ── Combined Reports Endpoint (/api/reports) ──
+  if ((pathname === '/api/reports' || pathname === '/reports') && req.method === 'GET') {
+    if (isDbConnected()) {
+      try {
+        const lost = await query('SELECT *, \'lost\' as report_type FROM lost_reports ORDER BY created_date DESC');
+        const found = await query('SELECT *, \'found\' as report_type FROM found_reports ORDER BY created_date DESC');
+        return sendJSON(res, 200, {
+          lost_reports: lost.rows,
+          found_reports: found.rows,
+          all_reports: [...lost.rows, ...found.rows],
+        });
+      } catch (err) {}
+    }
+
+    fallbackDbStore = loadFallbackDb();
+    return sendJSON(res, 200, {
+      lost_reports: fallbackDbStore.LostReports || [],
+      found_reports: fallbackDbStore.FoundReports || [],
+      all_reports: [...(fallbackDbStore.LostReports || []), ...(fallbackDbStore.FoundReports || [])],
+    });
+  }
+
+  // ── Real-Time SSE Stream Endpoint (/api/events or /events) ──
+  if (pathname === '/api/events' || pathname === '/events') {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
@@ -263,8 +350,8 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ── Auth Register ──
-  if (pathname === '/api/auth/register' && req.method === 'POST') {
+  // ── Auth Register (/api/auth/register or /auth/register) ──
+  if ((pathname === '/api/auth/register' || pathname === '/auth/register') && req.method === 'POST') {
     const body = await parseBody(req);
     const { email, full_name, name, fullName, phone } = body;
     if (!email) return sendJSON(res, 400, { error: 'Email is required' });
@@ -318,8 +405,8 @@ const server = http.createServer(async (req, res) => {
     return sendJSON(res, 200, { status: 'success', token, access_token: token, user: existing });
   }
 
-  // ── Auth Login ──
-  if (pathname === '/api/auth/login' && req.method === 'POST') {
+  // ── Auth Login (/api/auth/login or /auth/login) ──
+  if ((pathname === '/api/auth/login' || pathname === '/auth/login') && req.method === 'POST') {
     const body = await parseBody(req);
     const { email, full_name, name, fullName } = body;
     if (!email) return sendJSON(res, 400, { error: 'Email is required' });
@@ -370,8 +457,8 @@ const server = http.createServer(async (req, res) => {
     return sendJSON(res, 200, { status: 'success', token, access_token: token, user });
   }
 
-  // ── Auth Me ──
-  if (pathname === '/api/auth/me' && req.method === 'GET') {
+  // ── Auth Me (/api/auth/me or /auth/me) ──
+  if ((pathname === '/api/auth/me' || pathname === '/auth/me') && req.method === 'GET') {
     const authHeader = req.headers.authorization || '';
     const token = authHeader.replace('Bearer ', '') || reqUrl.searchParams.get('token');
 
@@ -398,8 +485,8 @@ const server = http.createServer(async (req, res) => {
     return sendJSON(res, 200, { user: null });
   }
 
-  // ── OTP Endpoints ──
-  if (pathname === '/api/send-otp' && req.method === 'POST') {
+  // ── OTP Endpoints (/api/send-otp or /send-otp) ──
+  if ((pathname === '/api/send-otp' || pathname === '/send-otp') && req.method === 'POST') {
     try {
       const body = await parseBody(req);
       if (!body.email) return sendJSON(res, 400, { error: 'Email is required' });
@@ -410,7 +497,7 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  if (pathname === '/api/verify-otp' && req.method === 'POST') {
+  if ((pathname === '/api/verify-otp' || pathname === '/verify-otp') && req.method === 'POST') {
     try {
       const body = await parseBody(req);
       const { email, code } = body;
@@ -423,7 +510,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Serverless Functions: Multi-Modal AI Matching ──
-  if (pathname === '/api/functions/runMatching' && req.method === 'POST') {
+  if ((pathname === '/api/functions/runMatching' || pathname === '/functions/runMatching') && req.method === 'POST') {
     try {
       const params = await parseBody(req);
       const { reportId, reportType } = params;
@@ -521,7 +608,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Serverless Functions: Submit Claim ──
-  if (pathname === '/api/functions/submitClaim' && req.method === 'POST') {
+  if ((pathname === '/api/functions/submitClaim' || pathname === '/functions/submitClaim') && req.method === 'POST') {
     try {
       const params = await parseBody(req);
       const { matchId, evidence = [], claimantNotes, claimantId } = params;
@@ -572,7 +659,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Serverless Functions: Decide Claim ──
-  if (pathname === '/api/functions/decideClaim' && req.method === 'POST') {
+  if ((pathname === '/api/functions/decideClaim' || pathname === '/functions/decideClaim') && req.method === 'POST') {
     try {
       const params = await parseBody(req);
       const { claimId, decision, notes } = params;
@@ -633,7 +720,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ── Serverless Functions: Complete Handover (SQL Atomic Transaction) ──
-  if (pathname === '/api/functions/completeHandover' && req.method === 'POST') {
+  if ((pathname === '/api/functions/completeHandover' || pathname === '/functions/completeHandover') && req.method === 'POST') {
     try {
       const params = await parseBody(req);
       const { handoverId, verificationCode } = params;
@@ -737,7 +824,7 @@ const server = http.createServer(async (req, res) => {
         handoverId: handover.id,
         claimantId: handover.lost_owner_id,
         finderId: handover.found_reporter_id,
-        adminId: 'admin-supervisor',
+        adminId: 'admin-default-1',
         verificationCode: String(verificationCode),
         timestamp: now,
       });
@@ -758,8 +845,14 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // ── Generic Entity REST CRUD Endpoints ──
-  const entityMatch = pathname.match(/^\/api\/entities\/([^\/]+)(?:\/([^\/]+))?$/);
+  // ── Universal Entity REST CRUD Endpoints ──
+  // Matches:
+  // /api/entities/:entityName
+  // /entities/:entityName
+  // /api/lost-reports, /api/found-reports, /api/matches, /api/claims, /api/handovers, /api/users
+  const entityMatch = pathname.match(/^(?:\/api)?\/entities\/([^\/]+)(?:\/([^\/]+))?$/i)
+    || pathname.match(/^(?:\/api)?\/(lost-reports|lost_reports|found-reports|found_reports|ai-matches|ai_matches|matches|claims|handovers|ownership-evidence|ownership_evidence|notifications|admin-actions|admin_actions|users)(?:\/([^\/]+))?$/i);
+
   if (entityMatch) {
     const entityName = entityMatch[1];
     const id = entityMatch[2];
@@ -782,7 +875,7 @@ const server = http.createServer(async (req, res) => {
           let pIndex = 1;
 
           reqUrl.searchParams.forEach((val, key) => {
-            if (key !== '_orderBy' && key !== '_limit' && key !== 'token') {
+            if (key !== '_orderBy' && key !== '_limit' && key !== 'token' && key !== 't') {
               conditions.push(`${key} = $${pIndex}`);
               values.push(val);
               pIndex++;
@@ -813,7 +906,7 @@ const server = http.createServer(async (req, res) => {
         // POST create entity
         if (req.method === 'POST') {
           const body = await parseBody(req);
-          const newItemId = body.id || `${entityName.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+          const newItemId = body.id || `${tableName}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
           const data = { id: newItemId, ...body };
 
           const cols = Object.keys(data);
@@ -859,18 +952,19 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Fallback JSON File Mode
+    const fallbackKey = Object.keys(defaultDb).find(k => k.toLowerCase() === entityName.toLowerCase() || k.toLowerCase() === tableName.replace(/_/g, '').toLowerCase()) || entityName;
     fallbackDbStore = loadFallbackDb();
-    if (!fallbackDbStore[entityName]) fallbackDbStore[entityName] = [];
+    if (!fallbackDbStore[fallbackKey]) fallbackDbStore[fallbackKey] = [];
 
     if (req.method === 'GET') {
       if (id) {
-        const item = fallbackDbStore[entityName].find((x) => x.id === id);
+        const item = fallbackDbStore[fallbackKey].find((x) => x.id === id);
         return item ? sendJSON(res, 200, item) : sendJSON(res, 404, { error: 'Item not found' });
       }
 
-      let list = fallbackDbStore[entityName];
+      let list = fallbackDbStore[fallbackKey];
       reqUrl.searchParams.forEach((val, key) => {
-        if (key !== '_orderBy' && key !== '_limit' && key !== 'token') {
+        if (key !== '_orderBy' && key !== '_limit' && key !== 'token' && key !== 't') {
           list = list.filter((item) => String(item[key]) === String(val));
         }
       });
@@ -885,34 +979,34 @@ const server = http.createServer(async (req, res) => {
         status: 'active',
         ...body,
       };
-      fallbackDbStore[entityName].push(newItem);
-      saveFallbackDb(fallbackDbStore, entityName);
+      fallbackDbStore[fallbackKey].push(newItem);
+      saveFallbackDb(fallbackDbStore, fallbackKey);
       return sendJSON(res, 201, newItem);
     }
 
     if (req.method === 'PUT' && id) {
       const body = await parseBody(req);
-      const idx = fallbackDbStore[entityName].findIndex((x) => x.id === id);
+      const idx = fallbackDbStore[fallbackKey].findIndex((x) => x.id === id);
       if (idx >= 0) {
-        fallbackDbStore[entityName][idx] = {
-          ...fallbackDbStore[entityName][idx],
+        fallbackDbStore[fallbackKey][idx] = {
+          ...fallbackDbStore[fallbackKey][idx],
           ...body,
           updated_date: new Date().toISOString(),
         };
-        saveFallbackDb(fallbackDbStore, entityName);
-        return sendJSON(res, 200, fallbackDbStore[entityName][idx]);
+        saveFallbackDb(fallbackDbStore, fallbackKey);
+        return sendJSON(res, 200, fallbackDbStore[fallbackKey][idx]);
       }
       return sendJSON(res, 404, { error: 'Item not found' });
     }
 
     if (req.method === 'DELETE' && id) {
-      fallbackDbStore[entityName] = fallbackDbStore[entityName].filter((x) => x.id !== id);
-      saveFallbackDb(fallbackDbStore, entityName);
+      fallbackDbStore[fallbackKey] = fallbackDbStore[fallbackKey].filter((x) => x.id !== id);
+      saveFallbackDb(fallbackDbStore, fallbackKey);
       return sendJSON(res, 200, { id, deleted: true });
     }
   }
 
-  sendJSON(res, 404, { error: 'Endpoint not found' });
+  sendJSON(res, 404, { error: 'Endpoint not found', path: pathname, method: req.method });
 });
 
 server.listen(PORT, '0.0.0.0', () => {

@@ -1,22 +1,33 @@
 /**
- * ZEXO / FindBack AI — Native Node Backend Server & File Database Persistence Engine
+ * FindBack AI Enterprise — Production Node.js & PostgreSQL Backend Server (Root Server)
  * ─────────────────────────────────────────────────────────────────────────────
- * Zero-dependency native Node.js HTTP server running on port 5000 backed by a local JSON file DB (`local_db.json`).
- * Features Server-Sent Events (SSE) live broadcast (/api/events) for instant cross-device sync between laptop & mobile.
+ * Designed for 1-Click Deployment on Render.com & Supabase / PostgreSQL.
  */
 
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+import db, { query, getClient, initSchema, isDbConnected } from './backend/config/db.js';
+import { categoryScore, temporalScore, computeOverallScore } from './matchScore.js';
+import { generateTextFingerprint, compareTextFingerprints } from './textFingerprint.js';
+import { computeSpatialProximityScore } from './spatialIndexer.js';
+import { generateHandoverReceiptHash } from './cryptoAudit.js';
+import { sendOtpEmail, verifyOtpCode } from './emailOtpService.js';
+import { notificationService } from './notificationService.js';
+import { sanitizeInput } from './securityHelper.js';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_FILE = path.join(__dirname, 'local_db.json');
+const DB_FILE = process.env.DB_FILE_PATH || path.join(__dirname, 'local_db.json');
 const PORT = process.env.PORT || 5000;
 const startTime = Date.now();
 
-// Server-Sent Events (SSE) subscribers client set
+// Server-Sent Events (SSE) connected clients pool
 const sseClients = new Set();
 
 const broadcastEvent = (eventType, payload = {}) => {
@@ -30,7 +41,50 @@ const broadcastEvent = (eventType, payload = {}) => {
   }
 };
 
-// Initialize Database Storage File
+setInterval(() => {
+  for (const client of sseClients) {
+    try {
+      client.write(`: ping\n\n`);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}, 20000);
+
+const ENTITY_TABLE_MAP = {
+  User: 'users',
+  user: 'users',
+  users: 'users',
+  LostReports: 'lost_reports',
+  lost_reports: 'lost_reports',
+  'lost-reports': 'lost_reports',
+  FoundReports: 'found_reports',
+  found_reports: 'found_reports',
+  'found-reports': 'found_reports',
+  AIMatches: 'ai_matches',
+  ai_matches: 'ai_matches',
+  'ai-matches': 'ai_matches',
+  matches: 'ai_matches',
+  Claims: 'claims',
+  claims: 'claims',
+  OwnershipEvidence: 'ownership_evidence',
+  ownership_evidence: 'ownership_evidence',
+  'ownership-evidence': 'ownership_evidence',
+  Handovers: 'handovers',
+  handovers: 'handovers',
+  Notifications: 'notifications',
+  notifications: 'notifications',
+  AdminActions: 'admin_actions',
+  admin_actions: 'admin_actions',
+  'admin-actions': 'admin_actions',
+  Sessions: 'sessions',
+  sessions: 'sessions',
+};
+
+const getTableName = (entityName) => {
+  return ENTITY_TABLE_MAP[entityName] || entityName.toLowerCase();
+};
+
 const defaultDb = {
   User: [
     {
@@ -57,71 +111,30 @@ const defaultDb = {
   OwnershipEvidence: [],
   Handovers: [],
   Notifications: [],
+  AdminActions: [],
   Sessions: {},
 };
 
-const sampleLostReports = [
-  { id: "lost-seed-101", title: "MacBook Air M2 (Space Grey) in Leather Sleeve", category: "Electronics", description: "Space Grey 13-inch MacBook Air M2 in dark brown leather sleeve.", brand: "Apple", color: "Space Grey", location_text: "KRCT Central Library", location_lat: 10.8231, location_lng: 78.6942, reporter_id: "user-sarah-101", lost_date: "2026-08-26", lost_time: "14:30", status: "active", created_date: "2026-08-26T14:30:00.000Z" },
-  { id: "lost-seed-102", title: "Apple iPhone 15 Pro Max (Natural Titanium)", category: "Electronics", description: "Natural Titanium iPhone 15 Pro Max with matte screen protector.", brand: "Apple", color: "Natural Titanium", location_text: "KRCT Campus Cafeteria", location_lat: 10.8238, location_lng: 78.6948, reporter_id: "user-anand-103", lost_date: "2026-08-25", lost_time: "12:45", status: "active", created_date: "2026-08-25T12:45:00.000Z" },
-  { id: "lost-seed-103", title: "Wildcraft Black Leather Wallet with Student ID", category: "Bags", description: "Black bi-fold leather wallet containing student ID card.", brand: "Wildcraft", color: "Black", location_text: "KRCT Sports Complex", location_lat: 10.8242, location_lng: 78.6952, reporter_id: "user-karthik-105", lost_date: "2026-08-24", lost_time: "17:15", status: "active", created_date: "2026-08-24T17:15:00.000Z" }
-];
-
-const sampleFoundReports = [
-  { id: "found-seed-201", title: "MacBook Air M2 (Space Grey) found near Library Lounge", category: "Electronics", description: "Found Space Grey MacBook Air inside brown leather case.", brand: "Apple", color: "Space Grey", location_text: "KRCT Central Library Study Lounge", location_lat: 10.8232, location_lng: 78.6943, finder_id: "user-priya-109", current_holder_location: "Central Library Security Desk", found_date: "2026-08-26", found_time: "15:00", status: "active", created_date: "2026-08-26T15:00:00.000Z" },
-  { id: "found-seed-202", title: "iPhone 15 Pro Max found at Cafeteria Counter", category: "Electronics", description: "Found Natural Titanium iPhone 15 Pro with blue ring stand.", brand: "Apple", color: "Natural Titanium", location_text: "KRCT Campus Cafeteria", location_lat: 10.8239, location_lng: 78.6949, finder_id: "user-priya-109", current_holder_location: "Cafeteria Manager Office", found_date: "2026-08-25", found_time: "13:10", status: "active", created_date: "2026-08-25T13:10:00.000Z" }
-];
-
-const sampleAIMatches = [
-  { id: "match-seed-301", lost_report_id: "lost-seed-101", found_report_id: "found-seed-201", overall_confidence_score: 96.5, text_similarity_score: 98.0, spatial_proximity_km: 0.015, temporal_proximity_hours: 0.5, status: "suggested", ai_recommendation: "HIGH CONFIDENCE MATCH: Match verified by SimHash text analysis and spatial proximity (15m).", created_date: "2026-08-26T15:05:00.000Z" },
-  { id: "match-seed-302", lost_report_id: "lost-seed-102", found_report_id: "found-seed-202", overall_confidence_score: 94.2, text_similarity_score: 95.0, spatial_proximity_km: 0.02, temporal_proximity_hours: 0.4, status: "suggested", ai_recommendation: "HIGH CONFIDENCE MATCH: Titanium iPhone 15 Pro Max matched with ring stand.", created_date: "2026-08-25T13:15:00.000Z" }
-];
-
-const sampleClaims = [
-  { id: "claim-seed-401", match_id: "match-seed-301", claimant_id: "user-sarah-101", claimant_notes: "This is my MacBook Air M2.", status: "approved", evidence_score: 98.0, verification_hash: "0x8F9C2B1D4E3A7F0B", created_date: "2026-08-26T16:00:00.000Z" }
-];
-
-const sampleHandovers = [
-  { id: "handover-seed-501", claim_id: "claim-seed-401", cert_id: "ZEXO-CERT-88492015", item_name: "MacBook Air M2 (Space Grey)", authority_name: "KRCT Central Library Security Desk", officer_name: "Inspector R. Sharma (Badge #8839)", recipient_email: "sarah.m@gmail.com", signature_hash: "0x9E8D7C6B5A4F3E2D", timestamp: "2026-08-26 17:30:00", created_date: "2026-08-26T17:30:00.000Z" }
-];
-
-const loadDatabase = () => {
+const loadFallbackDb = () => {
   try {
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, 'utf8');
-      const loaded = { ...defaultDb, ...JSON.parse(data) };
-      
-      // Auto-fill collections if empty
-      let dirty = false;
-      if (!loaded.LostReports || loaded.LostReports.length === 0) { loaded.LostReports = sampleLostReports; dirty = true; }
-      if (!loaded.FoundReports || loaded.FoundReports.length === 0) { loaded.FoundReports = sampleFoundReports; dirty = true; }
-      if (!loaded.AIMatches || loaded.AIMatches.length === 0) { loaded.AIMatches = sampleAIMatches; dirty = true; }
-      if (!loaded.Claims || loaded.Claims.length === 0) { loaded.Claims = sampleClaims; dirty = true; }
-      if (!loaded.Handovers || loaded.Handovers.length === 0) { loaded.Handovers = sampleHandovers; dirty = true; }
-
-      if (dirty) {
-        saveDatabase(loaded);
-      }
-      return loaded;
+      return { ...defaultDb, ...JSON.parse(data) };
     }
-  } catch (err) {
-    console.error('[Server DB] Read error:', err.message);
-  }
-  saveDatabase(defaultDb);
+  } catch (err) {}
   return defaultDb;
 };
 
-const saveDatabase = (dbData, updatedEntity = '') => {
+const saveFallbackDb = (dbData, updatedEntity = '') => {
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(dbData, null, 2), 'utf8');
-    if (updatedEntity) {
-      broadcastEvent('DB_UPDATED', { entity: updatedEntity });
-    }
-  } catch (err) {
-    console.error('[Server DB] Write error:', err.message);
-  }
+    if (updatedEntity) broadcastEvent('DB_UPDATED', { entity: updatedEntity });
+  } catch (err) {}
 };
 
-let dbStore = loadDatabase();
+let fallbackDbStore = loadFallbackDb();
+
+initSchema().catch(() => {});
 
 const sendJSON = (res, statusCode, data) => {
   res.writeHead(statusCode, {
@@ -131,7 +144,7 @@ const sendJSON = (res, statusCode, data) => {
     'Expires': '0',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Pragma',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Pragma, X-Requested-With',
   });
   res.end(JSON.stringify(data));
 };
@@ -155,74 +168,157 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Pragma',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Pragma, X-Requested-With',
     });
     return res.end();
   }
 
   const reqUrl = new URL(req.url, `http://localhost:${PORT}`);
-  const pathname = reqUrl.pathname;
+  let pathname = reqUrl.pathname.replace(/\/+/g, '/');
+  while (pathname.startsWith('/api/api/')) {
+    pathname = pathname.replace('/api/api/', '/api/');
+  }
 
-  // ── Health & Stats Endpoints ──
-  if (pathname === '/api/health') {
-    let dbSize = 0;
-    try {
-      if (fs.existsSync(DB_FILE)) dbSize = fs.statSync(DB_FILE).size;
-    } catch {}
+  if (pathname === '/' || pathname === '/healthz' || pathname === '/health' || pathname === '/api/health' || pathname === '/api/healthz') {
+    let dbStatus = 'file_fallback';
+    if (isDbConnected()) {
+      try {
+        await query('SELECT 1');
+        dbStatus = 'postgresql_connected';
+      } catch (e) {
+        dbStatus = 'postgresql_error';
+      }
+    }
 
     return sendJSON(res, 200, {
       status: 'online',
-      server: 'ZEXO Native SSE Node Server',
-      database_file: DB_FILE,
-      db_size_bytes: dbSize,
+      service: 'FindBack AI Enterprise Backend',
+      environment: process.env.NODE_ENV || 'production',
+      database_engine: dbStatus,
       uptime_seconds: Math.floor((Date.now() - startTime) / 1000),
       active_connections: sseClients.size,
       timestamp: new Date().toISOString(),
     });
   }
 
-  if (pathname === '/api/stats') {
-    dbStore = loadDatabase();
+  if ((pathname === '/api/stats' || pathname === '/stats') && req.method === 'GET') {
+    if (isDbConnected()) {
+      try {
+        const u = await query('SELECT COUNT(*) FROM users').catch(() => ({ rows: [{ count: 0 }] }));
+        const l = await query('SELECT COUNT(*) FROM lost_reports').catch(() => ({ rows: [{ count: 0 }] }));
+        const f = await query('SELECT COUNT(*) FROM found_reports').catch(() => ({ rows: [{ count: 0 }] }));
+        const m = await query('SELECT COUNT(*) FROM ai_matches').catch(() => ({ rows: [{ count: 0 }] }));
+        const c = await query('SELECT COUNT(*) FROM claims').catch(() => ({ rows: [{ count: 0 }] }));
+        const h = await query('SELECT COUNT(*) FROM handovers').catch(() => ({ rows: [{ count: 0 }] }));
+
+        return sendJSON(res, 200, {
+          users_count: parseInt(u.rows[0].count, 10),
+          lost_reports_count: parseInt(l.rows[0].count, 10),
+          found_reports_count: parseInt(f.rows[0].count, 10),
+          ai_matches_count: parseInt(m.rows[0].count, 10),
+          claims_count: parseInt(c.rows[0].count, 10),
+          handovers_count: parseInt(h.rows[0].count, 10),
+          uptime_seconds: Math.floor((Date.now() - startTime) / 1000),
+          database_engine: 'postgresql',
+          timestamp: new Date().toISOString(),
+        });
+      } catch (err) {}
+    }
+
+    fallbackDbStore = loadFallbackDb();
     return sendJSON(res, 200, {
-      users_count: dbStore.User?.length || 0,
-      lost_reports_count: dbStore.LostReports?.length || 0,
-      found_reports_count: dbStore.FoundReports?.length || 0,
-      ai_matches_count: dbStore.AIMatches?.length || 0,
-      handovers_count: dbStore.Handovers?.length || 0,
+      users_count: fallbackDbStore.User?.length || 0,
+      lost_reports_count: fallbackDbStore.LostReports?.length || 0,
+      found_reports_count: fallbackDbStore.FoundReports?.length || 0,
+      ai_matches_count: fallbackDbStore.AIMatches?.length || 0,
+      claims_count: fallbackDbStore.Claims?.length || 0,
+      handovers_count: fallbackDbStore.Handovers?.length || 0,
       uptime_seconds: Math.floor((Date.now() - startTime) / 1000),
+      database_engine: 'file_fallback',
       timestamp: new Date().toISOString(),
     });
   }
 
-  // ── Read-Only Enterprise Telemetry Viewer Endpoint ──
-  if (pathname === '/api/enterprise-console' && req.method === 'GET') {
-    dbStore = loadDatabase();
+  if ((pathname === '/api/enterprise-console' || pathname === '/enterprise-console') && req.method === 'GET') {
+    if (isDbConnected()) {
+      try {
+        const [u, l, f, m, c, h, n, a] = await Promise.all([
+          query('SELECT * FROM users ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM lost_reports ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM found_reports ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM ai_matches ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM claims ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM handovers ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM notifications ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+          query('SELECT * FROM admin_actions ORDER BY created_date DESC LIMIT 100').catch(() => ({ rows: [] })),
+        ]);
+
+        return sendJSON(res, 200, {
+          status: 'active',
+          server: 'FindBack AI Enterprise Telemetry Engine (PostgreSQL)',
+          timestamp: new Date().toISOString(),
+          collections: {
+            users: u.rows,
+            lost_reports: l.rows,
+            found_reports: f.rows,
+            ai_matches: m.rows,
+            claims: c.rows,
+            handovers: h.rows,
+            notifications: n.rows,
+            admin_actions: a.rows,
+          },
+        });
+      } catch (err) {}
+    }
+
+    fallbackDbStore = loadFallbackDb();
     return sendJSON(res, 200, {
       status: 'active',
-      server: 'ZEXO Enterprise Telemetry Engine',
+      server: 'FindBack AI Enterprise Telemetry Engine (Fallback)',
       database_file: DB_FILE,
       timestamp: new Date().toISOString(),
       collections: {
-        users: dbStore.User || [],
-        lost_reports: dbStore.LostReports || [],
-        found_reports: dbStore.FoundReports || [],
-        ai_matches: dbStore.AIMatches || [],
-        claims: dbStore.Claims || [],
-        handovers: dbStore.Handovers || [],
-        notifications: dbStore.Notifications || [],
+        users: fallbackDbStore.User || [],
+        lost_reports: fallbackDbStore.LostReports || [],
+        found_reports: fallbackDbStore.FoundReports || [],
+        ai_matches: fallbackDbStore.AIMatches || [],
+        claims: fallbackDbStore.Claims || [],
+        handovers: fallbackDbStore.Handovers || [],
+        notifications: fallbackDbStore.Notifications || [],
+        admin_actions: fallbackDbStore.AdminActions || [],
       },
     });
   }
 
-  // ── Real-Time SSE Stream Endpoint ──
-  if (pathname === '/api/events') {
+  if ((pathname === '/api/reports' || pathname === '/reports') && req.method === 'GET') {
+    if (isDbConnected()) {
+      try {
+        const lost = await query('SELECT *, \'lost\' as report_type FROM lost_reports ORDER BY created_date DESC');
+        const found = await query('SELECT *, \'found\' as report_type FROM found_reports ORDER BY created_date DESC');
+        return sendJSON(res, 200, {
+          lost_reports: lost.rows,
+          found_reports: found.rows,
+          all_reports: [...lost.rows, ...found.rows],
+        });
+      } catch (err) {}
+    }
+
+    fallbackDbStore = loadFallbackDb();
+    return sendJSON(res, 200, {
+      lost_reports: fallbackDbStore.LostReports || [],
+      found_reports: fallbackDbStore.FoundReports || [],
+      all_reports: [...(fallbackDbStore.LostReports || []), ...(fallbackDbStore.FoundReports || [])],
+    });
+  }
+
+  if (pathname === '/api/events' || pathname === '/events') {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
       'Access-Control-Allow-Origin': '*',
     });
-    res.write(`data: ${JSON.stringify({ type: 'CONNECTED', timestamp: new Date().toISOString() })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'CONNECTED', message: 'SSE Stream Active', timestamp: new Date().toISOString() })}\n\n`);
     sseClients.add(res);
 
     req.on('close', () => {
@@ -231,102 +327,595 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ── Auth Endpoints ──
-  if (pathname === '/api/auth/register' && req.method === 'POST') {
+  if ((pathname === '/api/auth/register' || pathname === '/auth/register') && req.method === 'POST') {
     const body = await parseBody(req);
     const { email, full_name, name, fullName, phone } = body;
     if (!email) return sendJSON(res, 400, { error: 'Email is required' });
 
     const nameVal = full_name || name || fullName || email.split('@')[0];
+    const userId = `user-${Date.now()}`;
+    const token = `token_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-    dbStore = loadDatabase();
-    let existing = dbStore.User.find((u) => u.email === email);
+    if (isDbConnected()) {
+      try {
+        const existing = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+        let user;
+        if (existing.rows.length === 0) {
+          const insertRes = await query(
+            `INSERT INTO users (id, email, full_name, phone, role, account_status, created_date)
+             VALUES ($1, $2, $3, $4, 'user', 'active', CURRENT_TIMESTAMP) RETURNING *`,
+            [userId, email.toLowerCase(), nameVal, phone || '']
+          );
+          user = insertRes.rows[0];
+        } else {
+          user = existing.rows[0];
+        }
+
+        await query('INSERT INTO sessions (token, user_id, created_date) VALUES ($1, $2, CURRENT_TIMESTAMP)', [token, user.id]);
+        broadcastEvent('USER_REGISTERED', { user_id: user.id });
+        return sendJSON(res, 200, { status: 'success', token, access_token: token, user });
+      } catch (err) {
+        console.error('[Postgres Register Error]', err.message);
+      }
+    }
+
+    fallbackDbStore = loadFallbackDb();
+    let existing = fallbackDbStore.User.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (!existing) {
       existing = {
-        id: `user-${Date.now()}`,
-        email,
+        id: userId,
+        email: email.toLowerCase(),
         full_name: nameVal,
         phone: phone || '',
         role: 'user',
         account_status: 'active',
         created_date: new Date().toISOString(),
       };
-      dbStore.User.push(existing);
-    } else {
-      if (nameVal && nameVal !== email.split('@')[0]) existing.full_name = nameVal;
-      if (phone) existing.phone = phone;
+      fallbackDbStore.User.push(existing);
     }
+    if (!fallbackDbStore.Sessions) fallbackDbStore.Sessions = {};
+    fallbackDbStore.Sessions[token] = existing;
+    saveFallbackDb(fallbackDbStore, 'User');
 
-    const token = `token_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    dbStore.Sessions[token] = existing;
-    saveDatabase(dbStore, 'User');
-
-    return sendJSON(res, 200, { status: 'success', token, user: existing });
+    return sendJSON(res, 200, { status: 'success', token, access_token: token, user: existing });
   }
 
-  if (pathname === '/api/auth/login' && req.method === 'POST') {
+  if ((pathname === '/api/auth/login' || pathname === '/auth/login') && req.method === 'POST') {
     const body = await parseBody(req);
     const { email, full_name, name, fullName } = body;
     if (!email) return sendJSON(res, 400, { error: 'Email is required' });
 
     const nameVal = full_name || name || fullName || email.split('@')[0];
+    const token = `token_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const role = email.toLowerCase().includes('admin') ? 'admin' : 'user';
 
-    dbStore = loadDatabase();
-    let user = dbStore.User.find((u) => u.email === email);
+    if (isDbConnected()) {
+      try {
+        const existing = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+        let user;
+        if (existing.rows.length === 0) {
+          const insertRes = await query(
+            `INSERT INTO users (id, email, full_name, role, account_status, created_date)
+             VALUES ($1, $2, $3, $4, 'active', CURRENT_TIMESTAMP) RETURNING *`,
+            [`user-${Date.now()}`, email.toLowerCase(), nameVal, role]
+          );
+          user = insertRes.rows[0];
+        } else {
+          user = existing.rows[0];
+        }
+
+        await query('INSERT INTO sessions (token, user_id, created_date) VALUES ($1, $2, CURRENT_TIMESTAMP)', [token, user.id]);
+        return sendJSON(res, 200, { status: 'success', token, access_token: token, user });
+      } catch (err) {
+        console.error('[Postgres Login Error]', err.message);
+      }
+    }
+
+    fallbackDbStore = loadFallbackDb();
+    let user = fallbackDbStore.User.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (!user) {
       user = {
         id: `user-${Date.now()}`,
-        email,
+        email: email.toLowerCase(),
         full_name: nameVal,
-        role: email.includes('admin') ? 'admin' : 'user',
+        role,
         account_status: 'active',
         created_date: new Date().toISOString(),
       };
-      dbStore.User.push(user);
-    } else if (nameVal && nameVal !== email.split('@')[0]) {
-      user.full_name = nameVal;
+      fallbackDbStore.User.push(user);
     }
+    if (!fallbackDbStore.Sessions) fallbackDbStore.Sessions = {};
+    fallbackDbStore.Sessions[token] = user;
+    saveFallbackDb(fallbackDbStore, 'User');
 
-    const token = `token_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    dbStore.Sessions[token] = user;
-    saveDatabase(dbStore, 'User');
-
-    return sendJSON(res, 200, { status: 'success', access_token: token, user });
+    return sendJSON(res, 200, { status: 'success', token, access_token: token, user });
   }
 
-  if (pathname === '/api/auth/me' && req.method === 'GET') {
+  if ((pathname === '/api/auth/me' || pathname === '/auth/me') && req.method === 'GET') {
     const authHeader = req.headers.authorization || '';
     const token = authHeader.replace('Bearer ', '') || reqUrl.searchParams.get('token');
-    dbStore = loadDatabase();
 
-    if (token && dbStore.Sessions[token]) {
-      return sendJSON(res, 200, { user: dbStore.Sessions[token] });
+    if (isDbConnected() && token) {
+      try {
+        const sessionRes = await query(
+          `SELECT u.* FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token = $1`,
+          [token]
+        );
+        if (sessionRes.rows.length > 0) {
+          return sendJSON(res, 200, { user: sessionRes.rows[0] });
+        }
+      } catch (err) {}
     }
 
-    if (dbStore.User.length > 0) {
-      return sendJSON(res, 200, { user: dbStore.User[0] });
+    fallbackDbStore = loadFallbackDb();
+    if (token && fallbackDbStore.Sessions && fallbackDbStore.Sessions[token]) {
+      return sendJSON(res, 200, { user: fallbackDbStore.Sessions[token] });
+    }
+    if (fallbackDbStore.User && fallbackDbStore.User.length > 0) {
+      return sendJSON(res, 200, { user: fallbackDbStore.User[0] });
     }
 
     return sendJSON(res, 200, { user: null });
   }
 
-  // ── Entity CRUD ──
-  const entityMatch = pathname.match(/^\/api\/entities\/([^\/]+)(?:\/([^\/]+))?$/);
+  if ((pathname === '/api/send-otp' || pathname === '/send-otp') && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      if (!body.email) return sendJSON(res, 400, { error: 'Email is required' });
+      const result = await sendOtpEmail(body.email);
+      return sendJSON(res, 200, result);
+    } catch (err) {
+      return sendJSON(res, 400, { error: err.message });
+    }
+  }
+
+  if ((pathname === '/api/verify-otp' || pathname === '/verify-otp') && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const { email, code } = body;
+      if (!email || !code) return sendJSON(res, 400, { error: 'Email and code are required' });
+      const result = await verifyOtpCode(email, code);
+      return sendJSON(res, 200, result);
+    } catch (err) {
+      return sendJSON(res, 400, { error: err.message });
+    }
+  }
+
+  if ((pathname === '/api/functions/runMatching' || pathname === '/functions/runMatching') && req.method === 'POST') {
+    try {
+      const params = await parseBody(req);
+      const { reportId, reportType } = params;
+      const isLost = reportType === 'lost' || reportType === 'LostReports';
+
+      let sourceList = [];
+      let targetList = [];
+
+      if (isDbConnected()) {
+        const sTable = isLost ? 'lost_reports' : 'found_reports';
+        const tTable = isLost ? 'found_reports' : 'lost_reports';
+        const sRes = await query(`SELECT * FROM ${sTable}`);
+        const tRes = await query(`SELECT * FROM ${tTable}`);
+        sourceList = sRes.rows;
+        targetList = tRes.rows;
+      } else {
+        fallbackDbStore = loadFallbackDb();
+        sourceList = fallbackDbStore[isLost ? 'LostReports' : 'FoundReports'] || [];
+        targetList = fallbackDbStore[isLost ? 'FoundReports' : 'LostReports'] || [];
+      }
+
+      const sourceItem = sourceList.find(r => r.id === reportId) || sourceList[sourceList.length - 1];
+      if (!sourceItem) return sendJSON(res, 200, { status: 'no_report_found', matches: [] });
+
+      const newMatches = [];
+
+      for (const targetItem of targetList) {
+        const lostRep = isLost ? sourceItem : targetItem;
+        const foundRep = isLost ? targetItem : sourceItem;
+
+        const cScore = categoryScore(lostRep.category, foundRep.category);
+        const textSim = compareTextFingerprints(
+          generateTextFingerprint(`${lostRep.title || ''} ${lostRep.description || ''}`),
+          generateTextFingerprint(`${foundRep.title || ''} ${foundRep.description || ''}`)
+        );
+        const tScore = temporalScore(lostRep.lost_date, foundRep.found_date);
+        const gScore = computeSpatialProximityScore(lostRep, foundRep);
+
+        const overall = computeOverallScore({
+          imageScore: 50,
+          textScore: textSim,
+          geoScore: gScore,
+          categoryScore: cScore,
+          timeScore: tScore,
+        });
+
+        if (overall >= 40) {
+          const matchId = `match-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+          const matchRecord = {
+            id: matchId,
+            lost_report_id: lostRep.id,
+            found_report_id: foundRep.id,
+            overall_score: overall,
+            overall_confidence_score: overall,
+            text_similarity_score: textSim,
+            image_similarity_score: 50,
+            category_match_score: cScore,
+            location_proximity_score: gScore,
+            time_proximity_score: tScore,
+            status: 'suggested',
+            ai_recommendation: `Match Confidence: ${overall}% (Text: ${textSim}%, Proximity: ${gScore}%, Category: ${cScore}%)`,
+            created_date: new Date().toISOString(),
+          };
+
+          if (isDbConnected()) {
+            await query(
+              `INSERT INTO ai_matches (id, lost_report_id, found_report_id, overall_score, overall_confidence_score,
+                text_similarity_score, image_similarity_score, category_match_score, location_proximity_score,
+                time_proximity_score, status, ai_recommendation, created_date)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP)
+               ON CONFLICT (id) DO NOTHING`,
+              [
+                matchRecord.id, matchRecord.lost_report_id, matchRecord.found_report_id,
+                matchRecord.overall_score, matchRecord.overall_confidence_score,
+                matchRecord.text_similarity_score, matchRecord.image_similarity_score,
+                matchRecord.category_match_score, matchRecord.location_proximity_score,
+                matchRecord.time_proximity_score, matchRecord.status, matchRecord.ai_recommendation
+              ]
+            );
+          } else {
+            if (!fallbackDbStore.AIMatches) fallbackDbStore.AIMatches = [];
+            fallbackDbStore.AIMatches.push(matchRecord);
+          }
+          newMatches.push(matchRecord);
+        }
+      }
+
+      if (!isDbConnected()) saveFallbackDb(fallbackDbStore, 'AIMatches');
+      broadcastEvent('MATCHES_GENERATED', { count: newMatches.length });
+
+      return sendJSON(res, 200, { status: 'success', matchesCount: newMatches.length, matches: newMatches });
+    } catch (err) {
+      return sendJSON(res, 500, { error: err.message });
+    }
+  }
+
+  if ((pathname === '/api/functions/submitClaim' || pathname === '/functions/submitClaim') && req.method === 'POST') {
+    try {
+      const params = await parseBody(req);
+      const { matchId, evidence = [], claimantNotes, claimantId } = params;
+      const claimId = `claim-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      const cid = claimantId || 'user-sarah-101';
+
+      if (isDbConnected()) {
+        const mRes = await query('SELECT * FROM ai_matches WHERE id = $1', [matchId]);
+        const match = mRes.rows[0] || { lost_report_id: 'lost-seed-101', found_report_id: 'found-seed-201' };
+
+        const claimRes = await query(
+          `INSERT INTO claims (id, match_id, lost_report_id, found_report_id, claimant_id, claimant_notes, status, evidence_score, created_date)
+           VALUES ($1, $2, $3, $4, $5, $6, 'submitted', 95.0, CURRENT_TIMESTAMP) RETURNING *`,
+          [claimId, matchId, match.lost_report_id, match.found_report_id, cid, claimantNotes || 'Claim filed']
+        );
+
+        for (const ev of evidence) {
+          await query(
+            `INSERT INTO ownership_evidence (id, claim_id, uploaded_by, evidence_type, text_description, file_url, verified, created_date)
+             VALUES ($1, $2, $3, $4, $5, $6, true, CURRENT_TIMESTAMP)`,
+            [`ev-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`, claimId, cid, ev.evidence_type || 'description', ev.text_description || '', ev.file_url || '']
+          );
+        }
+
+        return sendJSON(res, 201, { status: 'success', data: { claim: claimRes.rows[0] } });
+      }
+
+      fallbackDbStore = loadFallbackDb();
+      if (!fallbackDbStore.Claims) fallbackDbStore.Claims = [];
+      const newClaim = {
+        id: claimId,
+        match_id: matchId,
+        lost_report_id: 'lost-seed-101',
+        found_report_id: 'found-seed-201',
+        claimant_id: cid,
+        claimant_notes: claimantNotes || 'Claim filed',
+        status: 'submitted',
+        evidence_score: 95.0,
+        created_date: new Date().toISOString(),
+      };
+      fallbackDbStore.Claims.push(newClaim);
+      saveFallbackDb(fallbackDbStore, 'Claims');
+
+      return sendJSON(res, 201, { status: 'success', data: { claim: newClaim } });
+    } catch (err) {
+      return sendJSON(res, 500, { error: err.message });
+    }
+  }
+
+  if ((pathname === '/api/functions/decideClaim' || pathname === '/functions/decideClaim') && req.method === 'POST') {
+    try {
+      const params = await parseBody(req);
+      const { claimId, decision, notes } = params;
+      const statusVal = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'evidence_requested';
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const handoverId = `handover-${Date.now()}`;
+
+      if (isDbConnected()) {
+        await query('UPDATE claims SET status = $1, review_notes = $2 WHERE id = $3', [statusVal, notes || '', claimId]);
+        const claimRes = await query('SELECT * FROM claims WHERE id = $1', [claimId]);
+        const claim = claimRes.rows[0];
+
+        await query(
+          `INSERT INTO handovers (id, claim_id, cert_id, item_name, lost_owner_id, found_reporter_id, scheduled_location,
+            scheduled_datetime, status, verification_code, admin_supervised, created_date)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '1 day', 'scheduled', $8, true, CURRENT_TIMESTAMP)`,
+          [
+            handoverId, claimId, `ZEXO-CERT-${Math.floor(10000000 + Math.random() * 90000000)}`,
+            'Recovered Item', claim?.claimant_id || 'user-sarah-101', 'user-priya-109',
+            'Central Campus Security Office Desk 1', code
+          ]
+        );
+
+        return sendJSON(res, 200, { status: statusVal, handoverId, code });
+      }
+
+      fallbackDbStore = loadFallbackDb();
+      if (!fallbackDbStore.Claims) fallbackDbStore.Claims = [];
+      if (!fallbackDbStore.Handovers) fallbackDbStore.Handovers = [];
+
+      const c = fallbackDbStore.Claims.find(x => x.id === claimId);
+      if (c) {
+        c.status = statusVal;
+        c.review_notes = notes || '';
+      }
+
+      const handover = {
+        id: handoverId,
+        claim_id: claimId,
+        cert_id: `ZEXO-CERT-${Math.floor(10000000 + Math.random() * 90000000)}`,
+        item_name: 'Recovered Item',
+        lost_owner_id: c?.claimant_id || 'user-sarah-101',
+        found_reporter_id: 'user-priya-109',
+        scheduled_location: 'Central Campus Security Office Desk 1',
+        scheduled_datetime: new Date(Date.now() + 86400000).toISOString(),
+        status: 'scheduled',
+        verification_code: code,
+        admin_supervised: true,
+        created_date: new Date().toISOString(),
+      };
+      fallbackDbStore.Handovers.push(handover);
+      saveFallbackDb(fallbackDbStore, 'Handovers');
+
+      return sendJSON(res, 200, { status: statusVal, handoverId, code });
+    } catch (err) {
+      return sendJSON(res, 500, { error: err.message });
+    }
+  }
+
+  if ((pathname === '/api/functions/completeHandover' || pathname === '/functions/completeHandover') && req.method === 'POST') {
+    try {
+      const params = await parseBody(req);
+      const { handoverId, verificationCode } = params;
+      const now = new Date().toISOString();
+
+      if (isDbConnected()) {
+        const client = await getClient();
+        try {
+          await client.query('BEGIN');
+
+          const hRes = await client.query('SELECT * FROM handovers WHERE id = $1 FOR UPDATE', [handoverId]);
+          if (hRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return sendJSON(res, 404, { error: 'Handover record not found' });
+          }
+
+          const handover = hRes.rows[0];
+          if (['completed', 'cancelled', 'disputed'].includes(handover.status)) {
+            await client.query('ROLLBACK');
+            return sendJSON(res, 409, { error: 'Handover cannot be completed in its current state' });
+          }
+
+          if (String(handover.verification_code).trim() !== String(verificationCode).trim()) {
+            await client.query('ROLLBACK');
+            return sendJSON(res, 403, { error: 'Invalid verification code' });
+          }
+
+          const { receiptHash } = generateHandoverReceiptHash({
+            handoverId: handover.id,
+            claimantId: handover.lost_owner_id,
+            finderId: handover.found_reporter_id,
+            adminId: 'admin-default-1',
+            verificationCode: String(verificationCode),
+            timestamp: now,
+          });
+
+          await client.query(
+            'UPDATE handovers SET status = $1, completed_at = $2, receipt_hash = $3 WHERE id = $4',
+            ['completed', now, receiptHash, handover.id]
+          );
+
+          if (handover.claim_id) {
+            await client.query('UPDATE claims SET status = $1 WHERE id = $2', ['completed', handover.claim_id]);
+          }
+
+          if (handover.claim_id) {
+            const claimInfo = await client.query('SELECT * FROM claims WHERE id = $1', [handover.claim_id]);
+            if (claimInfo.rows.length > 0) {
+              const c = claimInfo.rows[0];
+              if (c.lost_report_id) {
+                await client.query('UPDATE lost_reports SET status = $1, updated_date = $2 WHERE id = $3', ['closed', now, c.lost_report_id]);
+              }
+              if (c.found_report_id) {
+                await client.query('UPDATE found_reports SET status = $1, updated_date = $2 WHERE id = $3', ['returned', now, c.found_report_id]);
+              }
+            }
+          }
+
+          await client.query(
+            `INSERT INTO admin_actions (id, admin_id, action_type, target_entity_type, target_entity_id, notes, created_date)
+             VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
+            [`act-${Date.now()}`, 'admin-default-1', 'handover_completed', 'handovers', handover.id, `SHA256:${receiptHash}`]
+          );
+
+          await client.query('COMMIT');
+          broadcastEvent('HANDOVER_COMPLETED', { handover_id: handover.id, receipt_hash: receiptHash });
+
+          return sendJSON(res, 200, {
+            status: 'completed',
+            receipt_hash: receiptHash,
+            message: 'Handover verified and recovery completed atomically with SQL transaction!',
+          });
+        } catch (txErr) {
+          await client.query('ROLLBACK');
+          throw txErr;
+        } finally {
+          client.release();
+        }
+      }
+
+      fallbackDbStore = loadFallbackDb();
+      const handovers = fallbackDbStore.Handovers || [];
+      const handover = handovers.find(h => h.id === handoverId);
+      if (!handover) return sendJSON(res, 404, { error: 'Handover record not found' });
+
+      if (['completed', 'cancelled', 'disputed'].includes(handover.status)) {
+        return sendJSON(res, 409, { error: 'Handover cannot be completed in its current state' });
+      }
+
+      if (String(handover.verification_code).trim() !== String(verificationCode).trim()) {
+        return sendJSON(res, 403, { error: 'Invalid verification code' });
+      }
+
+      const { receiptHash } = generateHandoverReceiptHash({
+        handoverId: handover.id,
+        claimantId: handover.lost_owner_id,
+        finderId: handover.found_reporter_id,
+        adminId: 'admin-default-1',
+        verificationCode: String(verificationCode),
+        timestamp: now,
+      });
+
+      handover.status = 'completed';
+      handover.completed_at = now;
+      handover.receipt_hash = receiptHash;
+
+      if (fallbackDbStore.Claims) {
+        const c = fallbackDbStore.Claims.find(x => x.id === handover.claim_id);
+        if (c) c.status = 'completed';
+      }
+
+      saveFallbackDb(fallbackDbStore, 'Handovers');
+      return sendJSON(res, 200, { status: 'completed', receipt_hash: receiptHash, message: 'Handover verified and recovery completed!' });
+    } catch (err) {
+      return sendJSON(res, 500, { error: err.message });
+    }
+  }
+
+  const entityMatch = pathname.match(/^(?:\/api)?\/entities\/([^\/]+)(?:\/([^\/]+))?$/i)
+    || pathname.match(/^(?:\/api)?\/(lost-reports|lost_reports|found-reports|found_reports|ai-matches|ai_matches|matches|claims|handovers|ownership-evidence|ownership_evidence|notifications|admin-actions|admin_actions|users)(?:\/([^\/]+))?$/i);
+
   if (entityMatch) {
     const entityName = entityMatch[1];
     const id = entityMatch[2];
-    dbStore = loadDatabase();
-    if (!dbStore[entityName]) dbStore[entityName] = [];
+    const tableName = getTableName(entityName);
+
+    if (isDbConnected()) {
+      try {
+        if (req.method === 'GET' && id) {
+          const result = await query(`SELECT * FROM ${tableName} WHERE id = $1`, [id]);
+          return result.rows.length > 0
+            ? sendJSON(res, 200, result.rows[0])
+            : sendJSON(res, 404, { error: 'Item not found' });
+        }
+
+        if (req.method === 'GET') {
+          const conditions = [];
+          const values = [];
+          let pIndex = 1;
+
+          reqUrl.searchParams.forEach((val, key) => {
+            if (key !== '_orderBy' && key !== '_limit' && key !== 'token' && key !== 't') {
+              conditions.push(`${key} = $${pIndex}`);
+              values.push(val);
+              pIndex++;
+            }
+          });
+
+          let sql = `SELECT * FROM ${tableName}`;
+          if (conditions.length > 0) sql += ` WHERE ${conditions.join(' AND ')}`;
+
+          const orderBy = reqUrl.searchParams.get('_orderBy');
+          if (orderBy) {
+            const isDesc = orderBy.startsWith('-');
+            const colName = isDesc ? orderBy.substring(1) : orderBy;
+            sql += ` ORDER BY ${colName} ${isDesc ? 'DESC' : 'ASC'}`;
+          } else {
+            sql += ` ORDER BY created_date DESC`;
+          }
+
+          const limit = parseInt(reqUrl.searchParams.get('_limit'), 10);
+          if (!isNaN(limit) && limit > 0) {
+            sql += ` LIMIT ${limit}`;
+          }
+
+          const result = await query(sql, values);
+          return sendJSON(res, 200, result.rows);
+        }
+
+        if (req.method === 'POST') {
+          const body = await parseBody(req);
+          const newItemId = body.id || `${tableName}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+          const data = { id: newItemId, ...body };
+
+          const cols = Object.keys(data);
+          const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
+          const values = Object.values(data).map(v => typeof v === 'object' && v !== null ? JSON.stringify(v) : v);
+
+          const insertSql = `INSERT INTO ${tableName} (${cols.join(', ')}) VALUES (${placeholders}) RETURNING *`;
+          const result = await query(insertSql, values);
+          broadcastEvent('ENTITY_CREATED', { entity: entityName, id: newItemId });
+          return sendJSON(res, 201, result.rows[0]);
+        }
+
+        if (req.method === 'PUT' && id) {
+          const body = await parseBody(req);
+          delete body.id;
+
+          const cols = Object.keys(body);
+          if (cols.length === 0) return sendJSON(res, 400, { error: 'No fields to update' });
+
+          const setClauses = cols.map((col, i) => `${col} = $${i + 1}`).join(', ');
+          const values = Object.values(body).map(v => typeof v === 'object' && v !== null ? JSON.stringify(v) : v);
+          values.push(id);
+
+          const updateSql = `UPDATE ${tableName} SET ${setClauses}, updated_date = CURRENT_TIMESTAMP WHERE id = $${values.length} RETURNING *`;
+          const result = await query(updateSql, values);
+
+          if (result.rows.length === 0) return sendJSON(res, 404, { error: 'Item not found' });
+          broadcastEvent('ENTITY_UPDATED', { entity: entityName, id });
+          return sendJSON(res, 200, result.rows[0]);
+        }
+
+        if (req.method === 'DELETE' && id) {
+          const result = await query(`DELETE FROM ${tableName} WHERE id = $1 RETURNING id`, [id]);
+          if (result.rows.length === 0) return sendJSON(res, 404, { error: 'Item not found' });
+          broadcastEvent('ENTITY_DELETED', { entity: entityName, id });
+          return sendJSON(res, 200, { id, deleted: true });
+        }
+      } catch (err) {
+        console.error(`[PostgreSQL CRUD Error for ${entityName}]`, err.message);
+      }
+    }
+
+    const fallbackKey = Object.keys(defaultDb).find(k => k.toLowerCase() === entityName.toLowerCase() || k.toLowerCase() === tableName.replace(/_/g, '').toLowerCase()) || entityName;
+    fallbackDbStore = loadFallbackDb();
+    if (!fallbackDbStore[fallbackKey]) fallbackDbStore[fallbackKey] = [];
 
     if (req.method === 'GET') {
       if (id) {
-        const item = dbStore[entityName].find((x) => x.id === id);
+        const item = fallbackDbStore[fallbackKey].find((x) => x.id === id);
         return item ? sendJSON(res, 200, item) : sendJSON(res, 404, { error: 'Item not found' });
       }
 
-      let list = dbStore[entityName];
+      let list = fallbackDbStore[fallbackKey];
       reqUrl.searchParams.forEach((val, key) => {
-        if (key !== '_orderBy' && key !== '_limit') {
+        if (key !== '_orderBy' && key !== '_limit' && key !== 'token' && key !== 't') {
           list = list.filter((item) => String(item[key]) === String(val));
         }
       });
@@ -336,44 +925,46 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST') {
       const body = await parseBody(req);
       const newItem = {
-        id: `${entityName.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        id: body.id || `${entityName.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         created_date: new Date().toISOString(),
         status: 'active',
         ...body,
       };
-      dbStore[entityName].push(newItem);
-      saveDatabase(dbStore, entityName);
+      fallbackDbStore[fallbackKey].push(newItem);
+      saveFallbackDb(fallbackDbStore, fallbackKey);
       return sendJSON(res, 201, newItem);
     }
 
     if (req.method === 'PUT' && id) {
       const body = await parseBody(req);
-      const idx = dbStore[entityName].findIndex((x) => x.id === id);
+      const idx = fallbackDbStore[fallbackKey].findIndex((x) => x.id === id);
       if (idx >= 0) {
-        dbStore[entityName][idx] = {
-          ...dbStore[entityName][idx],
+        fallbackDbStore[fallbackKey][idx] = {
+          ...fallbackDbStore[fallbackKey][idx],
           ...body,
           updated_date: new Date().toISOString(),
         };
-        saveDatabase(dbStore, entityName);
-        return sendJSON(res, 200, dbStore[entityName][idx]);
+        saveFallbackDb(fallbackDbStore, fallbackKey);
+        return sendJSON(res, 200, fallbackDbStore[fallbackKey][idx]);
       }
+      return sendJSON(res, 404, { error: 'Item not found' });
     }
 
     if (req.method === 'DELETE' && id) {
-      dbStore[entityName] = dbStore[entityName].filter((x) => x.id !== id);
-      saveDatabase(dbStore, entityName);
+      fallbackDbStore[fallbackKey] = fallbackDbStore[fallbackKey].filter((x) => x.id !== id);
+      saveFallbackDb(fallbackDbStore, fallbackKey);
       return sendJSON(res, 200, { id, deleted: true });
     }
   }
 
-  sendJSON(res, 404, { error: 'Endpoint not found' });
+  sendJSON(res, 404, { error: 'Endpoint not found', path: pathname, method: req.method });
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`=======================================================`);
-  console.log(`  ZEXO Server Active on http://0.0.0.0:${PORT}`);
-  console.log(`  Real-Time SSE Sync Stream: http://0.0.0.0:${PORT}/api/events`);
-  console.log(`  Local Storage File: ${DB_FILE}`);
-  console.log(`=======================================================`);
+  console.log(`================================================================`);
+  console.log(`🚀 FindBack AI Backend Server Active on Port: ${PORT}`);
+  console.log(`📡 Health Check URL: http://0.0.0.0:${PORT}/api/health`);
+  console.log(`⚡ Real-Time SSE Stream: http://0.0.0.0:${PORT}/api/events`);
+  console.log(`🐘 Database Mode: ${isDbConnected() ? 'PostgreSQL Pool Active' : 'File-Backed Fallback'}`);
+  console.log(`================================================================`);
 });

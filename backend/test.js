@@ -195,6 +195,36 @@ async function runTests() {
       }
     });
 
+    // 10. Enterprise Console & Reports Routing
+    await testCase('GET /api/enterprise-console returns collections without 404', async () => {
+      const res = await request('GET', '/api/enterprise-console');
+      if (res.status !== 200 || !res.data.collections) {
+        throw new Error(`enterprise-console failed: ${JSON.stringify(res.data)}`);
+      }
+    });
+
+    await testCase('GET /api/reports returns unified lost and found reports', async () => {
+      const res = await request('GET', '/api/reports');
+      if (res.status !== 200 || !Array.isArray(res.data.all_reports)) {
+        throw new Error(`reports endpoint failed: ${JSON.stringify(res.data)}`);
+      }
+    });
+
+    // 11. Shorthand and Route Normalization
+    await testCase('GET /api/lost-reports shorthand resolves properly', async () => {
+      const res = await request('GET', '/api/lost-reports');
+      if (res.status !== 200 || !Array.isArray(res.data)) {
+        throw new Error(`lost-reports shorthand failed: ${JSON.stringify(res.data)}`);
+      }
+    });
+
+    await testCase('GET /api/api/health normalizes duplicate prefix without 404', async () => {
+      const res = await request('GET', '/api/api/health');
+      if (res.status !== 200 || res.data.status !== 'online') {
+        throw new Error(`duplicate prefix normalization failed: ${JSON.stringify(res.data)}`);
+      }
+    });
+
   } finally {
     serverProcess.kill();
   }

@@ -115,15 +115,20 @@ const candidateBaseUrls = () => {
   try {
     const envUrl = typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_BACKEND_URL) : null;
     if (envUrl) {
-      list.push(envUrl.endsWith('/api') ? envUrl.slice(0, -4) : envUrl);
-      list.push(envUrl);
+      const clean = envUrl.trim().replace(/\/+$/, '');
+      const domain = clean.endsWith('/api') ? clean.slice(0, -4) : clean;
+      list.push(domain);
     }
   } catch (e) {}
 
   try {
     if (typeof localStorage !== 'undefined') {
       const customIp = localStorage.getItem('zexo_backend_ip') || localStorage.getItem('SERVER_IP');
-      if (customIp) list.push(customIp.startsWith('http') ? customIp : `http://${customIp}:5000`);
+      if (customIp) {
+        const clean = customIp.trim().replace(/\/+$/, '');
+        const domain = clean.startsWith('http') ? clean : `http://${clean}:5000`;
+        list.push(domain.endsWith('/api') ? domain.slice(0, -4) : domain);
+      }
     }
   } catch (e) {}
 
@@ -200,12 +205,14 @@ const syncServerRequest = async (path, method = 'GET', body = null) => {
     };
     if (body) opts.body = JSON.stringify(body);
 
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
     const urls = candidateBaseUrls();
     for (const baseUrl of urls) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        const res = await fetch(`${baseUrl}${path}`, { ...opts, signal: controller.signal }).catch(() => null);
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const targetUrl = `${baseUrl.replace(/\/api$/, '')}${cleanPath}`;
+        const res = await fetch(targetUrl, { ...opts, signal: controller.signal }).catch(() => null);
         clearTimeout(timeoutId);
         if (res && res.ok) {
           return await res.json();

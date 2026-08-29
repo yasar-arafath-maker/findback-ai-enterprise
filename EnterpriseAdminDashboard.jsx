@@ -18,6 +18,7 @@ import {
   Terminal,
   Cpu
 } from 'lucide-react';
+import { getApiBaseUrl } from './networkClient.js';
 
 export default function EnterpriseAdminDashboard() {
   const [health, setHealth] = useState(null);
@@ -31,9 +32,10 @@ export default function EnterpriseAdminDashboard() {
   const fetchLiveTelemetry = async () => {
     try {
       const ts = Date.now();
+      const baseUrl = getApiBaseUrl().replace(/\/api$/, '');
       const [healthRes, consoleRes] = await Promise.all([
-        fetch(`http://localhost:5000/api/health?t=${ts}`, { cache: 'no-store' }).catch(() => null),
-        fetch(`http://localhost:5000/api/enterprise-console?t=${ts}`, { cache: 'no-store' }).catch(() => null),
+        fetch(`${baseUrl}/api/health?t=${ts}`, { cache: 'no-store' }).catch(() => null),
+        fetch(`${baseUrl}/api/enterprise-console?t=${ts}`, { cache: 'no-store' }).catch(() => null),
       ]);
 
       if (healthRes && healthRes.ok) {
