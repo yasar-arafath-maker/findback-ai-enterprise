@@ -113,6 +113,14 @@ import { computeSpatialProximityScore } from './spatialIndexer.js';
 const candidateBaseUrls = () => {
   const list = [];
   try {
+    const envUrl = typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_BACKEND_URL) : null;
+    if (envUrl) {
+      list.push(envUrl.endsWith('/api') ? envUrl.slice(0, -4) : envUrl);
+      list.push(envUrl);
+    }
+  } catch (e) {}
+
+  try {
     if (typeof localStorage !== 'undefined') {
       const customIp = localStorage.getItem('zexo_backend_ip') || localStorage.getItem('SERVER_IP');
       if (customIp) list.push(customIp.startsWith('http') ? customIp : `http://${customIp}:5000`);

@@ -1,0 +1,33 @@
+{
+  "name": "findback-ai-backend",
+  "version": "1.0.0",
+  "description": "FindBack AI Enterprise - Native Cloud Backend Engine for Render Deployment",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node seed_db.js",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "findback-ai",
+    "zexo",
+    "render",
+    "lost-and-found",
+    "backend",
+    "sse",
+    "simhash",
+    "crypto-handover"
+  ],
+  "author": "FindBack AI Enterprise Team",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "nodemailer": "^6.9.16",
+    "pg": "^8.23.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

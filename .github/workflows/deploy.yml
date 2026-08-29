@@ -1,0 +1,41 @@
+name: Deploy Backend to Render
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-and-deploy:
+    name: Backend Test & Render Deployment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: backend/package.json
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Run Backend Automated Integration Tests
+        working-directory: backend
+        run: npm test
+
+      - name: Trigger Render Deploy Webhook
+        if: success()
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            echo "🚀 Triggering Render Deployment Webhook..."
+            curl -X POST -f "${{ secrets.RENDER_DEPLOY_HOOK }}"
+            echo "✅ Render deployment successfully initiated."
+          else
+            echo "⚠️ Warning: RENDER_DEPLOY_HOOK secret is not set in GitHub repository settings. Skipping webhook dispatch."
+          fi
