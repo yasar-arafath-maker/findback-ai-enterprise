@@ -151,18 +151,24 @@ export default function ReportWizard() {
 
       const duplicate = (own || []).find((r) => Math.abs(new Date(r.lost_date || r.found_date) - new Date(form.date)) <= 172800000);
 
+      // Auto-extract AI visual tags & brand signatures
+      const { analyzeItemImage } = await import('./aiVisionTagger.js');
+      const aiAnalysis = analyzeItemImage(form.title, form.description, form.category);
+
       const payload = {
         title: form.title,
         category: form.category,
         description: form.description,
-        brand: form.brand,
-        color: form.color,
+        brand: form.brand || aiAnalysis.detected_brand,
+        color: form.color || aiAnalysis.dominant_color,
         distinguishing_marks: form.distinguishing_marks,
         location_text: form.location_text,
         location_lat: form.location_lat !== null ? Number(form.location_lat) : null,
         location_lng: form.location_lng !== null ? Number(form.location_lng) : null,
         primary_image_url: urls[0] || '',
         status: 'active',
+        ai_tags: aiAnalysis.visual_tags,
+        ai_confidence: aiAnalysis.ai_confidence_score,
         is_duplicate_of: duplicate?.id || '',
         ...(lost
           ? { reporter_id: userId, lost_date: form.date, lost_time: form.time }
@@ -177,6 +183,26 @@ export default function ReportWizard() {
       const report = lost
         ? await db.entities.LostReports.create(payload)
         : await db.entities.FoundReports.create(payload);
+
+      // Trigger Smart GPS Geo-Fencing Radius Alerts
+      if (report?.id && form.location_lat && form.location_lng) {
+        try {
+          const { checkGeoFenceAlerts } = await import('./geoFencingAlerts.js');
+          const existingList = lost
+            ? await db.entities.FoundReports.filter({}, '-created_date', 50).catch(() => [])
+            : await db.entities.LostReports.filter({}, '-created_date', 50).catch(() => []);
+          const radiusAlerts = checkGeoFenceAlerts(
+            { ...report, type: type, latitude: form.location_lat, longitude: form.location_lng },
+            existingList,
+            5.0
+          );
+          for (const alertRecord of radiusAlerts) {
+            await db.entities.Notifications.create(alertRecord).catch(() => null);
+          }
+        } catch (alertErr) {
+          console.warn('[GeoFence Alert Notice]:', alertErr.message);
+        }
+      }
 
       if (urls.length && report?.id) {
         await db.entities.ItemImages.bulkCreate(

@@ -2,7 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { db } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { LayoutDashboard, Search, PlusCircle, Bell, User, ShieldCheck, LogOut } from 'lucide-react';
+import { LayoutDashboard, Search, PlusCircle, Bell, User, ShieldCheck, LogOut, QrCode, MessageSquare, Award } from 'lucide-react';
 import Brand from '@/components/Brand';
 
 const links = [
@@ -10,6 +10,9 @@ const links = [
   ['/report/lost', 'Report', PlusCircle],
   ['/reports', 'My reports', Search],
   ['/matches', 'Matches', ShieldCheck],
+  ['/smart-tag', 'Smart QR Tag', QrCode],
+  ['/safe-chat', 'Safe Chat', MessageSquare],
+  ['/authority-handover', 'Police Receipt', Award],
   ['/notifications', 'Alerts', Bell],
   ['/profile', 'Profile', User],
 ];

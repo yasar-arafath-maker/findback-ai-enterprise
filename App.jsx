@@ -30,6 +30,9 @@ import AdminClaims from '@/pages/AdminClaims';
 import AdminHandovers from '@/pages/AdminHandovers';
 import EnterpriseTelemetryViewer from './EnterpriseTelemetryViewer';
 import EnterpriseAdminDashboard from './EnterpriseAdminDashboard';
+import SmartTagGenerator from './SmartTagGenerator';
+import SafeChatWindow from './SafeChatWindow';
+import DigitalHandoverCertificate from './DigitalHandoverCertificate';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -75,6 +78,9 @@ const AuthenticatedApp = () => {
           <Route path="/evidence/:claimId" element={<EvidenceStatus />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/handover" element={<HandoverStatus />} />
+          <Route path="/smart-tag" element={<SmartTagGenerator />} />
+          <Route path="/safe-chat" element={<SafeChatWindow />} />
+          <Route path="/authority-handover" element={<DigitalHandoverCertificate />} />
           <Route path="/profile" element={<Profile />} />
           <Route element={<AdminGuard />}>
             <Route path="/admin" element={<AdminDashboard />} />

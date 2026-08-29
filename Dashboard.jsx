@@ -168,6 +168,59 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* Enterprise Protection Suite Grid */}
+          <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <span className="text-[10px] font-mono font-bold text-cyan-300 uppercase tracking-widest block">
+                  Enterprise Security Layer
+                </span>
+                <h3 className="text-base font-extrabold text-white">ZEXO Protection & Protocol Tools</h3>
+              </div>
+              <span className="rounded-full bg-cyan-950 border border-cyan-500/30 px-3 py-1 text-[10px] font-bold text-cyan-300">
+                v2.4 Active
+              </span>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Link
+                to="/smart-tag"
+                className="rounded-xl border border-white/10 bg-white/10 p-3.5 hover:bg-white/20 transition-all block group"
+              >
+                <div className="text-cyan-400 font-bold text-xs flex items-center gap-1.5 mb-1">
+                  <span>🏷️ Smart QR Tag</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-snug">
+                  Generate digital anti-loss QR codes for laptops, keys & bags with anonymous relay.
+                </p>
+              </Link>
+
+              <Link
+                to="/safe-chat"
+                className="rounded-xl border border-white/10 bg-white/10 p-3.5 hover:bg-white/20 transition-all block group"
+              >
+                <div className="text-emerald-400 font-bold text-xs flex items-center gap-1.5 mb-1">
+                  <span>💬 Safe Chat & Call</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-snug">
+                  Encrypted messaging & masked phone call relay without exposing personal numbers.
+                </p>
+              </Link>
+
+              <Link
+                to="/authority-handover"
+                className="rounded-xl border border-white/10 bg-white/10 p-3.5 hover:bg-white/20 transition-all block group"
+              >
+                <div className="text-purple-300 font-bold text-xs flex items-center gap-1.5 mb-1">
+                  <span>📜 Police Handover</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-snug">
+                  Verifiable digital handover receipts with official timestamps & QR security.
+                </p>
+              </Link>
+            </div>
+          </div>
+
           {/* High-Confidence AI Matches Feed */}
           <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
