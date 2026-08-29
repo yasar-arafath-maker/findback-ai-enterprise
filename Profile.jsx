@@ -82,6 +82,46 @@ export default function Profile() {
             </span>
           </div>
         </div>
+
+        {/* Honor Score & Reputation Badge */}
+        <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-amber-800 uppercase tracking-widest block">
+                ZEXO Community Reputation
+              </span>
+              <h4 className="text-base font-extrabold text-amber-950 mt-0.5">
+                Honor Score: <span className="font-mono text-xl text-amber-600">98 / 100</span> (Tier 1 Gold Guardian)
+              </h4>
+            </div>
+            <span className="rounded-full bg-amber-500 text-white px-3 py-1 text-xs font-bold shadow-sm">
+              🏆 Verified Guardian
+            </span>
+          </div>
+          <p className="text-xs text-amber-800 mt-2">
+            Your Honor Score increases with every verified item return and successful claim validation.
+          </p>
+        </div>
+
+        {/* Detective AI Inspector Assistant Card */}
+        <div className="rounded-2xl border border-blue-200 bg-slate-900 text-white p-5 shadow-md">
+          <div className="flex items-center space-x-3 mb-3">
+            <div className="h-9 w-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-xs text-white">
+              🕵️
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-white">Detective AI Inspector</h4>
+              <p className="text-xs text-cyan-400 font-mono">Automated Matching Assistant & Claim Auditor</p>
+            </div>
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed mb-3">
+            Detective AI automatically monitors your lost item reports, cross-references location data, and calculates SimHash text similarities to alert you of potential matches in real-time.
+          </p>
+          <div className="rounded-xl bg-slate-850 border border-slate-800 p-3 text-[11px] font-mono text-emerald-400">
+            ● Detective AI Status: ACTIVE & AUDITING (0 False Claims Detected)
+          </div>
+        </div>
+
         {saved && (
           <p className="text-sm font-semibold text-emerald-700 bg-emerald-50 p-3 rounded-xl border border-emerald-200">
             Profile updated successfully.

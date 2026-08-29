@@ -131,6 +131,22 @@
       "role": "user",
       "account_status": "active",
       "created_date": "2026-08-29T06:14:37.864Z"
+    },
+    {
+      "id": "user-1787985155254",
+      "email": "test.user.1787985154266@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-29T06:32:35.254Z"
+    },
+    {
+      "id": "user-1787985171760",
+      "email": "test.user.1787985171089@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-29T06:32:51.760Z"
     }
   ],
   "LostReports": [],
