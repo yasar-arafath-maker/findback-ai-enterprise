@@ -472,12 +472,17 @@ export default function EnterpriseAdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070B14] text-slate-100 font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
-      {/* ── Background Glow Matrix ────────────────────────────────────────── */}
+    <div className="min-h-screen bg-gradient-to-b from-[#030712] via-[#080e1e] to-[#0f172a] text-slate-100 font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200">
+      {/* ── Subtle Premium Radial Ambient Glow Matrix ────────────────────────────────────────── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-40 left-1/4 w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[140px]"></div>
-        <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-[140px]"></div>
-        <div className="absolute -bottom-40 left-1/3 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[140px]"></div>
+        {/* Top-left deep slate cyan glow */}
+        <div className="absolute -top-32 -left-32 w-[550px] h-[550px] bg-cyan-600/[0.07] rounded-full blur-[150px]"></div>
+        {/* Top-right deep indigo glow */}
+        <div className="absolute -top-32 -right-32 w-[600px] h-[600px] bg-indigo-600/[0.08] rounded-full blur-[160px]"></div>
+        {/* Bottom-left subtle deep blue glow */}
+        <div className="absolute -bottom-40 -left-20 w-[600px] h-[600px] bg-slate-800/[0.15] rounded-full blur-[160px]"></div>
+        {/* Bottom-right subtle emerald/cyan ambient glow */}
+        <div className="absolute -bottom-32 -right-20 w-[550px] h-[550px] bg-emerald-600/[0.06] rounded-full blur-[150px]"></div>
       </div>
 
       <div className="relative z-10 p-4 sm:p-8 max-w-[1600px] mx-auto">
