@@ -8,6 +8,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "seed": "node seed_db.js",
+    "db:init": "node init_db.js",
     "test": "node test.js"
   },
   "keywords": [

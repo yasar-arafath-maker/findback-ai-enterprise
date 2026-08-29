@@ -666,7 +666,7 @@ const server = http.createServer(async (req, res) => {
             handoverId: handover.id,
             claimantId: handover.lost_owner_id,
             finderId: handover.found_reporter_id,
-            adminId: 'admin-supervisor',
+            adminId: 'admin-default-1',
             verificationCode: String(verificationCode),
             timestamp: now,
           });
@@ -700,7 +700,7 @@ const server = http.createServer(async (req, res) => {
           await client.query(
             `INSERT INTO admin_actions (id, admin_id, action_type, target_entity_type, target_entity_id, notes, created_date)
              VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
-            [`act-${Date.now()}`, 'admin-supervisor', 'handover_completed', 'handovers', handover.id, `SHA256:${receiptHash}`]
+            [`act-${Date.now()}`, 'admin-default-1', 'handover_completed', 'handovers', handover.id, `SHA256:${receiptHash}`]
           );
 
           await client.query('COMMIT');
