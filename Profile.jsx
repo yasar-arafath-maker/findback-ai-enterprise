@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import PageHeader from '@/components/PageHeader';
-import { UserCheck, ShieldCheck } from 'lucide-react';
+import { UserCheck, ShieldCheck, LogOut } from 'lucide-react';
 
 export default function Profile() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, logout } = useAuth();
   const [user, setUser] = useState(null);
   const [phone, setPhone] = useState('');
   const [fullName, setFullName] = useState('');
@@ -129,6 +129,14 @@ export default function Profile() {
         )}
         <Button onClick={save} className="w-full btn-interactive bg-blue-600 hover:bg-blue-700 h-11 font-semibold">
           Save Account Changes
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => (logout ? logout() : db.auth.logout('/'))}
+          className="w-full h-11 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 font-semibold gap-2 transition-all active:scale-95"
+        >
+          <LogOut className="h-4 w-4 text-red-600" /> Sign Out & Exit Account
         </Button>
       </div>
     </div>

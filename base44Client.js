@@ -110,14 +110,27 @@ import { categoryScore, temporalScore, computeOverallScore } from './matchScore.
 import { generateTextFingerprint, compareTextFingerprints } from './textFingerprint.js';
 import { computeSpatialProximityScore } from './spatialIndexer.js';
 
-const getApiBaseUrl = () => {
+const candidateBaseUrls = () => {
+  const list = [];
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const customIp = localStorage.getItem('zexo_backend_ip') || localStorage.getItem('SERVER_IP');
+      if (customIp) list.push(customIp.startsWith('http') ? customIp : `http://${customIp}:5000`);
+    }
+  } catch (e) {}
+
   if (typeof window !== 'undefined' && window.location?.hostname) {
     const host = window.location.hostname;
     if (host && host !== 'localhost' && host !== '127.0.0.1') {
-      return `http://${host}:5000`;
+      list.push(`http://${host}:5000`);
     }
   }
-  return 'http://localhost:5000';
+
+  list.push('http://172.17.42.232:5000');
+  list.push('http://10.0.2.2:5000');
+  list.push('http://localhost:5000');
+
+  return Array.from(new Set(list));
 };
 
 const syncServerRequest = async (path, method = 'GET', body = null) => {
@@ -131,17 +144,24 @@ const syncServerRequest = async (path, method = 'GET', body = null) => {
           const dbData = JSON.parse(raw);
           if (path.startsWith('/api/auth/register') && body?.email) {
             if (!dbData.User) dbData.User = [];
-            if (!dbData.User.some(u => u.email === body.email)) {
-              dbData.User.push({
+            let existingUser = dbData.User.find(u => u.email === body.email);
+            const nameVal = body.full_name || body.name || body.email.split('@')[0];
+            if (!existingUser) {
+              existingUser = {
                 id: 'user-' + Date.now(),
                 email: body.email,
-                full_name: body.full_name || body.email.split('@')[0],
+                full_name: nameVal,
+                phone: body.phone || '',
                 role: 'user',
                 account_status: 'active',
                 created_date: new Date().toISOString(),
-              });
-              fs.writeFileSync(dbFile, JSON.stringify(dbData, null, 2), 'utf8');
+              };
+              dbData.User.push(existingUser);
+            } else if (nameVal && nameVal !== body.email.split('@')[0]) {
+              existingUser.full_name = nameVal;
             }
+            fs.writeFileSync(dbFile, JSON.stringify(dbData, null, 2), 'utf8');
+            return { status: 'success', user: existingUser };
           } else if (path.startsWith('/api/entities/')) {
             const parts = path.split('/');
             const entityName = parts[3];
@@ -166,15 +186,23 @@ const syncServerRequest = async (path, method = 'GET', body = null) => {
       return null;
     }
 
-    const baseUrl = getApiBaseUrl();
     const opts = {
       method,
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
     };
     if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(`${baseUrl}${path}`, opts).catch(() => null);
-    if (res && res.ok) {
-      return await res.json();
+
+    const urls = candidateBaseUrls();
+    for (const baseUrl of urls) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch(`${baseUrl}${path}`, { ...opts, signal: controller.signal }).catch(() => null);
+        clearTimeout(timeoutId);
+        if (res && res.ok) {
+          return await res.json();
+        }
+      } catch (err) {}
     }
   } catch (err) {
     // Non-blocking
@@ -210,11 +238,14 @@ const standaloneAuthClient = {
     },
     register: async (data) => {
       const email = data?.email || 'user@example.com';
+      const fullName = data?.full_name || data?.name || data?.fullName || email.split('@')[0];
+      const phone = data?.phone || '';
       const otpRes = await sendOtpEmail(email);
       const user = {
         id: 'user-' + Date.now(),
         email,
-        full_name: data?.full_name || email.split('@')[0],
+        full_name: fullName,
+        phone,
         role: 'user',
         account_status: 'active',
       };
@@ -224,15 +255,17 @@ const standaloneAuthClient = {
       const serverRes = await syncServerRequest('/api/auth/register', 'POST', {
         email: user.email,
         full_name: user.full_name,
-        phone: data?.phone || '',
+        phone: user.phone,
       });
 
       return { status: 'success', email: user.email, code: otpRes?.code, user: serverRes?.user || user };
     },
-    loginViaEmailPassword: async (email, password) => {
+    loginViaEmailPassword: async (email, password, extraData = {}) => {
+      const fullName = extraData?.full_name || extraData?.name || extraData?.fullName || (email ? email.split('@')[0] : 'User');
       const user = {
         id: 'user-' + Date.now(),
         email: email || 'user@example.com',
+        full_name: fullName,
         role: email?.includes('admin') ? 'admin' : 'user',
         account_status: 'active',
       };
@@ -241,7 +274,11 @@ const standaloneAuthClient = {
       setStoredUser(user);
 
       // Directly sync login to local_db.json on server.js!
-      const serverRes = await syncServerRequest('/api/auth/login', 'POST', { email, password });
+      const serverRes = await syncServerRequest('/api/auth/login', 'POST', {
+        email,
+        password,
+        full_name: fullName,
+      });
       if (serverRes?.user) {
         setStoredUser(serverRes.user);
         if (serverRes.access_token) setStoredToken(serverRes.access_token);

@@ -234,8 +234,10 @@ const server = http.createServer(async (req, res) => {
   // ── Auth Endpoints ──
   if (pathname === '/api/auth/register' && req.method === 'POST') {
     const body = await parseBody(req);
-    const { email, full_name, phone } = body;
+    const { email, full_name, name, fullName, phone } = body;
     if (!email) return sendJSON(res, 400, { error: 'Email is required' });
+
+    const nameVal = full_name || name || fullName || email.split('@')[0];
 
     dbStore = loadDatabase();
     let existing = dbStore.User.find((u) => u.email === email);
@@ -243,13 +245,16 @@ const server = http.createServer(async (req, res) => {
       existing = {
         id: `user-${Date.now()}`,
         email,
-        full_name: full_name || email.split('@')[0],
+        full_name: nameVal,
         phone: phone || '',
         role: 'user',
         account_status: 'active',
         created_date: new Date().toISOString(),
       };
       dbStore.User.push(existing);
+    } else {
+      if (nameVal && nameVal !== email.split('@')[0]) existing.full_name = nameVal;
+      if (phone) existing.phone = phone;
     }
 
     const token = `token_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -261,8 +266,10 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname === '/api/auth/login' && req.method === 'POST') {
     const body = await parseBody(req);
-    const { email } = body;
+    const { email, full_name, name, fullName } = body;
     if (!email) return sendJSON(res, 400, { error: 'Email is required' });
+
+    const nameVal = full_name || name || fullName || email.split('@')[0];
 
     dbStore = loadDatabase();
     let user = dbStore.User.find((u) => u.email === email);
@@ -270,12 +277,14 @@ const server = http.createServer(async (req, res) => {
       user = {
         id: `user-${Date.now()}`,
         email,
-        full_name: email.split('@')[0],
+        full_name: nameVal,
         role: email.includes('admin') ? 'admin' : 'user',
         account_status: 'active',
         created_date: new Date().toISOString(),
       };
       dbStore.User.push(user);
+    } else if (nameVal && nameVal !== email.split('@')[0]) {
+      user.full_name = nameVal;
     }
 
     const token = `token_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;

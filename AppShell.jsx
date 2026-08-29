@@ -67,6 +67,27 @@ export default function AppShell() {
       </aside>
 
       <main className="pb-20 md:ml-64 md:pb-0">
+        {/* Mobile Top Header with Exit/Logout Button */}
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-800 bg-[#0F1F3D] px-4 py-3 md:hidden shadow-md">
+          <button
+            onClick={() => (logout ? logout() : db.auth.logout('/'))}
+            className="flex items-center gap-2 rounded-xl bg-red-500/20 border border-red-500/30 px-3 py-1.5 text-xs font-bold text-red-300 hover:bg-red-500/30 transition-all active:scale-95 shadow-sm"
+            title="Exit Application / Log Out"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span>Exit / Log Out</span>
+          </button>
+
+          <div className="flex items-center space-x-2">
+            <span className="text-xs font-bold text-slate-200 truncate max-w-[130px]">
+              {user?.full_name || user?.email?.split('@')[0] || 'ZEXO Mobile'}
+            </span>
+            <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-[11px] font-black text-white shadow-sm border border-cyan-400/30">
+              {(user?.full_name || user?.email || 'U')[0].toUpperCase()}
+            </div>
+          </div>
+        </header>
+
         <Outlet />
       </main>
 

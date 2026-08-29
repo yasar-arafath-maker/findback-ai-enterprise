@@ -171,6 +171,33 @@
       "role": "user",
       "account_status": "active",
       "created_date": "2026-08-29T06:54:32.780Z"
+    },
+    {
+      "id": "user-1787988489826",
+      "email": "infantajin@zexo.app",
+      "full_name": "Infant Ajin Jose",
+      "phone": "+91 98765 12345",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-29T07:28:09.826Z"
+    },
+    {
+      "id": "user-1787988524989",
+      "email": "test.user.1787988524789@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-29T07:28:44.989Z"
+    },
+    {
+      "id": "user-1787988544042",
+      "email": "test.user.1787988543909@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-08-29T07:29:04.042Z"
     }
   ],
   "LostReports": [
