@@ -60,11 +60,48 @@ const defaultDb = {
   Sessions: {},
 };
 
+const sampleLostReports = [
+  { id: "lost-seed-101", title: "MacBook Air M2 (Space Grey) in Leather Sleeve", category: "Electronics", description: "Space Grey 13-inch MacBook Air M2 in dark brown leather sleeve.", brand: "Apple", color: "Space Grey", location_text: "KRCT Central Library", location_lat: 10.8231, location_lng: 78.6942, reporter_id: "user-sarah-101", lost_date: "2026-08-26", lost_time: "14:30", status: "active", created_date: "2026-08-26T14:30:00.000Z" },
+  { id: "lost-seed-102", title: "Apple iPhone 15 Pro Max (Natural Titanium)", category: "Electronics", description: "Natural Titanium iPhone 15 Pro Max with matte screen protector.", brand: "Apple", color: "Natural Titanium", location_text: "KRCT Campus Cafeteria", location_lat: 10.8238, location_lng: 78.6948, reporter_id: "user-anand-103", lost_date: "2026-08-25", lost_time: "12:45", status: "active", created_date: "2026-08-25T12:45:00.000Z" },
+  { id: "lost-seed-103", title: "Wildcraft Black Leather Wallet with Student ID", category: "Bags", description: "Black bi-fold leather wallet containing student ID card.", brand: "Wildcraft", color: "Black", location_text: "KRCT Sports Complex", location_lat: 10.8242, location_lng: 78.6952, reporter_id: "user-karthik-105", lost_date: "2026-08-24", lost_time: "17:15", status: "active", created_date: "2026-08-24T17:15:00.000Z" }
+];
+
+const sampleFoundReports = [
+  { id: "found-seed-201", title: "MacBook Air M2 (Space Grey) found near Library Lounge", category: "Electronics", description: "Found Space Grey MacBook Air inside brown leather case.", brand: "Apple", color: "Space Grey", location_text: "KRCT Central Library Study Lounge", location_lat: 10.8232, location_lng: 78.6943, finder_id: "user-priya-109", current_holder_location: "Central Library Security Desk", found_date: "2026-08-26", found_time: "15:00", status: "active", created_date: "2026-08-26T15:00:00.000Z" },
+  { id: "found-seed-202", title: "iPhone 15 Pro Max found at Cafeteria Counter", category: "Electronics", description: "Found Natural Titanium iPhone 15 Pro with blue ring stand.", brand: "Apple", color: "Natural Titanium", location_text: "KRCT Campus Cafeteria", location_lat: 10.8239, location_lng: 78.6949, finder_id: "user-priya-109", current_holder_location: "Cafeteria Manager Office", found_date: "2026-08-25", found_time: "13:10", status: "active", created_date: "2026-08-25T13:10:00.000Z" }
+];
+
+const sampleAIMatches = [
+  { id: "match-seed-301", lost_report_id: "lost-seed-101", found_report_id: "found-seed-201", overall_confidence_score: 96.5, text_similarity_score: 98.0, spatial_proximity_km: 0.015, temporal_proximity_hours: 0.5, status: "suggested", ai_recommendation: "HIGH CONFIDENCE MATCH: Match verified by SimHash text analysis and spatial proximity (15m).", created_date: "2026-08-26T15:05:00.000Z" },
+  { id: "match-seed-302", lost_report_id: "lost-seed-102", found_report_id: "found-seed-202", overall_confidence_score: 94.2, text_similarity_score: 95.0, spatial_proximity_km: 0.02, temporal_proximity_hours: 0.4, status: "suggested", ai_recommendation: "HIGH CONFIDENCE MATCH: Titanium iPhone 15 Pro Max matched with ring stand.", created_date: "2026-08-25T13:15:00.000Z" }
+];
+
+const sampleClaims = [
+  { id: "claim-seed-401", match_id: "match-seed-301", claimant_id: "user-sarah-101", claimant_notes: "This is my MacBook Air M2.", status: "approved", evidence_score: 98.0, verification_hash: "0x8F9C2B1D4E3A7F0B", created_date: "2026-08-26T16:00:00.000Z" }
+];
+
+const sampleHandovers = [
+  { id: "handover-seed-501", claim_id: "claim-seed-401", cert_id: "ZEXO-CERT-88492015", item_name: "MacBook Air M2 (Space Grey)", authority_name: "KRCT Central Library Security Desk", officer_name: "Inspector R. Sharma (Badge #8839)", recipient_email: "sarah.m@gmail.com", signature_hash: "0x9E8D7C6B5A4F3E2D", timestamp: "2026-08-26 17:30:00", created_date: "2026-08-26T17:30:00.000Z" }
+];
+
 const loadDatabase = () => {
   try {
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, 'utf8');
-      return { ...defaultDb, ...JSON.parse(data) };
+      const loaded = { ...defaultDb, ...JSON.parse(data) };
+      
+      // Auto-fill collections if empty
+      let dirty = false;
+      if (!loaded.LostReports || loaded.LostReports.length === 0) { loaded.LostReports = sampleLostReports; dirty = true; }
+      if (!loaded.FoundReports || loaded.FoundReports.length === 0) { loaded.FoundReports = sampleFoundReports; dirty = true; }
+      if (!loaded.AIMatches || loaded.AIMatches.length === 0) { loaded.AIMatches = sampleAIMatches; dirty = true; }
+      if (!loaded.Claims || loaded.Claims.length === 0) { loaded.Claims = sampleClaims; dirty = true; }
+      if (!loaded.Handovers || loaded.Handovers.length === 0) { loaded.Handovers = sampleHandovers; dirty = true; }
+
+      if (dirty) {
+        saveDatabase(loaded);
+      }
+      return loaded;
     }
   } catch (err) {
     console.error('[Server DB] Read error:', err.message);

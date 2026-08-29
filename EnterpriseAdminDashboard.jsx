@@ -106,6 +106,7 @@ export default function EnterpriseAdminDashboard() {
   const foundList = collections.found_reports || [];
   const matchesList = collections.ai_matches || [];
   const claimsList = collections.claims || [];
+  const handoversList = collections.handovers || [];
 
   const filterByQuery = (list) => {
     if (!searchQuery) return list;
@@ -225,10 +226,10 @@ export default function EnterpriseAdminDashboard() {
             <Layers className="h-4 w-4 text-indigo-400" />
           </div>
           <div className="mt-3 text-xl font-extrabold text-white font-mono">
-            {usersList.length + lostList.length + foundList.length + matchesList.length} Records
+            {usersList.length + lostList.length + foundList.length + matchesList.length + claimsList.length + handoversList.length} Records
           </div>
           <p className="mt-1 text-[11px] text-slate-400 font-mono">
-            Users, Reports & AI Matches
+            Users, Reports, Matches & Handovers
           </p>
         </div>
       </div>
@@ -244,6 +245,8 @@ export default function EnterpriseAdminDashboard() {
               ['lost', `Lost Reports (${lostList.length})`, FileText],
               ['found', `Found Reports (${foundList.length})`, FileText],
               ['matches', `AI Matches (${matchesList.length})`, Sparkles],
+              ['claims', `Claims (${claimsList.length})`, ShieldCheck],
+              ['handovers', `Handovers (${handoversList.length})`, ShieldCheck],
               ['json_tree', 'Live JSON Tree', Terminal],
             ].map(([id, label, Icon]) => (
               <button
@@ -451,7 +454,71 @@ export default function EnterpriseAdminDashboard() {
           </div>
         )}
 
-        {/* Tab Content 6: JSON Tree Viewer */}
+        {/* Tab Content 6: Claims */}
+        {activeTab === 'claims' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                <tr>
+                  <th className="p-4">Claim ID</th>
+                  <th className="p-4">Match ID</th>
+                  <th className="p-4">Claimant</th>
+                  <th className="p-4">Score</th>
+                  <th className="p-4">Verification Hash</th>
+                  <th className="p-4">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                {filterByQuery(claimsList).map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-800/40 transition-colors">
+                    <td className="p-4 text-cyan-400 font-bold">{c.id}</td>
+                    <td className="p-4 text-amber-300">{c.match_id}</td>
+                    <td className="p-4 text-slate-200">{c.claimant_id}</td>
+                    <td className="p-4 text-emerald-400 font-black">{c.evidence_score || 95}%</td>
+                    <td className="p-4 text-purple-300 font-mono">{c.verification_hash || '0x7F8E...'}</td>
+                    <td className="p-4">
+                      <span className="rounded-full bg-emerald-950 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300">
+                        {c.status || 'approved'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tab Content 7: Handovers */}
+        {activeTab === 'handovers' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                <tr>
+                  <th className="p-4">Cert ID</th>
+                  <th className="p-4">Item Name</th>
+                  <th className="p-4">Authority Station / Desk</th>
+                  <th className="p-4">Officer Name</th>
+                  <th className="p-4">Signature Hash</th>
+                  <th className="p-4">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                {filterByQuery(handoversList).map((h) => (
+                  <tr key={h.id || h.cert_id} className="hover:bg-slate-800/40 transition-colors">
+                    <td className="p-4 text-purple-400 font-bold">{h.cert_id || h.id}</td>
+                    <td className="p-4 text-white font-sans font-bold">{h.item_name}</td>
+                    <td className="p-4 text-amber-300">{h.authority_name}</td>
+                    <td className="p-4 text-emerald-400">{h.officer_name}</td>
+                    <td className="p-4 text-cyan-300 font-mono text-[11px]">{h.signature_hash}</td>
+                    <td className="p-4 text-slate-400 text-[11px]">{h.timestamp || h.created_date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tab Content 8: JSON Tree Viewer */}
         {activeTab === 'json_tree' && (
           <div className="p-4 bg-slate-950">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
