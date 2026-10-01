@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "start": "node run_all.js",
+    "app": "node run_all.js",
     "dev": "vite",
+    "server": "node backend/server.js",
     "build": "vite build",
     "build:all": "node tests/live_integration_diagnostic.test.js && vite build && npx cap sync android",
     "lint": "eslint . --quiet",

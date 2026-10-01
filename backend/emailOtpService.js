@@ -69,13 +69,13 @@ const dispatchSmtpViaNodemailer = async (email, code) => {
 /**
  * Send 6-digit OTP code to the specified email address
  */
-export const sendOtpEmail = async (rawEmail) => {
+export const sendOtpEmail = async (rawEmail, customCode = null) => {
   const email = sanitizeEmail(rawEmail);
   
   // Rate limit: max 3 requests per 5 minutes per email
   checkRateLimit(`otp_resend:${email}`, 3, 5 * 60 * 1000);
 
-  const code = generateOtpCode();
+  const code = customCode ? sanitizeOtpCode(customCode) : generateOtpCode();
   const TTL_MS = 10 * 60 * 1000;
   const expiresAt = Date.now() + TTL_MS;
 

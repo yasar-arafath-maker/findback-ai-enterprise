@@ -67,6 +67,60 @@
       "role": "user",
       "account_status": "active",
       "created_date": "2026-08-29T08:45:14.066Z"
+    },
+    {
+      "id": "user-1789099774966",
+      "email": "abc@gmail.com",
+      "full_name": "abc",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:09:34.970Z"
+    },
+    {
+      "id": "user-1789100074567",
+      "email": "indhu@gmail.com",
+      "full_name": "indhu",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:14:34.593Z"
+    },
+    {
+      "id": "user-1789100356362",
+      "email": "keerthi@gmail.com",
+      "full_name": "keerthi",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:19:16.384Z"
+    },
+    {
+      "id": "user-1789100407720",
+      "email": "kalai@gmail.com",
+      "full_name": "kalai",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:20:07.730Z"
+    },
+    {
+      "id": "user-1789100512593",
+      "email": "mathi@gmail.com",
+      "full_name": "mathi",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:21:52.631Z"
+    },
+    {
+      "id": "user-1789102051709",
+      "email": "test.1789102051703@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:47:31.711Z"
     }
   ],
   "LostReports": [
@@ -181,6 +235,18 @@
     {
       "id": "lostreports-1787993114077-ixcl",
       "created_date": "2026-08-29T08:45:14.077Z",
+      "status": "active",
+      "title": "MacBook Air M2 Silver",
+      "category": "Electronics",
+      "description": "Silver 13-inch laptop left at cafeteria",
+      "brand": "Apple",
+      "color": "Silver",
+      "location_lat": 10.8231,
+      "location_lng": 78.6942
+    },
+    {
+      "id": "lostreports-1789102051761-r4k1",
+      "created_date": "2026-09-11T04:47:31.762Z",
       "status": "active",
       "title": "MacBook Air M2 Silver",
       "category": "Electronics",
@@ -387,6 +453,36 @@
       "status": "suggested",
       "ai_recommendation": "Match Confidence: 54% (Text: 13%, Proximity: 99%, Category: 100%)",
       "created_date": "2026-08-29T08:45:14.089Z"
+    },
+    {
+      "id": "match-1789102051793-yxql",
+      "lost_report_id": "lostreports-1789102051761-r4k1",
+      "found_report_id": "found-seed-201",
+      "overall_score": 58,
+      "overall_confidence_score": 58,
+      "text_similarity_score": 28,
+      "image_similarity_score": 50,
+      "category_match_score": 100,
+      "location_proximity_score": 100,
+      "time_proximity_score": 50,
+      "status": "suggested",
+      "ai_recommendation": "Match Confidence: 58% (Text: 28%, Proximity: 100%, Category: 100%)",
+      "created_date": "2026-09-11T04:47:31.793Z"
+    },
+    {
+      "id": "match-1789102051796-0mb7",
+      "lost_report_id": "lostreports-1789102051761-r4k1",
+      "found_report_id": "found-seed-202",
+      "overall_score": 54,
+      "overall_confidence_score": 54,
+      "text_similarity_score": 13,
+      "image_similarity_score": 50,
+      "category_match_score": 100,
+      "location_proximity_score": 99,
+      "time_proximity_score": 50,
+      "status": "suggested",
+      "ai_recommendation": "Match Confidence: 54% (Text: 13%, Proximity: 99%, Category: 100%)",
+      "created_date": "2026-09-11T04:47:31.796Z"
     }
   ],
   "Claims": [
@@ -479,6 +575,22 @@
       "created_date": "2026-08-29T08:45:14.094Z",
       "completed_at": "2026-08-29T08:45:14.098Z",
       "receipt_hash": "e9ceedfbd115867820d40f3aa0bf72bd1efcb6592e7e4d121b51fd97edba93cd"
+    },
+    {
+      "id": "handover-1789102051806",
+      "claim_id": "claim-seed-401",
+      "cert_id": "ZEXO-CERT-20973934",
+      "item_name": "Recovered Item",
+      "lost_owner_id": "user-sarah-101",
+      "found_reporter_id": "user-priya-109",
+      "scheduled_location": "Central Campus Security Office Desk 1",
+      "scheduled_datetime": "2026-09-12T04:47:31.809Z",
+      "status": "completed",
+      "verification_code": "852583",
+      "admin_supervised": true,
+      "created_date": "2026-09-11T04:47:31.809Z",
+      "completed_at": "2026-09-11T04:47:31.818Z",
+      "receipt_hash": "d8603ef802a351a91c89767a78d922f302345ff38c2415f119d7371889901879"
     }
   ],
   "Notifications": [
@@ -529,6 +641,123 @@
       "role": "user",
       "account_status": "active",
       "created_date": "2026-08-29T08:45:14.066Z"
+    },
+    "token_1789099774966_ih8ikt": {
+      "id": "user-1789099774966",
+      "email": "abc@gmail.com",
+      "full_name": "abc",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:09:34.970Z"
+    },
+    "token_1789099923034_3y3mbq": {
+      "id": "user-1789099774966",
+      "email": "abc@gmail.com",
+      "full_name": "abc",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:09:34.970Z"
+    },
+    "token_1789100074567_ro0jm0": {
+      "id": "user-1789100074567",
+      "email": "indhu@gmail.com",
+      "full_name": "indhu",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:14:34.593Z"
+    },
+    "token_1789100356363_regii4": {
+      "id": "user-1789100356362",
+      "email": "keerthi@gmail.com",
+      "full_name": "keerthi",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:19:16.384Z"
+    },
+    "token_1789100407722_m3gu1n": {
+      "id": "user-1789100407720",
+      "email": "kalai@gmail.com",
+      "full_name": "kalai",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:20:07.730Z"
+    },
+    "token_1789100512595_2kf7br": {
+      "id": "user-1789100512593",
+      "email": "mathi@gmail.com",
+      "full_name": "mathi",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:21:52.631Z"
+    },
+    "token_1789100800831_7yrz7z": {
+      "id": "user-1789100407720",
+      "email": "kalai@gmail.com",
+      "full_name": "kalai",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:20:07.730Z"
+    },
+    "token_1789101292639_oanxsy": {
+      "id": "user-1789100356362",
+      "email": "keerthi@gmail.com",
+      "full_name": "keerthi",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:19:16.384Z"
+    },
+    "token_1789102051709_fxj08h": {
+      "id": "user-1789102051709",
+      "email": "test.1789102051703@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:47:31.711Z"
+    },
+    "token_1789102260247_9wdp6q": {
+      "id": "user-1789100074567",
+      "email": "indhu@gmail.com",
+      "full_name": "indhu",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:14:34.593Z"
+    },
+    "token_1789102263227_b7rpbv": {
+      "id": "user-1789100074567",
+      "email": "indhu@gmail.com",
+      "full_name": "indhu",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:14:34.593Z"
+    },
+    "token_1789104281908_qfhqbt": {
+      "id": "user-1789100074567",
+      "email": "indhu@gmail.com",
+      "full_name": "indhu",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:14:34.593Z"
+    },
+    "token_1789104285267_x0wja5": {
+      "id": "user-1789100074567",
+      "email": "indhu@gmail.com",
+      "full_name": "indhu",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-09-11T04:14:34.593Z"
     }
   }
 }

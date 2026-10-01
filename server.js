@@ -462,7 +462,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await parseBody(req);
       if (!body.email) return sendJSON(res, 400, { error: 'Email is required' });
-      const result = await sendOtpEmail(body.email);
+      const result = await sendOtpEmail(body.email, body.code);
       return sendJSON(res, 200, result);
     } catch (err) {
       return sendJSON(res, 400, { error: err.message });

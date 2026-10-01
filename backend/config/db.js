@@ -90,6 +90,7 @@ export const getClient = async () => {
 export const initSchema = async () => {
   if (!pool) return false;
   try {
+    await pool.query('SELECT 1');
     const schemaPath = path.join(__dirname, '..', 'schema.sql');
     if (fs.existsSync(schemaPath)) {
       const sql = fs.readFileSync(schemaPath, 'utf8');
@@ -98,7 +99,8 @@ export const initSchema = async () => {
       return true;
     }
   } catch (err) {
-    console.error('❌ [PostgreSQL] Schema initialization error:', err.message);
+    console.warn('⚠️ [PostgreSQL] Remote database unreachable (' + err.message + '). Seamlessly falling back to local file storage.');
+    isPostgresActive = false;
   }
   return false;
 };
