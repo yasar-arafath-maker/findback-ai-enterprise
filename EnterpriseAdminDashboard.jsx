@@ -49,6 +49,7 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 import { getApiBaseUrl } from './networkClient.js';
+import { generateHandoverCertificatePdf } from './certificatePdfGenerator.js';
 
 // Browser-safe SHA-256 hash generator for digital certificates
 async function sha256Browser(message) {
@@ -1632,8 +1633,21 @@ export default function EnterpriseAdminDashboard() {
                   <Printer className="h-3.5 w-3.5" /> Print Certificate
                 </button>
                 <button
+                  onClick={async () => {
+                    try {
+                      await generateHandoverCertificatePdf(certificateViewModal);
+                      showToast('Certificate PDF downloaded successfully');
+                    } catch (e) {
+                      showToast('Could not download PDF: ' + e.message, 'error');
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-purple-600 text-white font-bold text-xs flex items-center gap-2 hover:bg-purple-500 transition-colors"
+                >
+                  <Download className="h-3.5 w-3.5" /> Save PDF
+                </button>
+                <button
                   onClick={() => setCertificateViewModal(null)}
-                  className="px-5 py-2 rounded-xl bg-purple-600 text-white font-bold text-xs hover:bg-purple-500 transition-colors"
+                  className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors"
                 >
                   Close
                 </button>

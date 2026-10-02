@@ -6,9 +6,10 @@
  */
 
 import React, { useState } from 'react';
-import { ShieldCheck, Award, Download, Printer, CheckCircle2, Building2, QrCode, FileText, Lock } from 'lucide-react';
+import { ShieldCheck, Award, Download, Printer, CheckCircle2, Building2, QrCode, FileText, Lock, Loader2 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import QRCode from 'qrcode';
+import { generateHandoverCertificatePdf } from './certificatePdfGenerator';
 
 export default function DigitalHandoverCertificate() {
   const [itemName, setItemName] = useState('Govt Driving License & College Identity Card');
@@ -16,6 +17,20 @@ export default function DigitalHandoverCertificate() {
   const [officerName, setOfficerName] = useState('Inspector R. Sharma (Badge #8839)');
   const [recipientEmail, setRecipientEmail] = useState('owner@example.com');
   const [certificate, setCertificate] = useState(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!certificate) return;
+    setDownloadingPdf(true);
+    try {
+      await generateHandoverCertificatePdf(certificate);
+    } catch (err) {
+      console.error('PDF Generation Error:', err);
+      alert('Could not generate PDF: ' + err.message);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   const handleGenerate = async (e) => {
     e.preventDefault();
@@ -192,11 +207,12 @@ export default function DigitalHandoverCertificate() {
                   <span>Print Receipt</span>
                 </button>
                 <button
-                  onClick={() => alert(`Certificate ${certificate.cert_id} downloaded as PDF`)}
-                  className="flex-1 rounded-xl bg-purple-600 text-white py-2.5 text-xs font-bold hover:bg-purple-500 transition-colors flex items-center justify-center space-x-1.5"
+                  onClick={handleDownloadPdf}
+                  disabled={downloadingPdf}
+                  className="flex-1 rounded-xl bg-purple-600 text-white py-2.5 text-xs font-bold hover:bg-purple-500 disabled:opacity-50 transition-colors flex items-center justify-center space-x-1.5"
                 >
-                  <Download className="h-3.5 w-3.5" />
-                  <span>Save PDF</span>
+                  {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                  <span>{downloadingPdf ? 'Generating...' : 'Save PDF'}</span>
                 </button>
               </div>
             </div>
