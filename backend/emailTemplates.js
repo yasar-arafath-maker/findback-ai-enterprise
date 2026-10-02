@@ -501,10 +501,20 @@ export const buildAiMatchFoundTemplate = ({ matchId, lostTitle, foundTitle, conf
         <td style="color: #64748B; padding: 5px 0;">Matched Found Item:</td>
         <td style="color: #059669; font-weight: 700; text-align: right;">${foundTitle}</td>
       </tr>
+      ${category ? `
+      <tr>
+        <td style="color: #64748B; padding: 5px 0;">Category:</td>
+        <td style="color: #0F1F3D; font-weight: 700; text-align: right;">${category}</td>
+      </tr>` : ''}
       <tr>
         <td style="color: #64748B; padding: 5px 0;">Proximity:</td>
         <td style="color: #0F1F3D; font-weight: 700; text-align: right;">${locationProximity}</td>
       </tr>
+      ${matchId ? `
+      <tr>
+        <td style="color: #64748B; padding: 5px 0;">Match Spec ID:</td>
+        <td style="color: #6366F1; font-family: monospace; font-weight: 700; text-align: right;">${matchId}</td>
+      </tr>` : ''}
     </table>
 
     <p style="margin: 0; font-size: 13px; color: #334155; line-height: 1.5;">
@@ -512,9 +522,11 @@ export const buildAiMatchFoundTemplate = ({ matchId, lostTitle, foundTitle, conf
     </p>
   `;
 
+  const ctaTarget = matchId ? `${BASE_URL}/matches?matchId=${encodeURIComponent(matchId)}` : `${BASE_URL}/matches`;
+
   return {
     subject: `🎯 AI Match Alert (${confidenceScore}%): "${lostTitle}"`,
-    text: `AI found a ${confidenceScore}% match for your lost item "${lostTitle}". View details: ${BASE_URL}/matches`,
+    text: `AI found a ${confidenceScore}% match for your lost item "${lostTitle}". View details: ${ctaTarget}`,
     html: wrapEmailShell({
       badgeText: '🤖 AI Autonomous Match',
       badgeColor: '#4F46E5',
@@ -524,7 +536,7 @@ export const buildAiMatchFoundTemplate = ({ matchId, lostTitle, foundTitle, conf
       preheader: `AI found a ${confidenceScore}% match for "${lostTitle}"`,
       bodyContent,
       ctaText: 'Inspect Match & Claim Item →',
-      ctaUrl: `${BASE_URL}/matches`,
+      ctaUrl: ctaTarget,
     }),
   };
 };

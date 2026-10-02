@@ -2,9 +2,15 @@ import React, { createContext, useState, useContext, useEffect, useCallback } fr
 import { db } from '@/api/base44Client';
 import { appParams } from '@/lib/app-params';
 
-const createAxiosClient = (_config) => ({
-  get: async (_url) => ({ id: appParams?.appId || 'findit', public_settings: {} }),
-  post: async (_url, _data) => ({}),
+const createAxiosClient = (config = {}) => ({
+  get: async (url) => {
+    console.debug(`[AuthContext Axios Mock GET] Request to ${url}`, config);
+    return { id: appParams?.appId || 'findit', public_settings: {} };
+  },
+  post: async (url, data) => {
+    console.debug(`[AuthContext Axios Mock POST] Request to ${url}`, data, config);
+    return {};
+  },
 });
 
 const AuthContext = createContext();

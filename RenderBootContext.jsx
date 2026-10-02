@@ -81,6 +81,7 @@ export const RenderBootProvider = ({ children }) => {
         return true;
       }
     } catch (err) {
+      console.warn('Boot check endpoint ping encountered issue, falling back:', err);
       clearTimeout(timer1);
       clearTimeout(timer2);
       setBootProgress(100);

@@ -73,7 +73,7 @@ export const safeHapticImpact = async (style = ImpactStyle.Medium) => {
   try {
     await Haptics.impact({ style });
   } catch (err) {
-    // Non-critical, ignore on unsupported web environments
+    console.warn('[nativePlugins] Haptics.impact not available:', err.message);
   }
 };
 
@@ -86,23 +86,32 @@ export const safeStorage = {
       const res = await Preferences.get({ key });
       return res.value;
     } catch (e) {
+      console.warn('[nativePlugins] Preferences.get failed, falling back to localStorage:', e.message);
       return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
     }
   },
   set: async (key, value) => {
     try {
       await Preferences.set({ key, value: String(value) });
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[nativePlugins] Preferences.set failed:', e.message);
+    }
     if (typeof localStorage !== 'undefined') {
-      try { localStorage.setItem(key, String(value)); } catch (e) {}
+      try { localStorage.setItem(key, String(value)); } catch (e) {
+        console.warn('[nativePlugins] localStorage.setItem failed:', e.message);
+      }
     }
   },
   remove: async (key) => {
     try {
       await Preferences.remove({ key });
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[nativePlugins] Preferences.remove failed:', e.message);
+    }
     if (typeof localStorage !== 'undefined') {
-      try { localStorage.removeItem(key); } catch (e) {}
+      try { localStorage.removeItem(key); } catch (e) {
+        console.warn('[nativePlugins] localStorage.removeItem failed:', e.message);
+      }
     }
   }
 };
@@ -119,6 +128,6 @@ export const safeConfigureStatusBar = async (isDarkMode = true) => {
       color: isDarkMode ? '#0d0e12' : '#ffffff',
     });
   } catch (err) {
-    // Non-critical for web
+    console.warn('[nativePlugins] StatusBar configuration not available:', err.message);
   }
 };

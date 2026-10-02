@@ -54,6 +54,12 @@ async function runUIInteractiveTestSuite() {
 
   assertFlow('UI-02', 'Password Match & Min Length Validation', !validatePasswordMatch(passwordMismatch) && validatePasswordMatch(passwordMatch), 'Mismatched passwords blocked');
 
+  // UI perceptual hash match simulation (photo description fingerprinting)
+  const descHashA = generatePerceptualHash('Black Wildcraft leather wallet with scratch near corner');
+  const descHashB = generatePerceptualHash('Black Wildcraft leather wallet with scratch near corner');
+  const descSimilarity = comparePerceptualHashes(descHashA, descHashB);
+  assertFlow('UI-02b', 'Photo Description Fingerprint Match (AI Preview)', descSimilarity >= 90, `Similarity: ${descSimilarity}%`);
+
   const mockAuthState = { isAuthenticated: false, token: null, user: null };
   const simulateLoginSuccess = (email, pwd) => {
     if (validateEmailFormat(email) && pwd === 'password123') {
@@ -143,13 +149,13 @@ async function runUIInteractiveTestSuite() {
   const simulateHandoverCreation = (claimId) => {
     const code = '592814';
     const { receiptHash } = generateHandoverReceiptHash({
-      handoverId: 'HANDOVER-001',
+      handoverId: `HANDOVER-${claimId}`,
       claimantId: 'user-A',
       finderId: 'user-B',
       adminId: 'admin-01',
       verificationCode: code
     });
-    return { handoverId: 'HANDOVER-001', verificationCode: code, status: 'scheduled', receiptHash };
+    return { handoverId: `HANDOVER-${claimId}`, claimId, verificationCode: code, status: 'scheduled', receiptHash };
   };
 
   const handoverObj = simulateHandoverCreation('CLAIM-001');

@@ -104,7 +104,9 @@ const loadFallbackDb = () => {
       const data = fs.readFileSync(DB_FILE, 'utf8');
       return { ...defaultDb, ...JSON.parse(data) };
     }
-  } catch (err) {}
+  } catch (err) {
+    console.error('[DB] Failed to load fallback DB from disk:', err.message);
+  }
   return defaultDb;
 };
 
@@ -112,7 +114,9 @@ const saveFallbackDb = (dbData, updatedEntity = '') => {
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(dbData, null, 2), 'utf8');
     if (updatedEntity) broadcastEvent('DB_UPDATED', { entity: updatedEntity });
-  } catch (err) {}
+  } catch (err) {
+    console.error('[DB] Failed to save fallback DB to disk:', err.message);
+  }
 };
 
 let fallbackDbStore = loadFallbackDb();
@@ -174,6 +178,7 @@ const server = http.createServer(async (req, res) => {
         await query('SELECT 1');
         dbStatus = 'postgresql_connected';
       } catch (e) {
+        console.error('[DB] PostgreSQL SELECT 1 health check failed:', e.message);
         dbStatus = 'postgresql_error';
       }
     }
@@ -223,7 +228,9 @@ const server = http.createServer(async (req, res) => {
           database_engine: 'postgresql',
           timestamp: new Date().toISOString(),
         });
-      } catch (err) {}
+      } catch (err) {
+        console.error('[Stats] PostgreSQL stats query failed, falling back to file DB:', err.message);
+      }
     }
 
     fallbackDbStore = loadFallbackDb();
@@ -269,7 +276,9 @@ const server = http.createServer(async (req, res) => {
             admin_actions: a.rows,
           },
         });
-      } catch (err) {}
+      } catch (err) {
+        console.error('[Telemetry] PostgreSQL telemetry query failed, falling back to file DB:', err.message);
+      }
     }
 
     fallbackDbStore = loadFallbackDb();
@@ -301,7 +310,9 @@ const server = http.createServer(async (req, res) => {
           found_reports: found.rows,
           all_reports: [...lost.rows, ...found.rows],
         });
-      } catch (err) {}
+      } catch (err) {
+        console.error('[Reports] PostgreSQL reports query failed, falling back to file DB:', err.message);
+      }
     }
 
     fallbackDbStore = loadFallbackDb();
@@ -465,7 +476,9 @@ const server = http.createServer(async (req, res) => {
         if (sessionRes.rows.length > 0) {
           return sendJSON(res, 200, { user: sessionRes.rows[0] });
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error('[Auth] PostgreSQL session lookup failed, falling back to file DB:', err.message);
+      }
     }
 
     fallbackDbStore = loadFallbackDb();

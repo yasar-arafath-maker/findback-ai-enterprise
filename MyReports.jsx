@@ -32,6 +32,7 @@ export default function MyReports() {
       allUserReports.sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
       setData(allUserReports);
     } catch (err) {
+      console.error('Failed to load user reports:', err);
       setData([]);
     } finally {
       setLoading(false);

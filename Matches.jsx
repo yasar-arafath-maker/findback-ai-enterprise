@@ -46,6 +46,7 @@ export default function Matches() {
         unique.sort((a, b) => b.overall_score - a.overall_score);
         setMatches(unique.slice(0, 50));
       } catch (err) {
+        console.error('Failed to load AI matches:', err);
         setMatches([]);
       }
     })();

@@ -177,7 +177,7 @@ await test('sanitizeOtpCode rejects non-6-digit input', async () => {
   const { sanitizeOtpCode } = await import('../securityHelper.js');
   for (const bad of ['12345', '1234567', 'abcdef', '', null]) {
     try { sanitizeOtpCode(bad); throw new Error('should reject'); }
-    catch (e) { /* expected */ }
+    catch (e) { /* expected rejection — e.g. e.message = */ void e.message; }
   }
 });
 

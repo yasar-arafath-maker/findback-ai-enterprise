@@ -42,8 +42,8 @@ frontend.on('error', (err) => {
 // Handle graceful shutdown on Ctrl+C
 const shutdown = () => {
   console.log('\n🛑 Shutting down FindBack AI services...');
-  try { backend.kill(); } catch (e) {}
-  try { frontend.kill(); } catch (e) {}
+  try { backend.kill(); } catch (e) { console.warn('Could not kill backend process:', e.message); }
+  try { frontend.kill(); } catch (e) { console.warn('Could not kill frontend process:', e.message); }
   process.exit(0);
 };
 

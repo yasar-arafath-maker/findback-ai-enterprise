@@ -161,9 +161,17 @@ export default function SplashScreen({ onComplete }) {
             )}
           </div>
         ) : (
-          <div className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-400">
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
-            <span>Handling Render cold-start... Please stand by</span>
+          <div className="mt-6 flex flex-col items-center gap-3 text-xs text-slate-400">
+            <div className="flex items-center justify-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
+              <span>{isBooting ? "Handling Render cold-start... Please stand by" : "Checking Cloud Instance..."}</span>
+            </div>
+            <button
+              onClick={() => triggerBootCheck()}
+              className="text-[11px] text-blue-400 hover:underline cursor-pointer"
+            >
+              Re-check Cloud Status Now
+            </button>
           </div>
         )}
       </div>

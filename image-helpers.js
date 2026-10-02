@@ -1,5 +1,21 @@
 const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
 
+/**
+ * Upload a raw File object via the Base44 Core integration.
+ * Returns the public file_url string, or an empty string on failure.
+ * @param {File} file
+ * @returns {Promise<string>}
+ */
+export async function uploadImageFile(file) {
+  try {
+    const result = await db.integrations.Core.UploadFile({ file });
+    return result?.file_url || '';
+  } catch (e) {
+    console.warn('[image-helpers] UploadFile failed:', e.message);
+    return '';
+  }
+}
+
 const WIX_MEDIA_HOSTS = {
   "media.db.com": "/images/public/",
   "static.wixstatic.com": "/media/",

@@ -20,7 +20,9 @@ const runSmtpAudit = async () => {
 
   console.log(`\n[Audit Step 2] Generating 6-Digit Cryptographic OTP Code...`);
   const otpCode = generateOtpCode();
+  const sanitizedOtp = sanitizeOtpCode(String(otpCode));
   console.log(`  ✓ 6-Digit OTP Generated: ${otpCode}`);
+  console.log(`  ✓ OTP Sanitized & Validated (6 digits confirmed): ${sanitizedOtp}`);
 
   console.log(`\n[Audit Step 3] Dispatching OTP Email & Tracing SMTP Handshake...`);
   const dispatchResult = await sendOtpEmail(cleanEmail);

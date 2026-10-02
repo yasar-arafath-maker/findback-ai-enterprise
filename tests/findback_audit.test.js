@@ -352,6 +352,49 @@ test('TC-12', 'Threshold checks – High>=75, Medium 50-74, Low 30-49, <30 disca
   return PASS('TC-12', 'Behaviorally verified: All threshold bands (high>=75, medium 50-74, low 30-49) match spec');
 });
 
+test('TC-12b', 'preRankScore formula — category-heavy pre-LLM sort weight', () => {
+  const highCatHighGeo = preRankScore(100, 100, 100);
+  const lowCat = preRankScore(0, 100, 100);
+  const midCat = preRankScore(50, 80, 90);
+  if (highCatHighGeo !== 100) return FAIL('TC-12b', `Expected 100 for all-100, got ${highCatHighGeo}`);
+  if (lowCat !== 50)  return FAIL('TC-12b', `Expected 50 for catScore=0, got ${lowCat}`);
+  const expected = Math.round(50 * 0.50 + 80 * 0.25 + 90 * 0.25);
+  if (midCat !== expected) return FAIL('TC-12b', `Expected ${expected} for mid scores, got ${midCat}`);
+  return PASS('TC-12b', `preRankScore formula correct: highCatHighGeo=${highCatHighGeo}, lowCat=${lowCat}, midCat=${midCat}`);
+});
+
+test('TC-12c', 'computeSpatialProximityScore + latLngToSpatialCell — geo engine check', () => {
+  const proxClose = computeSpatialProximityScore(
+    { location_lat: 10.8000, location_lng: 78.7000, location_text: 'KRCT Campus Library' },
+    { location_lat: 10.8001, location_lng: 78.7001, location_text: 'KRCT Campus Library' }
+  );
+  if (proxClose < 80) return FAIL('TC-12c', `Expected >=80 for near-identical coordinates, got ${proxClose}`);
+
+  const cellA = latLngToSpatialCell(10.8, 78.7, 'KRCT Campus Library');
+  const cellB = latLngToSpatialCell(10.8, 78.7, 'KRCT Campus Library');
+  if (!cellA || typeof cellA !== 'string') return FAIL('TC-12c', `Expected a string spatial cell, got ${cellA}`);
+  if (cellA !== cellB) return FAIL('TC-12c', 'Same coordinates produced different cells — non-deterministic');
+  return PASS('TC-12c', `Spatial proximity=${proxClose}; cell=${cellA}; deterministic=true`);
+});
+
+test('TC-12d', 'evaluateABAC engine — access control enforcement', () => {
+  const activeUser = { id: 'user-A', role: 'user', account_status: 'active' };
+  const adminUser  = { id: 'admin-01', role: 'admin', account_status: 'active' };
+  const suspUser   = { id: 'user-S', role: 'user', account_status: 'suspended' };
+  const matchRes   = { id: 'MATCH-001', lost_reporter_id: 'user-A', found_finder_id: 'user-B' };
+  const claimRes   = { id: 'CLAIM-001', claimant_id: 'user-A', status: 'submitted' };
+
+  if (evaluateABAC('submitClaim', activeUser, matchRes)?.authorized !== true)
+    return FAIL('TC-12d', 'Active user should be authorized to submitClaim as lost reporter');
+  if (evaluateABAC('submitClaim', suspUser, matchRes)?.authorized === true)
+    return FAIL('TC-12d', 'Suspended user should be blocked from submitClaim');
+  if (evaluateABAC('decideClaim', adminUser, claimRes)?.authorized !== true)
+    return FAIL('TC-12d', 'Admin should be authorized to decideClaim');
+  if (evaluateABAC('decideClaim', activeUser, claimRes)?.authorized === true)
+    return FAIL('TC-12d', 'Regular user should be blocked from decideClaim');
+  return PASS('TC-12d', 'ABAC engine: submitClaim + decideClaim access control verified correctly');
+});
+
 test('TC-13', 'Deduplication – identical report pairs do not create duplicate AIMatches', () => {
   const checksExisting = matchFn.includes('AIMatches.filter({lost_report_id:lost.id,found_report_id:found.id}');
   const skipsDuplicate = matchFn.includes('if (existing.length) { saved.push(existing[0]); continue; }');
@@ -554,6 +597,34 @@ test('TC-26', 'Append-Only Audit Log – regular users cannot insert/modify Admi
     'TC-26',
     'AdminActions CUD locked to admin; backend functions call only .create() — true append-only audit log'
   );
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// SECTION 7 – SCHEMA FIELD COVERAGE (Claims, Handovers, AIMatches)
+// ══════════════════════════════════════════════════════════════════════════
+
+test('TC-27', 'Claims schema has required status field and RLS wiring', () => {
+  const hasStatus = !!(schClaim.properties?.status || (schClaim.fields && schClaim.fields.some(f => f.name === 'status')));
+  const hasRls    = !!schClaim.rls;
+  if (!hasStatus) return FAIL('TC-27', 'Claims.jsonc missing "status" field');
+  if (!hasRls)    return FAIL('TC-27', 'Claims.jsonc missing rls block');
+  return PASS('TC-27', `Claims schema: status field present, RLS keys=${JSON.stringify(Object.keys(schClaim.rls))}`);
+});
+
+test('TC-28', 'Handovers schema has verification_code and scheduled_datetime fields', () => {
+  const hasCode = !!(schHand.properties?.verification_code || (schHand.fields && schHand.fields.some(f => f.name === 'verification_code')));
+  const hasDt   = !!(schHand.properties?.scheduled_datetime || (schHand.fields && schHand.fields.some(f => f.name === 'scheduled_datetime')));
+  if (!hasCode) return FAIL('TC-28', 'Handovers.jsonc missing "verification_code" field');
+  if (!hasDt)   return FAIL('TC-28', 'Handovers.jsonc missing "scheduled_datetime" field');
+  return PASS('TC-28', 'Handovers schema: verification_code and scheduled_datetime fields present');
+});
+
+test('TC-29', 'AIMatches schema has overall_score and confidence fields', () => {
+  const hasScore = !!(schMatch.properties?.overall_score || (schMatch.fields && schMatch.fields.some(f => f.name === 'overall_score')));
+  const hasConf  = !!(schMatch.properties?.confidence_level || schMatch.properties?.confidence || (schMatch.fields && schMatch.fields.some(f => f.name === 'confidence' || f.name === 'confidence_level')));
+  if (!hasScore) return FAIL('TC-29', 'AIMatches.jsonc missing "overall_score" field');
+  if (!hasConf)  return FAIL('TC-29', 'AIMatches.jsonc missing "confidence" field');
+  return PASS('TC-29', 'AIMatches schema: overall_score and confidence fields present');
 });
 
 // ══════════════════════════════════════════════════════════════════════════

@@ -1,5 +1,28 @@
 const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
 
+/**
+ * Hook: upload a File and get back its public URL via Base44 Core integration.
+ * Usage: const { upload, uploading, url } = useImageUpload();
+ */
+export function useImageUpload() {
+  const [uploading, setUploading] = React.useState(false);
+  const [url, setUrl] = React.useState(null);
+  const upload = React.useCallback(async (file) => {
+    setUploading(true);
+    try {
+      const result = await db.integrations.Core.UploadFile({ file });
+      setUrl(result?.file_url || null);
+      return result?.file_url || null;
+    } catch (e) {
+      console.warn('[Image] Upload failed:', e.message);
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  }, []);
+  return { upload, uploading, url };
+}
+
 import * as React from "react"
 import { useSize } from "@/hooks/use-size"
 import { cn } from "@/lib/utils"

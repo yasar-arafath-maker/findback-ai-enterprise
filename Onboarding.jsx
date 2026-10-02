@@ -168,6 +168,15 @@ export default function Onboarding() {
           <Brand light={true} />
         </Link>
         <div className="flex items-center gap-4">
+          <a
+            href="https://github.com/yasar-arafath-maker/findback-ai-enterprise"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden md:inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+          >
+            <span>Docs</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
           <span className="hidden sm:inline-block text-xs font-mono text-slate-400">
             Step {step.step} of {onboardingSteps.length}
           </span>

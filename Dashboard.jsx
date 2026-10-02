@@ -34,6 +34,7 @@ export default function Dashboard() {
           notes: notes || [],
         });
       } catch (err) {
+        console.error('Failed to load dashboard metrics:', err);
         setData({
           u: activeUser,
           userLost: [],

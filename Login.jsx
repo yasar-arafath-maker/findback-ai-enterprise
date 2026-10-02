@@ -17,6 +17,11 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [userNotFound, setUserNotFound] = useState(false);
   const [notFoundEmail, setNotFoundEmail] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const returnTo = safeReturnTo(searchParams?.get('returnTo'));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,7 +42,7 @@ export default function Login() {
       } else if (userRole === 'officer' || userRole === 'authority') {
         navigate('/authority-handover', { replace: true });
       } else {
-        navigate(requestedReturnTo !== '/' ? requestedReturnTo : '/dashboard', { replace: true });
+        navigate(returnTo !== '/' ? returnTo : '/dashboard', { replace: true });
       }
     } catch (err) {
       if (err?.code === 'USER_NOT_FOUND' || err?.status === 404 || err?.message?.toLowerCase().includes('not found')) {

@@ -65,7 +65,9 @@ export default function SmartTagGenerator() {
         const existing = JSON.parse(localStorage.getItem('findback_smart_tags') || '[]');
         existing.unshift(tagData);
         localStorage.setItem('findback_smart_tags', JSON.stringify(existing.slice(0, 50)));
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Failed to save generated smart tag to localStorage:', e);
+      }
     } catch (err) {
       console.error('Failed to generate QR:', err);
     } finally {
@@ -105,7 +107,9 @@ export default function SmartTagGenerator() {
           sender_role: 'Finder',
         });
       }
-    } catch (err) {}
+    } catch (err) {
+      console.warn('Failed to send relay message for scanned tag:', err);
+    }
 
     setRelaySent(true);
     setTimeout(() => {

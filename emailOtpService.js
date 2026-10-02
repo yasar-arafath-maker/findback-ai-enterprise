@@ -15,6 +15,7 @@ const getStoredOtpMap = () => {
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('findback_otp_store') : null;
     return raw ? JSON.parse(raw) : {};
   } catch (e) {
+    console.warn('[OTP Store] Failed to parse localStorage OTP map:', e.message);
     return {};
   }
 };
@@ -28,7 +29,9 @@ const saveOtpToStore = (email, code, expiresAt) => {
       map[normalized] = { code, expiresAt };
       localStorage.setItem('findback_otp_store', JSON.stringify(map));
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[OTP Store] Failed to persist OTP to localStorage:', e.message);
+  }
 };
 
 const getOtpFromStore = (email) => {
@@ -40,7 +43,9 @@ const getOtpFromStore = (email) => {
         return map[normalized];
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[OTP Store] Failed to read OTP from localStorage:', e.message);
+  }
   if (otpStore.has(normalized)) {
     return otpStore.get(normalized);
   }
@@ -56,7 +61,9 @@ const removeOtpFromStore = (email) => {
       delete map[normalized];
       localStorage.setItem('findback_otp_store', JSON.stringify(map));
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[OTP Store] Failed to remove OTP from localStorage:', e.message);
+  }
 };
 
 /**
@@ -248,7 +255,9 @@ export const verifyOtpCode = async (rawEmail, rawCode) => {
         return { verified: true, email };
       }
     }
-  } catch (err) {}
+  } catch (err) {
+    console.warn('[OTP Verify] Backend verification request failed:', err.message);
+  }
 
   throw new Error('Invalid verification code. Please check your email and try again.');
 };
@@ -280,7 +289,9 @@ export const sendFeatureEmail = async (rawEmail, templateType, templateData = {}
       const data = await res.json().catch(() => ({}));
       return { status: 'sent', email, templateType, ...data };
     }
-  } catch (err) {}
+  } catch (err) {
+    console.warn('[Feature Mail] Backend dispatch request failed:', err.message);
+  }
 
   return {
     status: 'sent',

@@ -88,6 +88,7 @@ const runTests = async () => {
       const { file_url } = await db.integrations.Core.UploadFile({ file: null }).catch(() => ({ file_url: '' }));
       if (typeof file_url !== 'string') throw new Error('Upload fallback failed to return string');
     } catch (e) {
+      console.warn('[E2E] Upload fallback error (expected):', e.message);
       // Expected to handle safely
     }
   });

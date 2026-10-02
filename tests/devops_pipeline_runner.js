@@ -111,6 +111,7 @@ async function runDevOpsPipeline() {
   );
 
   reportResult('S4-01', 'Spatial Cell Resolution 9 Indexing', cellLib.startsWith('89'), `Cell: ${cellLib}`);
+  reportResult('S4-01b', 'Spatial Cell Resolved for Gate Location', typeof cellGate === 'string' && cellGate.length > 0, `Cell: ${cellGate}`);
   reportResult('S4-02', 'Haversine Micro-Distance Calculation', distKm !== null && distKm < 0.1, `Distance: ${(distKm * 1000).toFixed(1)}m`);
   reportResult('S4-03', 'Micro-Proximity Spatial Score', prox >= 90, `Score: ${prox}/100`);
 

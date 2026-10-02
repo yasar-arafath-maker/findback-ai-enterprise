@@ -108,7 +108,9 @@ export default function SafeChatWindow() {
             setActiveItemTitle(customChannels[0].title);
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        console.warn('Failed to load user custom chat channels:', err);
+      }
     })();
   }, [user, paramChannel, paramItem]);
 
@@ -209,6 +211,7 @@ export default function SafeChatWindow() {
         }, 1000);
       }, 3500);
     } catch (err) {
+      console.error('Failed to initiate masked call:', err);
       setCallState('idle');
     }
   };

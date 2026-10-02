@@ -174,7 +174,7 @@ export const createLiveEventStream = (onMessage, onError = null) => {
           const data = JSON.parse(e.data);
           if (onMessage) onMessage(data);
         } catch (err) {
-          // ignore non-json messages
+          console.warn('[SSE] Received non-JSON SSE frame (ignored):', err.message);
         }
       };
 

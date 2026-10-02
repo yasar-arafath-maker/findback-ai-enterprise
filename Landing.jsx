@@ -76,6 +76,12 @@ const capabilityCards = [
     tag: 'Privacy Sandbox',
   },
   {
+    icon: Layers,
+    title: 'Multi-Tier Neural Architecture',
+    desc: 'Deep learning visual feature vectors combined with localized geospatial fencing for max accuracy.',
+    tag: 'Neural Stack',
+  },
+  {
     icon: UserCheck,
     title: 'Three-Tier RBAC Governance',
     desc: 'Dedicated segregated portals for Citizens, Custody Recovery Officers, and Enterprise System Administrators.',
@@ -86,6 +92,12 @@ const capabilityCards = [
     title: 'Real-Time SSE Event Bus',
     desc: 'Persistent Server-Sent Events stream broadcasts claim updates, matches, and handover notifications without polling.',
     tag: 'Live SSE Stream',
+  },
+  {
+    icon: Server,
+    title: 'Cloud Gateway & Postgres Sync',
+    desc: 'Dual-active persistence layer linking local storage with production PostgreSQL and Supabase databases.',
+    tag: 'Cloud Gateway',
   },
 ];
 
@@ -128,11 +140,11 @@ export default function Landing() {
             verifiedClaims: data.verifiedClaims ?? 0,
             completedHandovers: data.completedHandovers ?? 0,
             databaseMode: data.databaseMode || 'PostgreSQL (Supabase)',
-            systemHealth: data.systemHealth || '100% Operational',
+            systemHealth: isBooting ? `Booting (${bootProgress}%: ${bootStatusText})` : (data.systemHealth || '100% Operational'),
           });
         }
       } catch (err) {
-        // graceful keep existing state
+        console.warn('Failed to load live stats on Landing page:', err);
       } finally {
         setLoadingStats(false);
       }

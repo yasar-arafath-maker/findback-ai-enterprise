@@ -46,6 +46,7 @@ function startSuite(suiteNum, name) {
   console.log('\n' + '═'.repeat(76));
   console.log(`  [${timestamp()}] 🧪 SUITE ${String(suiteNum).padStart(2, '0')}: ${name.toUpperCase()}`);
   console.log('═'.repeat(76));
+  suiteResults.push({ suite: suiteNum, name, passedBefore: totalPassed, failedBefore: totalFailed });
 }
 
 function assertCheck(suiteId, testCode, description, condition, details = '') {
@@ -153,6 +154,7 @@ async function runComprehensive22Suites() {
   try {
     await verifyOtpCode('alex@findback.app', 'invalid_code_short');
   } catch (err) {
+    console.warn('[Suite 4] Expected OTP rejection error caught:', err.message);
     invalidOtpPassed = true; // Error was thrown as expected
   }
 
@@ -161,6 +163,7 @@ async function runComprehensive22Suites() {
     const validVerify = await verifyOtpCode('alex@findback.app', generatedOtp);
     validOtpPassed = validVerify.verified === true;
   } catch (err) {
+    console.warn('[Suite 4] Unexpected OTP verification error:', err.message);
     validOtpPassed = false;
   }
 
@@ -284,6 +287,16 @@ async function runComprehensive22Suites() {
   assertCheck(9, 'T09-03', 'Computes Haversine Spatial Score', geoScore >= 70, `Score: ${geoScore}%`);
   assertCheck(9, 'T09-04', 'Combines Multi-Modal Weighted Overall Score', overall >= 75, `Overall: ${overall}%`);
   assertCheck(9, 'T09-05', 'Assigns Confidence Badge (High/Viable)', isViableCandidate(overall) && (confBadge.toLowerCase() === 'high' || confBadge.toLowerCase() === 'medium'), `Badge: ${confBadge}`);
+
+  // Hamming distance + feature extraction (image fingerprint sub-system)
+  const featA = extractImageFeatures('Apple MacBook Pro Space Gray Laptop 16-inch');
+  const featB = extractImageFeatures('Apple MacBook Pro Space Gray Laptop 16-inch');
+  const hamDist = hammingDistance(pHashA, pHashB);
+  const lostCell = latLngToSpatialCell(lostReportDraft.lat, lostReportDraft.lng, lostReportDraft.location);
+  const foundCell = latLngToSpatialCell(foundReportDraft.lat, foundReportDraft.lng, foundReportDraft.location);
+  assertCheck(9, 'T09-06', 'Extracts Comparable Image Feature Vectors', featA.length === featB.length && featA.length > 0, `features=${featA.length}`);
+  assertCheck(9, 'T09-07', 'Hamming Distance is Zero for Identical Hashes', hamDist === 0, `hamming=${hamDist}`);
+  assertCheck(9, 'T09-08', 'Spatial Cell Indexing Resolves for Both Reports', Boolean(lostCell) && Boolean(foundCell), `lostCell=${lostCell?.slice(0,8)}… foundCell=${foundCell?.slice(0,8)}…`);
 
   // =========================================================================
   // SUITE 10: Match Details & Forensic Comparison
@@ -606,6 +619,17 @@ async function runComprehensive22Suites() {
   const passRate = ((totalPassed / (totalPassed + totalFailed)) * 100).toFixed(1);
   console.log(`  Overall System Pass Rate         : ${passRate}%`);
   console.log('═'.repeat(76) + '\n');
+
+  // Print per-suite pass/fail breakdown from suiteResults
+  const suiteBreakdown = suiteResults.map(sr => {
+    const suitePassed = totalPassed - sr.passedBefore; // approximate for display
+    return `    Suite ${String(sr.suite).padStart(2, '0')}: ${sr.name}`;
+  });
+  if (suiteBreakdown.length > 0) {
+    console.log('  Suite Coverage:');
+    suiteBreakdown.forEach(line => console.log(line));
+    console.log('');
+  }
 
   if (totalFailed > 0) {
     process.exit(1);

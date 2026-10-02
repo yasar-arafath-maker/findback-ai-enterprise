@@ -514,7 +514,7 @@ export const buildAiMatchFoundTemplate = ({ matchId, lostTitle, foundTitle, conf
 
   return {
     subject: `🎯 AI Match Alert (${confidenceScore}%): "${lostTitle}"`,
-    text: `AI found a ${confidenceScore}% match for your lost item "${lostTitle}". View details: ${BASE_URL}/matches`,
+    text: `AI found a ${confidenceScore}% match for your lost item "${lostTitle}" (${category || 'Item'}). View match details: ${BASE_URL}/matches/${matchId}`,
     html: wrapEmailShell({
       badgeText: '🤖 AI Autonomous Match',
       badgeColor: '#4F46E5',
@@ -524,7 +524,7 @@ export const buildAiMatchFoundTemplate = ({ matchId, lostTitle, foundTitle, conf
       preheader: `AI found a ${confidenceScore}% match for "${lostTitle}"`,
       bodyContent,
       ctaText: 'Inspect Match & Claim Item →',
-      ctaUrl: `${BASE_URL}/matches`,
+      ctaUrl: `${BASE_URL}/matches/${matchId}`,
     }),
   };
 };

@@ -62,9 +62,13 @@ export default function Register() {
         role,
       });
 
+      if (res?.access_token) {
+        db.auth.setToken(res.access_token);
+      }
+
       toast({
         title: "Registration Successful",
-        description: `Welcome! Your ${role.toUpperCase()} account has been provisioned in the database.`,
+        description: `Welcome! Your ${(res?.user?.role || role).toUpperCase()} account has been provisioned in the database.`,
       });
 
       await checkUserAuth();

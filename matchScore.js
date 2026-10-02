@@ -174,5 +174,5 @@ export function isViableCandidate({ catScore, days, km }) {
  * @returns {number}
  */
 export function preRankScore(catScore, geoScore, timeScore) {
-  return catScore * 0.50 + geoScore * 0.25 + timeScore * 0.25;
+  return Math.round(catScore * 0.50 + geoScore * 0.25 + timeScore * 0.25);
 }

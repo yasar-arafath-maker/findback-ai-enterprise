@@ -43,6 +43,7 @@ async function sha256Browser(message) {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   } catch (e) {
+    console.warn('SubtleCrypto SHA-256 unavailable, using standard string hash fallback:', e);
     let hash = 0;
     for (let i = 0; i < message.length; i++) {
       hash = ((hash << 5) - hash) + message.charCodeAt(i);

@@ -16,6 +16,18 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = p => resolve(__dirname, '..', p);
 
+// Validate critical source files are present before running the demo
+const REQUIRED_FILES = ['abacEngine.js', 'cryptoAudit.js', 'matchScore.js', 'spatialIndexer.js', 'perceptualHash.js'];
+for (const file of REQUIRED_FILES) {
+  try {
+    readFileSync(root(file), 'utf8');
+  } catch (e) {
+    console.error(`[Pre-flight] MISSING source file: ${file} — ${e.message}`);
+    process.exit(1);
+  }
+}
+console.log(`[Pre-flight] All ${REQUIRED_FILES.length} core source files verified ✅\n`);
+
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const timestamp = () => new Date().toISOString().split('T')[1].slice(0, 8);

@@ -77,6 +77,8 @@ const proxScore = computeSpatialProximityScore(
 
 assert('E-06', 'Pillar 4: Uber H3 Spatial Cell Indexing', cellA.startsWith('89') && cellA === cellB, `H3 Cell: ${cellA}`);
 assert('E-07', 'Pillar 4: Spatial Micro-Proximity Scoring', proxScore >= 90, `Spatial Proximity Score: ${proxScore}/100`);
+const distKm = haversineDistanceKm(10.8001, 78.7001, 10.8002, 78.7002);
+assert('E-07b', 'Pillar 4: Haversine Distance < 100 meters for micro-offsets', distKm !== null && distKm < 0.1, `Distance: ${(distKm * 1000).toFixed(1)}m`);
 
 // Pillar 5 Tests
 const adminSubject = { id: 'admin-01', role: 'admin', account_status: 'active', department: 'CS' };

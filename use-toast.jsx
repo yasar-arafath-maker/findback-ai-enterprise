@@ -53,6 +53,8 @@ export const reducer = (state, action) => {
       };
 
     case actionTypes.UPDATE_TOAST:
+      // Cancel any pending removal timer so the updated toast stays visible
+      if (action.toast.id) _clearFromRemoveQueue(action.toast.id);
       return {
         ...state,
         toasts: state.toasts.map((t) =>

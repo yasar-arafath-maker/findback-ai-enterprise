@@ -14,6 +14,7 @@ export default function PageNotFound({}) {
                 const user = await db.auth.me();
                 return { user, isAuthenticated: true };
             } catch (error) {
+                console.debug('Auth status check failed on 404 page:', error);
                 return { user: null, isAuthenticated: false };
             }
         }

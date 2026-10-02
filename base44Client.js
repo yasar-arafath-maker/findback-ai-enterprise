@@ -71,6 +71,7 @@ const getStoredUser = () => {
     const raw = localStorage.getItem('b44_user');
     return raw ? JSON.parse(raw) : null;
   } catch (e) {
+    console.debug('[getStoredUser] Failed to parse stored user:', e);
     return null;
   }
 };
@@ -82,13 +83,16 @@ const setStoredUser = (user) => {
     } else {
       localStorage.removeItem('b44_user');
     }
-  } catch (e) {}
+  } catch (e) {
+    console.debug('[setStoredUser] Failed to store user:', e);
+  }
 };
 
 const getStoredToken = () => {
   try {
     return localStorage.getItem('b44_token') || localStorage.getItem('base44_access_token');
   } catch (e) {
+    console.debug('[getStoredToken] Failed to get stored token:', e);
     return null;
   }
 };
@@ -102,7 +106,9 @@ const setStoredToken = (token) => {
       localStorage.removeItem('b44_token');
       localStorage.removeItem('base44_access_token');
     }
-  } catch (e) {}
+  } catch (e) {
+    console.debug('[setStoredToken] Failed to store token:', e);
+  }
 };
 
 import { sendOtpEmail, verifyOtpCode } from './emailOtpService.js';
@@ -125,7 +131,9 @@ const candidateBaseUrls = () => {
       const domain = clean.endsWith('/api') ? clean.slice(0, -4) : clean;
       list.push(domain);
     }
-  } catch (e) {}
+  } catch (e) {
+    console.debug('[candidateBaseUrls] Env read error:', e);
+  }
 
   // Production-Ready Cloud Backend
   list.push('https://findback-ai-backend.onrender.com');
@@ -139,7 +147,9 @@ const candidateBaseUrls = () => {
         list.push(domain.endsWith('/api') ? domain.slice(0, -4) : domain);
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.debug('[candidateBaseUrls] localStorage read error:', e);
+  }
 
   if (typeof window !== 'undefined' && window.location?.origin?.startsWith('https://')) {
     list.push(window.location.origin);
@@ -221,7 +231,9 @@ const syncServerRequest = async (path, method = 'GET', body = null) => {
             }
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        console.debug('[syncServerRequest] Inner route handling error:', err);
+      }
       return null;
     }
 
@@ -244,10 +256,12 @@ const syncServerRequest = async (path, method = 'GET', body = null) => {
           cachedWorkingBaseUrl = baseUrl;
           return await res.json();
         }
-      } catch (err) {}
+      } catch (err) {
+        console.debug(`[syncServerRequest] fetch error for ${baseUrl}:`, err);
+      }
     }
   } catch (err) {
-    // Non-blocking
+    console.debug('[syncServerRequest] Outer error:', err);
   }
   return null;
 };
@@ -268,7 +282,9 @@ const standaloneAuthClient = {
             setStoredUser(remoteUser.user);
             return remoteUser.user;
           }
-        } catch (e) {}
+        } catch (e) {
+          console.debug('[me] Remote user fetch error:', e);
+        }
       }
       return getStoredUser() || null;
     },
@@ -413,7 +429,7 @@ const standaloneAuthClient = {
             list.sort((a, b) => String(b[field] || '').localeCompare(String(a[field] || '')));
           }
           return list.slice(0, limit);
-        } catch (e) { return []; }
+        } catch (e) { console.debug(`[entity filter ${entityName}]`, e); return []; }
       },
       get: async (id) => {
         try {
@@ -423,7 +439,7 @@ const standaloneAuthClient = {
           const raw = localStorage.getItem(`entity_${entityName}`);
           const list = raw ? JSON.parse(raw) : [];
           return list.find(item => item.id === id) || null;
-        } catch (e) { return null; }
+        } catch (e) { console.debug(`[entity get ${entityName}]`, e); return null; }
       },
       create: async (data) => {
         const newItem = { id: 'id-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4), created_date: new Date().toISOString(), status: 'active', ...data };
@@ -432,7 +448,7 @@ const standaloneAuthClient = {
           const list = raw ? JSON.parse(raw) : [];
           list.push(newItem);
           localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
-        } catch (e) {}
+        } catch (e) { console.debug(`[entity create localStorage ${entityName}]`, e); }
 
         // Directly sync new record to local_db.json on server.js!
         const serverItem = await syncServerRequest(`/api/entities/${entityName}`, 'POST', newItem);
@@ -451,7 +467,7 @@ const standaloneAuthClient = {
             return item;
           });
           localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
-        } catch (e) {}
+        } catch (e) { console.debug(`[entity update localStorage ${entityName}]`, e); }
 
         // Directly sync update to local_db.json on server.js!
         await syncServerRequest(`/api/entities/${entityName}/${id}`, 'PUT', data);
@@ -463,7 +479,7 @@ const standaloneAuthClient = {
           let list = raw ? JSON.parse(raw) : [];
           list = list.filter(item => item.id !== id);
           localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
-        } catch (e) {}
+        } catch (e) { console.debug(`[entity delete localStorage ${entityName}]`, e); }
 
         // Directly sync delete to local_db.json on server.js!
         await syncServerRequest(`/api/entities/${entityName}/${id}`, 'DELETE');
@@ -674,11 +690,13 @@ const standaloneAuthClient = {
           localStorage.setItem(`chat_${channelId}`, JSON.stringify(remote));
           return remote;
         }
-      } catch (e) {}
+      } catch (e) {
+        console.debug('[getMessages] Remote sync error:', e);
+      }
       try {
         const local = localStorage.getItem(`chat_${channelId}`);
         return local ? JSON.parse(local) : [];
-      } catch (e) { return []; }
+      } catch (e) { console.debug('[getMessages] Local read error:', e); return []; }
     },
     sendMessage: async (channelId, messageData) => {
       const u = getStoredUser();
@@ -692,7 +710,9 @@ const standaloneAuthClient = {
       try {
         const res = await syncServerRequest(`/api/chat/${channelId}/messages`, 'POST', payload);
         if (res?.message) result = res.message;
-      } catch (e) {}
+      } catch (e) {
+        console.debug('[sendMessage] Remote send error:', e);
+      }
 
       if (!result) {
         // Redact PII locally if offline
@@ -713,7 +733,9 @@ const standaloneAuthClient = {
         const local = JSON.parse(localStorage.getItem(`chat_${channelId}`) || '[]');
         local.push(result);
         localStorage.setItem(`chat_${channelId}`, JSON.stringify(local));
-      } catch (e) {}
+      } catch (e) {
+        console.debug('[sendMessage] Local store error:', e);
+      }
       return result;
     },
     startMaskedCall: async (channelId) => {

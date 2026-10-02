@@ -118,7 +118,9 @@ const loadFallbackDb = () => {
       const data = fs.readFileSync(DB_FILE, 'utf8');
       return { ...defaultDb, ...JSON.parse(data) };
     }
-  } catch (err) {}
+  } catch (err) {
+    console.warn('[loadFallbackDb] Failed to read fallback DB file:', err?.message || err);
+  }
   return defaultDb;
 };
 
@@ -126,7 +128,9 @@ const saveFallbackDb = (dbData, updatedEntity = '') => {
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(dbData, null, 2), 'utf8');
     if (updatedEntity) broadcastEvent('DB_UPDATED', { entity: updatedEntity });
-  } catch (err) {}
+  } catch (err) {
+    console.error('[saveFallbackDb] Failed to write fallback DB file:', err?.message || err);
+  }
 };
 
 let fallbackDbStore = loadFallbackDb();
@@ -194,6 +198,7 @@ const server = http.createServer(async (req, res) => {
         await query('SELECT 1');
         dbStatus = 'postgresql_connected';
       } catch (e) {
+        console.warn('[Postgres Healthcheck] Failed:', e?.message || e);
         dbStatus = 'postgresql_error';
       }
     }
@@ -244,7 +249,9 @@ const server = http.createServer(async (req, res) => {
           database_engine: 'postgresql',
           timestamp: new Date().toISOString(),
         });
-      } catch (err) {}
+      } catch (err) {
+        console.warn('[Postgres Stats Error]', err?.message || err);
+      }
     }
 
     fallbackDbStore = loadFallbackDb();
@@ -291,7 +298,9 @@ const server = http.createServer(async (req, res) => {
             admin_actions: a.rows,
           },
         });
-      } catch (err) {}
+      } catch (err) {
+        console.warn('[Postgres Enterprise Telemetry Error]', err?.message || err);
+      }
     }
 
     fallbackDbStore = loadFallbackDb();
@@ -324,7 +333,9 @@ const server = http.createServer(async (req, res) => {
           found_reports: found.rows,
           all_reports: [...lost.rows, ...found.rows],
         });
-      } catch (err) {}
+      } catch (err) {
+        console.warn('[Postgres Combined Reports Error]', err?.message || err);
+      }
     }
 
     fallbackDbStore = loadFallbackDb();
@@ -490,7 +501,9 @@ const server = http.createServer(async (req, res) => {
         if (sessionRes.rows.length > 0) {
           return sendJSON(res, 200, { user: sessionRes.rows[0] });
         }
-      } catch (err) {}
+      } catch (err) {
+        console.warn('[Postgres Session Check Error]', err?.message || err);
+      }
     }
 
     fallbackDbStore = loadFallbackDb();
