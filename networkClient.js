@@ -24,7 +24,8 @@ export const getApiBaseUrl = () => {
     if (customIp) return customIp.startsWith('http') ? `${customIp.replace(/\/+$/, '')}/api` : `http://${customIp}:5000/api`;
   }
 
-  return 'http://localhost:5000/api';
+  // Production-ready Render backend fallback
+  return 'https://findback-ai-backend.onrender.com/api';
 };
 
 /**

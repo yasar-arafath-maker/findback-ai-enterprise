@@ -33,7 +33,8 @@ dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DB_FILE = process.env.DB_FILE_PATH || path.join(__dirname, 'local_db.json');
+const rootDbCandidate = path.join(__dirname, '..', 'local_db.json');
+const DB_FILE = process.env.DB_FILE_PATH || (fs.existsSync(rootDbCandidate) ? rootDbCandidate : path.join(__dirname, 'local_db.json'));
 const PORT = process.env.PORT || 5000;
 const startTime = Date.now();
 
@@ -99,24 +100,7 @@ const getTableName = (entityName) => {
 
 // ── JSON Local DB Fallback (Active when DATABASE_URL is not set) ──
 const defaultDb = {
-  User: [
-    {
-      id: 'user-default-1',
-      email: 'user@example.com',
-      full_name: 'Demo User',
-      role: 'user',
-      account_status: 'active',
-      created_date: new Date().toISOString(),
-    },
-    {
-      id: 'admin-default-1',
-      email: 'admin@findback.app',
-      full_name: 'Admin Supervisor',
-      role: 'admin',
-      account_status: 'active',
-      created_date: new Date().toISOString(),
-    },
-  ],
+  User: [],
   LostReports: [],
   FoundReports: [],
   AIMatches: [],
@@ -126,6 +110,7 @@ const defaultDb = {
   Notifications: [],
   AdminActions: [],
   Sessions: {},
+  ChatMessages: [],
 };
 
 const loadFallbackDb = () => {
@@ -188,7 +173,9 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  const reqUrl = new URL(req.url, `http://localhost:${PORT}`);
+  const host = req.headers.host || 'findback-ai-backend.onrender.com';
+  const protocol = req.headers['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
+  const reqUrl = new URL(req.url, `${protocol}://${host}`);
   
   // ── Universal Route Normalization ──
   // Strip duplicate slashes and duplicate /api/api prefixes
@@ -196,9 +183,12 @@ const server = http.createServer(async (req, res) => {
   while (pathname.startsWith('/api/api/')) {
     pathname = pathname.replace('/api/api/', '/api/');
   }
+  if (pathname.length > 1 && pathname.endsWith('/')) {
+    pathname = pathname.slice(0, -1);
+  }
 
   // ── Render Root & Health Check Probes ──
-  if (pathname === '/' || pathname === '/healthz' || pathname === '/health' || pathname === '/api/health' || pathname === '/api/healthz') {
+  if (pathname === '/' || pathname === '/api' || pathname === '/healthz' || pathname === '/health' || pathname === '/api/health' || pathname === '/api/healthz') {
     let dbStatus = 'file_fallback';
     if (isDbConnected()) {
       try {
@@ -211,11 +201,24 @@ const server = http.createServer(async (req, res) => {
 
     return sendJSON(res, 200, {
       status: 'online',
-      service: 'FindBack AI Enterprise Backend',
+      service: 'FindBack AI Enterprise Backend API',
+      version: '1.0.0',
       environment: process.env.NODE_ENV || 'production',
       database_engine: dbStatus,
       uptime_seconds: Math.floor((Date.now() - startTime) / 1000),
       active_connections: sseClients.size,
+      endpoints: {
+        health: '/api/health',
+        stats: '/api/stats',
+        telemetry: '/api/enterprise-console',
+        auth: '/api/auth/me',
+        entities: '/api/entities/:entityName',
+        matching: '/api/functions/runMatching',
+        claims: '/api/functions/submitClaim',
+        chat: '/api/chat/:channelId/messages',
+        call: '/api/call/session',
+        events: '/api/events'
+      },
       timestamp: new Date().toISOString(),
     });
   }
@@ -613,16 +616,16 @@ const server = http.createServer(async (req, res) => {
       const params = await parseBody(req);
       const { matchId, evidence = [], claimantNotes, claimantId } = params;
       const claimId = `claim-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-      const cid = claimantId || 'user-sarah-101';
+      const cid = claimantId || null;
 
       if (isDbConnected()) {
         const mRes = await query('SELECT * FROM ai_matches WHERE id = $1', [matchId]);
-        const match = mRes.rows[0] || { lost_report_id: 'lost-seed-101', found_report_id: 'found-seed-201' };
+        const match = mRes.rows[0] || {};
 
         const claimRes = await query(
           `INSERT INTO claims (id, match_id, lost_report_id, found_report_id, claimant_id, claimant_notes, status, evidence_score, created_date)
            VALUES ($1, $2, $3, $4, $5, $6, 'submitted', 95.0, CURRENT_TIMESTAMP) RETURNING *`,
-          [claimId, matchId, match.lost_report_id, match.found_report_id, cid, claimantNotes || 'Claim filed']
+          [claimId, matchId, match.lost_report_id || null, match.found_report_id || null, cid, claimantNotes || 'Claim filed']
         );
 
         for (const ev of evidence) {
@@ -638,11 +641,12 @@ const server = http.createServer(async (req, res) => {
 
       fallbackDbStore = loadFallbackDb();
       if (!fallbackDbStore.Claims) fallbackDbStore.Claims = [];
+      const match = (fallbackDbStore.AIMatches || []).find(m => m.id === matchId) || {};
       const newClaim = {
         id: claimId,
         match_id: matchId,
-        lost_report_id: 'lost-seed-101',
-        found_report_id: 'found-seed-201',
+        lost_report_id: match.lost_report_id || null,
+        found_report_id: match.found_report_id || null,
         claimant_id: cid,
         claimant_notes: claimantNotes || 'Claim filed',
         status: 'submitted',
@@ -678,7 +682,7 @@ const server = http.createServer(async (req, res) => {
            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '1 day', 'scheduled', $8, true, CURRENT_TIMESTAMP)`,
           [
             handoverId, claimId, `ZEXO-CERT-${Math.floor(10000000 + Math.random() * 90000000)}`,
-            'Recovered Item', claim?.claimant_id || 'user-sarah-101', 'user-priya-109',
+            'Recovered Item', claim?.claimant_id || null, null,
             'Central Campus Security Office Desk 1', code
           ]
         );
@@ -696,13 +700,16 @@ const server = http.createServer(async (req, res) => {
         c.review_notes = notes || '';
       }
 
+      const fMatch = (fallbackDbStore.AIMatches || []).find(m => m.id === c?.match_id);
+      const fReport = (fallbackDbStore.FoundReports || []).find(f => f.id === (c?.found_report_id || fMatch?.found_report_id));
+
       const handover = {
         id: handoverId,
         claim_id: claimId,
         cert_id: `ZEXO-CERT-${Math.floor(10000000 + Math.random() * 90000000)}`,
         item_name: 'Recovered Item',
-        lost_owner_id: c?.claimant_id || 'user-sarah-101',
-        found_reporter_id: 'user-priya-109',
+        lost_owner_id: c?.claimant_id || null,
+        found_reporter_id: fReport?.finder_id || null,
         scheduled_location: 'Central Campus Security Office Desk 1',
         scheduled_datetime: new Date(Date.now() + 86400000).toISOString(),
         status: 'scheduled',
@@ -843,6 +850,70 @@ const server = http.createServer(async (req, res) => {
     } catch (err) {
       return sendJSON(res, 500, { error: err.message });
     }
+  }
+
+  // ── Privacy PII Masking Utility ──
+  const maskPiiContent = (text) => {
+    if (!text || typeof text !== 'string') return text;
+    let masked = text.replace(/(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g, '[PHONE REDACTED BY RELAY]');
+    masked = masked.replace(/\b\d{10}\b/g, '[PHONE REDACTED BY RELAY]');
+    masked = masked.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
+    return masked;
+  };
+
+  // ── Secure Chat & Messaging Endpoints ──
+  const chatMatch = pathname.match(/^(?:\/api)?\/chat\/([^\/]+)(?:\/messages)?$/i);
+  if (chatMatch) {
+    const channelId = chatMatch[1];
+    fallbackDbStore = loadFallbackDb();
+    if (!fallbackDbStore.ChatMessages) fallbackDbStore.ChatMessages = [];
+
+    if (req.method === 'GET') {
+      const channelMessages = fallbackDbStore.ChatMessages.filter(m => m.channel_id === channelId);
+      return sendJSON(res, 200, channelMessages);
+    }
+
+    if (req.method === 'POST') {
+      const body = await parseBody(req);
+      const rawText = sanitizeInput(body.text || '');
+      if (!rawText.trim()) return sendJSON(res, 400, { error: 'Message text required' });
+
+      const safeText = maskPiiContent(rawText);
+      const newMsg = {
+        id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        channel_id: channelId,
+        sender_id: body.sender_id || 'user-anonymous',
+        sender_name: body.sender_name || 'Anonymous User',
+        sender_role: body.sender_role || 'Finder',
+        text: safeText,
+        created_at: new Date().toISOString(),
+        read: false,
+      };
+
+      fallbackDbStore.ChatMessages.push(newMsg);
+      saveFallbackDb(fallbackDbStore, 'ChatMessages');
+      broadcastEvent('CHAT_MESSAGE', { channel_id: channelId, message: newMsg });
+      return sendJSON(res, 201, { status: 'success', message: newMsg });
+    }
+  }
+
+  // ── Virtual Masked Calling Bridge Endpoints ──
+  if ((pathname === '/api/call/session' || pathname === '/call/session') && req.method === 'POST') {
+    const body = await parseBody(req);
+    const channelId = body.channel_id || 'default-relay';
+    const trunkId = `TRUNK-${Math.floor(1000 + Math.random() * 9000)}-ZEXO`;
+    const callPayload = {
+      trunk_id: trunkId,
+      channel_id: channelId,
+      status: body.action === 'end' ? 'terminated' : 'bridged',
+      caller_id: body.caller_id || 'caller-anonymous',
+      recipient_id: body.recipient_id || 'recipient-anonymous',
+      relay_number: '+1 (800) 555-ZEXO',
+      timestamp: new Date().toISOString(),
+      encryption: 'TLS 1.3 End-to-End Masked Trunk',
+    };
+    broadcastEvent('CALL_EVENT', callPayload);
+    return sendJSON(res, 200, { status: 'success', call: callPayload });
   }
 
   // ── Universal Entity REST CRUD Endpoints ──

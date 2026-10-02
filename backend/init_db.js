@@ -28,15 +28,7 @@ const pool = new Pool({
   ssl: isLocalhost ? false : { rejectUnauthorized: false },
 });
 
-const standardUsers = [
-  { id: "user-default-1", email: "user@example.com", full_name: "Demo User", role: "user", account_status: "active" },
-  { id: "admin-default-1", email: "admin@findback.app", full_name: "Admin Supervisor", role: "admin", account_status: "active" },
-  { id: "user-sarah-101", email: "sarah.m@gmail.com", full_name: "Sarah Miller", role: "user", account_status: "active" },
-  { id: "user-anand-103", email: "anand.v@gmail.com", full_name: "Anand Verma", role: "user", account_status: "active" },
-  { id: "user-karthik-105", email: "karthik.r@gmail.com", full_name: "Karthik Raja", role: "user", account_status: "active" },
-  { id: "user-vikram-107", email: "vikram.s@gmail.com", full_name: "Vikram Singh", role: "user", account_status: "active" },
-  { id: "user-priya-109", email: "priya.k@gmail.com", full_name: "Priya Kumar", role: "user", account_status: "active" }
-];
+const standardUsers = [];
 
 async function initializeDatabase() {
   console.log('╔══════════════════════════════════════════════════════════════╗');
@@ -90,10 +82,10 @@ async function initializeDatabase() {
       const validUserIds = new Set(standardUsers.map(u => u.id));
       if (localData.User) localData.User.forEach(u => validUserIds.add(u.id));
 
-      if (localData.LostReports) {
-        console.log(` ➔ Seeding ${localData.LostReports.length} LostReports...`);
+      if (localData.LostReports && localData.LostReports.length > 0) {
+        console.log(` ➔ Syncing ${localData.LostReports.length} LostReports...`);
         for (const r of localData.LostReports) {
-          const reporterId = validUserIds.has(r.reporter_id) ? r.reporter_id : 'user-sarah-101';
+          const reporterId = validUserIds.has(r.reporter_id) ? r.reporter_id : (r.reporter_id || null);
           await client.query(
             `INSERT INTO lost_reports (id, title, category, description, brand, color, distinguishing_marks, location_text, location_lat, location_lng, reporter_id, lost_date, lost_time, status, ai_tags, ai_confidence, created_date)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
@@ -110,10 +102,10 @@ async function initializeDatabase() {
       }
 
       // Seed Found Reports
-      if (localData.FoundReports) {
-        console.log(` ➔ Seeding ${localData.FoundReports.length} FoundReports...`);
+      if (localData.FoundReports && localData.FoundReports.length > 0) {
+        console.log(` ➔ Syncing ${localData.FoundReports.length} FoundReports...`);
         for (const r of localData.FoundReports) {
-          const finderId = validUserIds.has(r.finder_id) ? r.finder_id : 'user-priya-109';
+          const finderId = validUserIds.has(r.finder_id) ? r.finder_id : (r.finder_id || null);
           await client.query(
             `INSERT INTO found_reports (id, title, category, description, brand, color, distinguishing_marks, location_text, location_lat, location_lng, finder_id, current_holder_location, found_date, found_time, status, ai_tags, ai_confidence, created_date)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
@@ -130,8 +122,8 @@ async function initializeDatabase() {
       }
 
       // Seed AI Matches
-      if (localData.AIMatches) {
-        console.log(` ➔ Seeding ${localData.AIMatches.length} AIMatches...`);
+      if (localData.AIMatches && localData.AIMatches.length > 0) {
+        console.log(` ➔ Syncing ${localData.AIMatches.length} AIMatches...`);
         for (const m of localData.AIMatches) {
           await client.query(
             `INSERT INTO ai_matches (id, lost_report_id, found_report_id, overall_confidence_score, overall_score, text_similarity_score, location_proximity_score, spatial_proximity_km, temporal_proximity_hours, status, ai_recommendation, created_date)
@@ -149,17 +141,17 @@ async function initializeDatabase() {
       }
 
       // Seed Claims
-      if (localData.Claims) {
-        console.log(` ➔ Seeding ${localData.Claims.length} Claims...`);
+      if (localData.Claims && localData.Claims.length > 0) {
+        console.log(` ➔ Syncing ${localData.Claims.length} Claims...`);
         for (const c of localData.Claims) {
           await client.query(
             `INSERT INTO claims (id, match_id, lost_report_id, found_report_id, claimant_id, claimant_notes, status, evidence_score, verification_hash, created_date)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
              ON CONFLICT (id) DO NOTHING`,
             [
-              c.id, c.match_id || 'match-seed-301', 'lost-seed-101', 'found-seed-201',
-              'user-sarah-101', c.claimant_notes || '',
-              c.status || 'approved', c.evidence_score || 90,
+              c.id, c.match_id || null, c.lost_report_id || null, c.found_report_id || null,
+              c.claimant_id || null, c.claimant_notes || '',
+              c.status || 'submitted', c.evidence_score || 0,
               c.verification_hash || '', c.created_date || new Date().toISOString()
             ]
           ).catch(() => {});
@@ -167,18 +159,18 @@ async function initializeDatabase() {
       }
 
       // Seed Handovers
-      if (localData.Handovers) {
-        console.log(` ➔ Seeding ${localData.Handovers.length} Handovers...`);
+      if (localData.Handovers && localData.Handovers.length > 0) {
+        console.log(` ➔ Syncing ${localData.Handovers.length} Handovers...`);
         for (const h of localData.Handovers) {
           await client.query(
             `INSERT INTO handovers (id, claim_id, cert_id, item_name, authority_name, officer_name, recipient_email, signature_hash, timestamp, lost_owner_id, found_reporter_id, status, verification_code, created_date)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
              ON CONFLICT (id) DO NOTHING`,
             [
-              h.id, h.claim_id || 'claim-seed-401', h.cert_id || 'ZEXO-CERT-88492015', h.item_name || 'Item', h.authority_name || 'Desk',
-              h.officer_name || 'Officer', h.recipient_email || 'sarah.m@gmail.com', h.signature_hash || '',
-              h.timestamp || '2026-08-26 17:30:00', 'user-sarah-101', 'user-priya-109',
-              h.status || 'completed', '592814', h.created_date || new Date().toISOString()
+              h.id, h.claim_id || null, h.cert_id || null, h.item_name || 'Item', h.authority_name || '',
+              h.officer_name || '', h.recipient_email || '', h.signature_hash || '',
+              h.timestamp || new Date().toISOString(), h.lost_owner_id || null, h.found_reporter_id || null,
+              h.status || 'scheduled', h.verification_code || '', h.created_date || new Date().toISOString()
             ]
           ).catch(() => {});
         }

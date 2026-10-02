@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { db } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { seedInitialCommunityData } from './communitySeed';
 import { Search, PlusCircle, Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Clock, MapPin } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 
@@ -13,9 +12,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     (async () => {
-      // Automatically seed realistic community data if empty
-      seedInitialCommunityData();
-
       const activeUser = user || (await db.auth.me().catch(() => null)) || { id: 'guest-user', full_name: 'Guest User' };
       const userId = activeUser?.id || 'guest-user';
       try {
@@ -28,16 +24,12 @@ export default function Dashboard() {
           db.entities.Notifications.filter({ is_read: false }, '-created_date', 5).catch(() => []),
         ]);
 
-        const combinedReports = [...(userLost || []), ...(userFound || [])];
-        const displayLost = combinedReports.length ? allLost : allLost;
-        const displayFound = combinedReports.length ? allFound : allFound;
-
         setData({
           u: activeUser,
           userLost: userLost || [],
           userFound: userFound || [],
-          allLost: displayLost || [],
-          allFound: displayFound || [],
+          allLost: allLost || [],
+          allFound: allFound || [],
           matches: matches || [],
           notes: notes || [],
         });
@@ -71,13 +63,14 @@ export default function Dashboard() {
     );
   }
 
-  const totalReportsCount = (data.allLost.length || 0) + (data.allFound.length || 0);
-  const recoveredCount = data.allLost.filter(x => x.status === 'closed' || x.status === 'returned').length + 2;
-  const matchCount = data.matches.length || 4;
+  const activeLostCount = (data.allLost || []).filter(x => x.status === 'active').length;
+  const activeFoundCount = (data.allFound || []).filter(x => x.status === 'active').length;
+  const matchCount = (data.matches || []).length;
+  const recoveredCount = [...(data.allLost || []), ...(data.allFound || [])].filter(x => x.status === 'closed' || x.status === 'returned').length;
 
   const stats = [
-    [data.allLost.length || 4, 'Active Lost Reports', Search, 'text-amber-600 bg-amber-50'],
-    [data.allFound.length || 4, 'Found Items Logged', PlusCircle, 'text-emerald-600 bg-emerald-50'],
+    [activeLostCount, 'Active Lost Reports', Search, 'text-amber-600 bg-amber-50'],
+    [activeFoundCount, 'Found Items Logged', PlusCircle, 'text-emerald-600 bg-emerald-50'],
     [matchCount, 'AI Verified Matches', Sparkles, 'text-blue-600 bg-blue-50 ring-2 ring-blue-400/30 animate-pulse-glow'],
     [recoveredCount, 'Items Safely Handed Over', CheckCircle2, 'text-indigo-600 bg-indigo-50'],
   ];
@@ -265,7 +258,47 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Recent Global & Personal Reports */}
+          {/* User's Own Logged Items (User Separation) */}
+          {((data.userLost || []).length > 0 || (data.userFound || []).length > 0) && (
+            <div className="rounded-2xl border border-blue-200 bg-blue-50/30 p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-full bg-blue-600" />
+                    <span>Your Reported Items</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Items currently logged under your account</p>
+                </div>
+                <Link to="/reports" className="text-xs font-semibold text-blue-600 hover:underline">
+                  Manage All
+                </Link>
+              </div>
+
+              <div className="mt-4 space-y-2.5">
+                {[
+                  ...(data.userLost || []).map(x => ({ ...x, reportType: 'Lost' })),
+                  ...(data.userFound || []).map(x => ({ ...x, reportType: 'Found' }))
+                ].slice(0, 4).map(r => (
+                  <div key={r.id} className="flex items-center justify-between rounded-xl bg-white p-3.5 border border-blue-100 shadow-xs">
+                    <div className="flex items-center space-x-3">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${r.reportType === 'Lost' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                        {r.reportType}
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{r.title}</p>
+                        <p className="text-xs text-slate-500">{r.location_text || 'Logged Location'}</p>
+                      </div>
+                    </div>
+                    <span className="rounded-md bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600 border capitalize">
+                      {r.status || 'Active'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recent Global Community Reports */}
           <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
             <h2 className="font-bold text-slate-900 text-lg">Recent Community Feed</h2>
             <div className="mt-4 space-y-2.5">

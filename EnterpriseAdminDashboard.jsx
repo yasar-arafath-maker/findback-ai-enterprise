@@ -94,13 +94,13 @@ export default function EnterpriseAdminDashboard() {
   // Handover form state
   const [handoverForm, setHandoverForm] = useState({
     claim_id: '',
-    item_name: 'MacBook Air M2 (Space Grey)',
-    authority_name: 'KRCT Central Library Security Desk',
-    officer_name: 'Supervisor R. Sharma',
-    officer_badge: 'BADGE-8849',
-    recipient_email: 'sarah.m@gmail.com',
-    claimant_id: 'user-sarah-101',
-    finder_id: 'user-priya-109'
+    item_name: '',
+    authority_name: '',
+    officer_name: '',
+    officer_badge: '',
+    recipient_email: '',
+    claimant_id: '',
+    finder_id: ''
   });
 
   const showToast = (message, type = 'success') => {
@@ -1322,13 +1322,13 @@ export default function EnterpriseAdminDashboard() {
                     {paginate(getFilteredList(claimsList)).map((c) => (
                       <tr key={c.id} className="hover:bg-slate-800/40 transition-colors">
                         <td className="p-4 text-cyan-400 font-bold">{c.id}</td>
-                        <td className="p-4 text-white font-sans">{c.claimant_id || 'Sarah Miller'}</td>
-                        <td className="p-4 text-amber-300">{c.match_id || 'MATCH-301'}</td>
+                        <td className="p-4 text-white font-sans">{c.claimant_name || c.claimant_id || 'Claimant'}</td>
+                        <td className="p-4 text-amber-300">{c.match_id || 'N/A'}</td>
                         <td className="p-4">
                           <span className="font-black text-emerald-400">{c.evidence_score || 95}% Verified</span>
                         </td>
                         <td className="p-4 text-purple-300 font-mono text-[11px]">
-                          {c.verification_hash || '0x8F9C2B1D4E3A7F0B'}
+                          {c.verification_hash || 'Pending'}
                         </td>
                         <td className="p-4">
                           <span className="rounded-full bg-emerald-950 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 uppercase">
@@ -1341,7 +1341,7 @@ export default function EnterpriseAdminDashboard() {
                               setHandoverForm({
                                 ...handoverForm,
                                 claim_id: c.id,
-                                claimant_id: c.claimant_id || 'user-sarah-101'
+                                claimant_id: c.claimant_id || ''
                               });
                               setHandoverModalOpen(true);
                             }}

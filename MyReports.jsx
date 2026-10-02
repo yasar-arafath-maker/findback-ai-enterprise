@@ -30,18 +30,6 @@ export default function MyReports() {
         ...found.map(r => ({ ...r, type: 'found' })),
       ];
 
-      // If user has no reports created yet, fetch all reports as initial view so UI is populated
-      if (!allUserReports.length) {
-        const [allLost, allFound] = await Promise.all([
-          db.entities.LostReports.filter({}, '-created_date', 50).catch(() => []),
-          db.entities.FoundReports.filter({}, '-created_date', 50).catch(() => []),
-        ]);
-        allUserReports = [
-          ...allLost.map(r => ({ ...r, type: 'lost' })),
-          ...allFound.map(r => ({ ...r, type: 'found' })),
-        ];
-      }
-
       allUserReports.sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
       setData(allUserReports);
     } catch (err) {

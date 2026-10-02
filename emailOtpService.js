@@ -76,7 +76,8 @@ const dispatchSmtpViaNodemailer = async (email, code) => {
   }
 
   try {
-    const nodemailer = await import('nodemailer').catch(() => null);
+    const nodemailerModule = 'nodemailer';
+    const nodemailer = await import(/* @vite-ignore */ nodemailerModule).catch(() => null);
     if (!nodemailer || !nodemailer.createTransport) {
       return null;
     }

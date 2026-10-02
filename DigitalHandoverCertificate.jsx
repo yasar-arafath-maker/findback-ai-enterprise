@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Award, Download, Printer, CheckCircle2, Building2, QrCode, FileText, Lock } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
+import QRCode from 'qrcode';
 
 export default function DigitalHandoverCertificate() {
   const [itemName, setItemName] = useState('Govt Driving License & College Identity Card');
@@ -16,10 +17,25 @@ export default function DigitalHandoverCertificate() {
   const [recipientEmail, setRecipientEmail] = useState('owner@example.com');
   const [certificate, setCertificate] = useState(null);
 
-  const handleGenerate = (e) => {
+  const handleGenerate = async (e) => {
     e.preventDefault();
-    const certId = `ZEXO-CERT-${Math.floor(10000000 + Math.random() * 90000000)}`;
+    const certId = `FB-CERT-${Math.floor(10000000 + Math.random() * 90000000)}`;
     const hash = `0x${Math.random().toString(16).substring(2, 10)}${Math.random().toString(16).substring(2, 10)}`.toUpperCase();
+
+    const origin = (typeof window !== 'undefined' && window.location?.origin && !window.location.origin.includes('localhost'))
+      ? window.location.origin
+      : 'https://findback-ai.onrender.com';
+    const verifyUrl = `${origin}/evidence/${certId}`;
+    let qrDataUrl = '';
+    try {
+      qrDataUrl = await QRCode.toDataURL(verifyUrl, {
+        width: 180,
+        margin: 2,
+        color: { dark: '#1E1B4B', light: '#FFFFFF' },
+      });
+    } catch (e) {
+      console.error(e);
+    }
 
     setCertificate({
       cert_id: certId,
@@ -29,7 +45,7 @@ export default function DigitalHandoverCertificate() {
       recipient_email: recipientEmail,
       signature_hash: hash,
       timestamp: new Date().toLocaleString(),
-      qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://zexo.app/verify-handover/${certId}`,
+      qr_url: qrDataUrl,
     });
   };
 

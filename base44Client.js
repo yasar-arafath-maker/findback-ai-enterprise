@@ -15,7 +15,7 @@ const devBypassDb = {
     isAuthenticated: async () => true,
     me: async () => ({
       id: 'dev-user',
-      email: 'dev@localhost',
+      email: 'dev@findback.app',
       role: 'admin',
       account_status: 'active',
     }),
@@ -110,7 +110,13 @@ import { categoryScore, temporalScore, computeOverallScore } from './matchScore.
 import { generateTextFingerprint, compareTextFingerprints } from './textFingerprint.js';
 import { computeSpatialProximityScore } from './spatialIndexer.js';
 
+let cachedWorkingBaseUrl = null;
+
 const candidateBaseUrls = () => {
+  if (cachedWorkingBaseUrl) {
+    return [cachedWorkingBaseUrl, 'https://findback-ai-backend.onrender.com'];
+  }
+
   const list = [];
   try {
     const envUrl = typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_BACKEND_URL) : null;
@@ -121,12 +127,15 @@ const candidateBaseUrls = () => {
     }
   } catch (e) {}
 
+  // Production-Ready Cloud Backend
+  list.push('https://findback-ai-backend.onrender.com');
+
   try {
     if (typeof localStorage !== 'undefined') {
       const customIp = localStorage.getItem('zexo_backend_ip') || localStorage.getItem('SERVER_IP');
       if (customIp) {
         const clean = customIp.trim().replace(/\/+$/, '');
-        const domain = clean.startsWith('http') ? clean : `http://${clean}:5000`;
+        const domain = clean.startsWith('http') ? clean : `https://${clean}`;
         list.push(domain.endsWith('/api') ? domain.slice(0, -4) : domain);
       }
     }
@@ -135,13 +144,14 @@ const candidateBaseUrls = () => {
   if (typeof window !== 'undefined' && window.location?.hostname) {
     const host = window.location.hostname;
     if (host && host !== 'localhost' && host !== '127.0.0.1') {
-      list.push(`http://${host}:5000`);
+      list.push(window.location.origin);
+    } else {
+      list.push('http://localhost:5000');
+    }
+    if (window.Capacitor?.isNativePlatform()) {
+      list.push('https://findback-ai-backend.onrender.com');
     }
   }
-
-  list.push('http://172.17.42.232:5000');
-  list.push('http://10.0.2.2:5000');
-  list.push('http://localhost:5000');
 
   return Array.from(new Set(list));
 };
@@ -150,7 +160,7 @@ const syncServerRequest = async (path, method = 'GET', body = null) => {
   try {
     if (typeof window === 'undefined') {
       try {
-        const fs = await import('fs');
+        const fs = await import(/* @vite-ignore */ 'fs');
         const dbFile = 'local_db.json';
         if (fs.existsSync(dbFile)) {
           const raw = fs.readFileSync(dbFile, 'utf8');
@@ -180,18 +190,40 @@ const syncServerRequest = async (path, method = 'GET', body = null) => {
             const entityName = parts[3];
             const entityId = parts[4];
             if (!dbData[entityName]) dbData[entityName] = [];
+            if (method === 'GET') {
+              if (entityId) {
+                return dbData[entityName].find(x => x.id === entityId) || null;
+              }
+              return dbData[entityName];
+            }
             if (method === 'POST' && body) {
               const idx = dbData[entityName].findIndex(x => x.id === body.id);
               if (idx >= 0) dbData[entityName][idx] = body;
               else dbData[entityName].push(body);
               fs.writeFileSync(dbFile, JSON.stringify(dbData, null, 2), 'utf8');
+              return body;
             } else if (method === 'PUT' && entityId && body) {
               const idx = dbData[entityName].findIndex(x => x.id === entityId);
               if (idx >= 0) dbData[entityName][idx] = { ...dbData[entityName][idx], ...body };
               fs.writeFileSync(dbFile, JSON.stringify(dbData, null, 2), 'utf8');
+              return dbData[entityName][idx];
             } else if (method === 'DELETE' && entityId) {
               dbData[entityName] = dbData[entityName].filter(x => x.id !== entityId);
               fs.writeFileSync(dbFile, JSON.stringify(dbData, null, 2), 'utf8');
+              return { deleted: true };
+            }
+          } else if (path.startsWith('/api/chat/')) {
+            const parts = path.split('/');
+            const channelId = parts[3];
+            if (!dbData.ChatMessages) dbData.ChatMessages = [];
+            if (method === 'GET') {
+              return dbData.ChatMessages.filter(m => m.channel_id === channelId);
+            }
+            if (method === 'POST' && body) {
+              const newMsg = { id: `msg-${Date.now()}`, channel_id: channelId, ...body, created_at: new Date().toISOString() };
+              dbData.ChatMessages.push(newMsg);
+              fs.writeFileSync(dbFile, JSON.stringify(dbData, null, 2), 'utf8');
+              return { status: 'success', message: newMsg };
             }
           }
         }
@@ -210,11 +242,12 @@ const syncServerRequest = async (path, method = 'GET', body = null) => {
     for (const baseUrl of urls) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const timeoutId = setTimeout(() => controller.abort(), 1200);
         const targetUrl = `${baseUrl.replace(/\/api$/, '')}${cleanPath}`;
         const res = await fetch(targetUrl, { ...opts, signal: controller.signal }).catch(() => null);
         clearTimeout(timeoutId);
         if (res && res.ok) {
+          cachedWorkingBaseUrl = baseUrl;
           return await res.json();
         }
       } catch (err) {}
@@ -540,7 +573,7 @@ const standaloneAuthClient = {
 
           if (!targetClaim) {
             const matches = getList('AIMatches');
-            const match = matches.find(m => m.id === matchId) || { id: matchId, lost_report_id: 'lost-seed-101', found_report_id: 'found-seed-201' };
+            const match = matches.find(m => m.id === matchId) || { id: matchId, lost_report_id: null, found_report_id: null };
             targetClaim = {
               id: `claim-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
               match_id: match.id,
@@ -642,6 +675,73 @@ const standaloneAuthClient = {
       }
 
       return { status: 'ok' };
+    },
+  },
+  chat: {
+    getMessages: async (channelId) => {
+      try {
+        const remote = await syncServerRequest(`/api/chat/${channelId}`, 'GET');
+        if (Array.isArray(remote) && remote.length > 0) {
+          localStorage.setItem(`chat_${channelId}`, JSON.stringify(remote));
+          return remote;
+        }
+      } catch (e) {}
+      try {
+        const local = localStorage.getItem(`chat_${channelId}`);
+        return local ? JSON.parse(local) : [];
+      } catch (e) { return []; }
+    },
+    sendMessage: async (channelId, messageData) => {
+      const u = getStoredUser();
+      const payload = {
+        sender_id: u?.id || 'anon-user',
+        sender_name: u?.full_name || u?.name || 'Anonymous User',
+        sender_role: messageData.sender_role || 'Finder',
+        text: messageData.text,
+      };
+      let result = null;
+      try {
+        const res = await syncServerRequest(`/api/chat/${channelId}/messages`, 'POST', payload);
+        if (res?.message) result = res.message;
+      } catch (e) {}
+
+      if (!result) {
+        // Redact PII locally if offline
+        let safeText = payload.text || '';
+        safeText = safeText.replace(/(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g, '[PHONE REDACTED BY RELAY]');
+        safeText = safeText.replace(/\b\d{10}\b/g, '[PHONE REDACTED BY RELAY]');
+        safeText = safeText.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[EMAIL REDACTED]');
+
+        result = {
+          id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          channel_id: channelId,
+          ...payload,
+          text: safeText,
+          created_at: new Date().toISOString(),
+        };
+      }
+      try {
+        const local = JSON.parse(localStorage.getItem(`chat_${channelId}`) || '[]');
+        local.push(result);
+        localStorage.setItem(`chat_${channelId}`, JSON.stringify(local));
+      } catch (e) {}
+      return result;
+    },
+    startMaskedCall: async (channelId) => {
+      const u = getStoredUser();
+      const payload = {
+        channel_id: channelId,
+        caller_id: u?.id || 'caller',
+        action: 'initiate',
+      };
+      const res = await syncServerRequest('/api/call/session', 'POST', payload);
+      return res?.call || {
+        trunk_id: `TRUNK-${Math.floor(1000 + Math.random() * 9000)}-ZEXO`,
+        channel_id: channelId,
+        status: 'bridged',
+        relay_number: '+1 (800) 555-ZEXO',
+        timestamp: new Date().toISOString(),
+      };
     },
   },
 };
