@@ -222,11 +222,15 @@ await test('Offline detection throws descriptive error', async () => {
 
 await test('Server 503 returns graceful error message', async () => {
   const { resilientFetch } = await import('../networkClient.js');
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ status: 503, ok: false, json: async () => ({}) });
   try {
-    await resilientFetch('/test');
+    await resilientFetch('/test', {}, 0);
     throw new Error('Should have thrown');
   } catch (e) {
     assert(e.message.includes('Server error'), `Wrong error: ${e.message}`);
+  } finally {
+    globalThis.fetch = origFetch;
   }
 });
 

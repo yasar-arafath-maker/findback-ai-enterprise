@@ -19,7 +19,6 @@ import {
   Download,
   Copy,
   Check,
-  Eye,
   Activity,
   Shield,
   Clock,
@@ -39,7 +38,6 @@ export default function EnterpriseTelemetryViewer() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('visual'); // 'visual' or 'json'
   const [copied, setCopied] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const fetchTelemetry = async () => {
     setLoading(true);

@@ -7,7 +7,7 @@
  */
 
 import React, { useState } from 'react';
-import { QrCode, Shield, Download, Sparkles, Check, Send, Printer, Copy, ExternalLink, ShieldCheck, Tag, FileText } from 'lucide-react';
+import { QrCode, Shield, Download, Sparkles, Check, Send, Printer, Copy, ShieldCheck, FileText } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import QRCode from 'qrcode';
 import { db } from '@/api/base44Client';

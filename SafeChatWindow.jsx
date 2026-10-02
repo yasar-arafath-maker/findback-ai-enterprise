@@ -21,17 +21,13 @@ import {
   MicOff,
   Volume2,
   VolumeX,
-  Clock,
-  Sparkles,
   AlertCircle,
   Radio,
-  RefreshCw,
-  Hash
+  RefreshCw
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { db } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { getApiBaseUrl } from './networkClient';
 
 export default function SafeChatWindow() {
   const { user } = useAuth();
@@ -53,7 +49,6 @@ export default function SafeChatWindow() {
   // Messages state
   const [messages, setMessages] = useState([]);
   const [inputMsg, setInputMsg] = useState('');
-  const [loadingMessages, setLoadingMessages] = useState(false);
   const [piiWarning, setPiiWarning] = useState(false);
 
   // Masked Call state machine

@@ -20,13 +20,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
-import db, { query, getClient, initSchema, isDbConnected } from './config/db.js';
+import { query, getClient, initSchema, isDbConnected } from './config/db.js';
 import { categoryScore, temporalScore, computeOverallScore } from './matchScore.js';
 import { generateTextFingerprint, compareTextFingerprints } from './textFingerprint.js';
 import { computeSpatialProximityScore } from './spatialIndexer.js';
 import { generateHandoverReceiptHash } from './cryptoAudit.js';
 import { sendOtpEmail, verifyOtpCode } from './emailOtpService.js';
-import { notificationService } from './notificationService.js';
 import { sanitizeInput } from './securityHelper.js';
 
 dotenv.config();

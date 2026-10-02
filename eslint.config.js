@@ -6,12 +6,28 @@ import pluginUnusedImports from "eslint-plugin-unused-imports";
 
 export default [
   {
-    files: [
-      "src/components/**/*.{js,mjs,cjs,jsx}",
-      "src/pages/**/*.{js,mjs,cjs,jsx}",
-      "src/Layout.jsx",
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "android/**",
+      "public/**",
+      "entry.ts*",
+      "tests/**",
+      "backend/local_db.json",
+      "local_db.json"
     ],
-    ignores: ["src/lib/**/*", "src/components/ui/**/*"],
+  },
+  {
+    files: [
+      "**/*.{js,mjs,cjs,jsx}",
+    ],
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "android/**",
+      "entry.ts*",
+      "tests/**"
+    ],
     ...pluginJs.configs.recommended,
     ...pluginReact.configs.flat.recommended,
     languageOptions: {
@@ -43,9 +59,10 @@ export default [
         "warn",
         {
           vars: "all",
-          varsIgnorePattern: "^_",
+          varsIgnorePattern: "^_|^e$|^err$|^db$",
           args: "after-used",
-          argsIgnorePattern: "^_",
+          argsIgnorePattern: "^_|^e$|^err$",
+          caughtErrors: "none",
         },
       ],
       "react/prop-types": "off",

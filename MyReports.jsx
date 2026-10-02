@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { db } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/PageHeader';
 import ReportCard from '@/components/ReportCard';
-import { PlusCircle, Search, Trash2, Edit3, CheckCircle, RefreshCw } from 'lucide-react';
+import { PlusCircle, Search, Trash2, CheckCircle, RefreshCw } from 'lucide-react';
 
 export default function MyReports() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);

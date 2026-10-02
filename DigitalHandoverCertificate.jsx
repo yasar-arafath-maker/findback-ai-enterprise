@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { ShieldCheck, Award, Download, Printer, CheckCircle2, Building2, QrCode, FileText, Lock, Loader2 } from 'lucide-react';
+import { ShieldCheck, Award, Download, Printer, Building2, Loader2 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import QRCode from 'qrcode';
 import { generateHandoverCertificatePdf } from './certificatePdfGenerator';

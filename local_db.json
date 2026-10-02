@@ -1,7 +1,107 @@
 {
-  "User": [],
-  "LostReports": [],
-  "FoundReports": [],
+  "User": [
+    {
+      "id": "user-1790918950388",
+      "email": "test.user.1790918949914@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T05:29:10.388Z"
+    },
+    {
+      "id": "user-1790918984802",
+      "email": "test.user.1790918984164@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T05:29:44.802Z"
+    },
+    {
+      "id": "user-1790919161200",
+      "email": "test.user.1790919160708@zexo.app",
+      "full_name": "Live Diagnostic User",
+      "phone": "+91 9988776655",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T05:32:41.200Z"
+    }
+  ],
+  "LostReports": [
+    {
+      "id": "id-1790919118352-3h4s",
+      "created_date": "2026-10-02T05:31:58.352Z",
+      "status": "active",
+      "title": "Apple AirPods Pro (2nd Gen)",
+      "category": "Electronics",
+      "description": "White MagSafe case with small scratch near hinge.",
+      "brand": "Apple",
+      "color": "White",
+      "distinguishing_marks": "Blue silicone tip on left earbud",
+      "location_text": "Central Library, 2nd Floor",
+      "location_lat": 10.8231,
+      "location_lng": 78.6942,
+      "primary_image_url": "https://example.com/airpods.jpg",
+      "reporter_id": "test-user-123",
+      "lost_date": "2026-08-27",
+      "lost_time": "14:30"
+    },
+    {
+      "id": "id-1790919164522-w7lk",
+      "created_date": "2026-10-02T05:32:44.522Z",
+      "status": "active",
+      "title": "Apple AirPods Pro (2nd Gen)",
+      "category": "Electronics",
+      "description": "White MagSafe case with small scratch near hinge.",
+      "brand": "Apple",
+      "color": "White",
+      "distinguishing_marks": "Blue silicone tip on left earbud",
+      "location_text": "Central Library, 2nd Floor",
+      "location_lat": 10.8231,
+      "location_lng": 78.6942,
+      "primary_image_url": "https://example.com/airpods.jpg",
+      "reporter_id": "test-user-123",
+      "lost_date": "2026-08-27",
+      "lost_time": "14:30"
+    }
+  ],
+  "FoundReports": [
+    {
+      "id": "id-1790919118364-6jyi",
+      "created_date": "2026-10-02T05:31:58.364Z",
+      "status": "active",
+      "title": "Leather Wallet with Student ID",
+      "category": "Bags",
+      "description": "Black leather Wildcraft wallet found under study desk.",
+      "brand": "Wildcraft",
+      "color": "Black",
+      "location_text": "KRCT Student Center Lounge",
+      "location_lat": 10.824,
+      "location_lng": 78.695,
+      "current_holder_location": "Campus Security Office",
+      "finder_id": "test-user-456",
+      "found_date": "2026-08-27",
+      "found_time": "15:00"
+    },
+    {
+      "id": "id-1790919164531-puqh",
+      "created_date": "2026-10-02T05:32:44.531Z",
+      "status": "active",
+      "title": "Leather Wallet with Student ID",
+      "category": "Bags",
+      "description": "Black leather Wildcraft wallet found under study desk.",
+      "brand": "Wildcraft",
+      "color": "Black",
+      "location_text": "KRCT Student Center Lounge",
+      "location_lat": 10.824,
+      "location_lng": 78.695,
+      "current_holder_location": "Campus Security Office",
+      "finder_id": "test-user-456",
+      "found_date": "2026-08-27",
+      "found_time": "15:00"
+    }
+  ],
   "AIMatches": [],
   "Claims": [],
   "OwnershipEvidence": [],

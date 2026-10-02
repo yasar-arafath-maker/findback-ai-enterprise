@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { db } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/PageHeader';
-import { Bell, CheckCircle2 } from 'lucide-react';
+import { Bell } from 'lucide-react';
 
 export default function Notifications() {
   const { user } = useAuth();

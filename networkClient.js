@@ -89,7 +89,7 @@ export const resilientFetch = async (endpoint, options = {}, maxRetries = 2) => 
       }
 
       if (response.status >= 500) {
-        throw new Error('Cloud backend is initializing or encountered an issue. Please retry in a few seconds.');
+        throw new Error('Server error: Cloud backend is initializing or encountered an issue. Please retry in a few seconds.');
       }
 
       const data = await response.json().catch(() => ({}));

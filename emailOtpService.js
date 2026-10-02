@@ -33,15 +33,17 @@ const saveOtpToStore = (email, code, expiresAt) => {
 
 const getOtpFromStore = (email) => {
   const normalized = email.toLowerCase();
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const map = getStoredOtpMap();
+      if (map[normalized]) {
+        return map[normalized];
+      }
+    }
+  } catch (e) {}
   if (otpStore.has(normalized)) {
     return otpStore.get(normalized);
   }
-  try {
-    const map = getStoredOtpMap();
-    if (map[normalized]) {
-      return map[normalized];
-    }
-  } catch (e) {}
   return null;
 };
 
@@ -207,6 +209,7 @@ export const verifyOtpCode = async (rawEmail, rawCode) => {
       removeOtpFromStore(email);
       return { verified: true, email };
     }
+    throw new Error('Invalid verification code. Please check your email and try again.');
   }
 
   // Attempt backend verify-otp check if available
@@ -226,12 +229,6 @@ export const verifyOtpCode = async (rawEmail, rawCode) => {
       }
     }
   } catch (err) {}
-
-  // If code is a valid 6-digit number, authorize verification in demo/fallback mode
-  if (code && code.length === 6) {
-    removeOtpFromStore(email);
-    return { verified: true, email };
-  }
 
   throw new Error('Invalid verification code. Please check your email and try again.');
 };

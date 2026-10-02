@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
-  FileText,
   Filter,
   RefreshCw,
 } from 'lucide-react';

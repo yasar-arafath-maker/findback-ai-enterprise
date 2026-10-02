@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
   Activity,
   Database,
-  Server,
   Users,
   FileText,
   Sparkles,
@@ -12,23 +11,12 @@ import {
   Download,
   Copy,
   Check,
-  Clock,
-  HardDrive,
-  Layers,
   Terminal,
   Cpu,
-  UserCheck,
-  UserX,
-  AlertTriangle,
   CheckCircle2,
-  XCircle,
   Trash2,
   Eye,
   Award,
-  ExternalLink,
-  QrCode,
-  ShieldAlert,
-  ArrowUpRight,
   Filter,
   ChevronLeft,
   ChevronRight,
@@ -36,16 +24,12 @@ import {
   Radio,
   Lock,
   Unlock,
-  Sliders,
   DollarSign,
-  ArrowRight,
   X,
   Printer,
   PlusCircle,
   MinusCircle,
   Shield,
-  FileSpreadsheet,
-  Globe,
   SlidersHorizontal
 } from 'lucide-react';
 import { getApiBaseUrl } from './networkClient.js';
@@ -83,7 +67,7 @@ export default function EnterpriseAdminDashboard() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize] = useState(10);
 
   // Modals & Drawers
   const [previewImage, setPreviewImage] = useState(null);

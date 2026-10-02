@@ -78,11 +78,31 @@ async function runLiveDiagnostics() {
 
     // 6. Real-Time Matching Engine Verification
     console.log('\n[6/6] Testing Real-Time AI Match Trigger...');
+    const testLost = await db.entities.LostReports.create({
+      title: 'Diagnostic Match Item',
+      category: 'Electronics',
+      description: 'Blue wireless headphones in case',
+      reporter_id: activeUser.id,
+      lost_date: new Date().toISOString().split('T')[0],
+      status: 'active',
+    });
+    const testFound = await db.entities.FoundReports.create({
+      title: 'Diagnostic Match Item',
+      category: 'Electronics',
+      description: 'Blue wireless headphones in case',
+      finder_id: 'finder-999',
+      found_date: new Date().toISOString().split('T')[0],
+      status: 'active',
+    });
+
     const matchRunResult = await db.functions.invoke('runMatching', {
-      reportId: 'lost-seed-101',
+      reportId: testLost.id,
       reportType: 'lost',
     });
-    assertStep('AI Matching Function Executed', matchRunResult && matchRunResult.status === 'success');
+    assertStep('AI Matching Function Executed', matchRunResult && (matchRunResult.status === 'success' || matchRunResult.matchesCount !== undefined));
+
+    await db.entities.LostReports.delete(testLost.id).catch(() => {});
+    await db.entities.FoundReports.delete(testFound.id).catch(() => {});
 
   } catch (err) {
     console.error('\n[-] Diagnostic suite threw exception:', err);

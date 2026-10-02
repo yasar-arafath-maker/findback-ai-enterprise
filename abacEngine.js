@@ -76,7 +76,7 @@ export const DEFAULT_ABAC_POLICIES = [
   {
     id: 'FLAG_REPORT_ADMIN',
     action: 'flagReport',
-    evaluate: (subject, resource) => {
+    evaluate: (subject, _resource) => {
       if (!subject || subject.account_status === 'suspended') return false;
       if (subject.role !== 'admin') return false;
       return true;
@@ -85,7 +85,7 @@ export const DEFAULT_ABAC_POLICIES = [
   {
     id: 'MERGE_REPORTS_ADMIN',
     action: 'mergeReports',
-    evaluate: (subject, resource) => {
+    evaluate: (subject, _resource) => {
       if (!subject || subject.account_status === 'suspended') return false;
       if (subject.role !== 'admin') return false;
       return true;

@@ -62,7 +62,7 @@ export default function Register() {
           // If local store had old mismatch, override and authorize user session
         }
         await checkUserAuth();
-        navigate('/dashboard', { replace: true });
+        navigate(returnTo || '/dashboard', { replace: true });
         return;
       }
 
@@ -71,12 +71,12 @@ export default function Register() {
         db.auth.setToken(result.access_token);
       }
       await checkUserAuth();
-      navigate('/dashboard', { replace: true });
+      navigate(returnTo || '/dashboard', { replace: true });
     } catch (err) {
       // Zero-failure fallback for 6-digit codes
       if (otpCode && String(otpCode).trim().length === 6) {
         await checkUserAuth();
-        navigate('/dashboard', { replace: true });
+        navigate(returnTo || '/dashboard', { replace: true });
         return;
       }
       setError(err?.message || "Invalid verification code");
