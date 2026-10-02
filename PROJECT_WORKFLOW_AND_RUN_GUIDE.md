@@ -289,7 +289,7 @@ VITE_API_BASE_URL=https://findback-ai-backend.onrender.com/api
 ```env
 PORT=5000
 NODE_ENV=production
-DATABASE_URL=postgresql://postgres.svundgrrldchslwlisfe:Kb1w2mAPY071GFxe@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.yourproject:yourpassword@aws-0-region.pooler.supabase.com:6543/postgres
 ```
 
 ---
@@ -462,7 +462,7 @@ npx cap open android
    - Build Command: `cd backend && npm install`
    - Start Command: `node backend/server.js`
    - Environment Variable:
-     `DATABASE_URL=postgresql://postgres.svundgrrldchslwlisfe:Kb1w2mAPY071GFxe@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres`
+     `DATABASE_URL=postgresql://postgres.yourproject:yourpassword@aws-0-region.pooler.supabase.com:6543/postgres`
 4. **Live URL:**
    - Backend API: `https://findback-ai-backend.onrender.com/api`
    - Health Probe: `https://findback-ai-backend.onrender.com/api/health`

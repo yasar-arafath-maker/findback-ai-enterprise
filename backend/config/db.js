@@ -27,8 +27,9 @@ let pool = null;
 let isPostgresActive = false;
 
 const DATABASE_URL = process.env.DATABASE_URL;
+const isPlaceholderDb = !DATABASE_URL || DATABASE_URL.includes('yourproject') || DATABASE_URL.includes('yourpassword') || DATABASE_URL.includes('your_') || DATABASE_URL.includes('example');
 
-if (DATABASE_URL) {
+if (DATABASE_URL && !isPlaceholderDb) {
   try {
     const isLocalhost = DATABASE_URL.includes('localhost') || DATABASE_URL.includes('127.0.0.1');
     pool = new Pool({
