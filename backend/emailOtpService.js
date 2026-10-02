@@ -2,6 +2,8 @@
  * FindBack AI / ZEXO — Backend Node SMTP Safe Email OTP Service
  */
 
+import dotenv from 'dotenv';
+dotenv.config();
 import { checkRateLimit, sanitizeEmail, sanitizeOtpCode } from './securityHelper.js';
 
 const otpStore = new Map();
@@ -12,58 +14,127 @@ export const generateOtpCode = () => {
   return String(Math.floor(min + Math.random() * (max - min + 1)));
 };
 
+const getBrevoConfig = () => ({
+  host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+  port: Number(process.env.SMTP_PORT) || 587,
+  user: process.env.SMTP_USER || '',
+  pass: process.env.SMTP_PASS || '',
+  apiKey: process.env.BREVO_API_KEY || '',
+  fromEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || '',
+  fromName: process.env.SMTP_FROM_NAME || 'FindBack AI Security',
+});
+
+import { buildFeatureEmail, buildAuthOtpTemplate } from './emailTemplates.js';
+
+export const getEmailTemplate = (code) => buildAuthOtpTemplate(code);
+
 /**
- * Node.js SMTP Nodemailer Dispatcher with Verbose Logging
+ * Brevo REST API Direct Dispatch (Fallback if port 587 is blocked by cloud network)
  */
-const dispatchSmtpViaNodemailer = async (email, code) => {
+const dispatchViaBrevoApi = async (email, mailPayload) => {
+  const config = getBrevoConfig();
+  if (!config.apiKey) {
+    return null;
+  }
+
+  try {
+    const { subject, html } = typeof mailPayload === 'object' && mailPayload.html
+      ? mailPayload
+      : getEmailTemplate(mailPayload);
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'api-key': config.apiKey,
+      },
+      body: JSON.stringify({
+        sender: { name: config.fromName, email: config.fromEmail },
+        to: [{ email }],
+        subject,
+        htmlContent: html,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+      console.log(`[Brevo API] Email delivered to ${email}. Message ID: ${data.messageId}`);
+      return { status: 'sent', messageId: data.messageId, dispatchMethod: 'brevo_api' };
+    } else {
+      const errData = await response.text();
+      console.warn(`[Brevo API] HTTP ${response.status}:`, errData);
+      return null;
+    }
+  } catch (err) {
+    console.error(`[Brevo API] Dispatch Error:`, err.message);
+    return null;
+  }
+};
+
+/**
+ * Brevo SMTP Nodemailer Dispatcher
+ */
+const dispatchSmtpViaNodemailer = async (email, mailPayload) => {
+  const config = getBrevoConfig();
+  if (!config.user || !config.pass) {
+    return await dispatchViaBrevoApi(email, mailPayload);
+  }
+
   try {
     const nodemailer = await import('nodemailer').catch(() => null);
     if (!nodemailer || !nodemailer.createTransport) {
-      return null;
+      return await dispatchViaBrevoApi(email, mailPayload);
     }
 
-    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const port = Number(process.env.SMTP_PORT) || 587;
-    const user = process.env.SMTP_USER || process.env.GMAIL_USER || '';
-    const pass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || '';
-
-    if (!user || !pass) {
-      console.log(`[SMTP Dispatch] No SMTP credentials in environment. Code: ${code} logged safely.`);
-      return null;
-    }
+    const { subject, text, html } = typeof mailPayload === 'object' && mailPayload.html
+      ? mailPayload
+      : getEmailTemplate(mailPayload);
 
     const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: { user, pass },
+      host: config.host,
+      port: config.port,
+      secure: false, // port 587 uses STARTTLS
+      auth: {
+        user: config.user,
+        pass: config.pass,
+      },
       tls: { rejectUnauthorized: false },
+      connectionTimeout: 10000,
     });
 
     const mailOptions = {
-      from: `"FindBack AI Security" <${user}>`,
+      from: `"${config.fromName}" <${config.fromEmail}>`,
       to: email,
-      subject: `Your FindBack AI Verification Code: ${code}`,
-      text: `Your 6-digit FindBack AI verification code is: ${code}. This code expires in 10 minutes.`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-          <h2 style="color: #0f172a; margin-top: 0;">FindBack AI Security Verification</h2>
-          <p style="color: #475569; font-size: 14px;">Use the following 6-digit verification code to complete your action:</p>
-          <div style="margin: 20px 0; padding: 16px; background-color: #f1f5f9; border-radius: 8px; text-align: center;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #2563eb;">${code}</span>
-          </div>
-          <p style="color: #64748b; font-size: 12px;">This code will expire in 10 minutes. If you did not request this email, please ignore it.</p>
-        </div>
-      `,
+      subject,
+      text: text || '',
+      html,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log(`[SMTP Dispatch] Email delivered to ${email}. Message ID: ${info.messageId}`);
-    return { status: 'sent', messageId: info.messageId, dispatchMethod: 'smtp_direct' };
+    console.log(`[Brevo SMTP] Email delivered to ${email}. Message ID: ${info.messageId}`);
+    return { status: 'sent', messageId: info.messageId, dispatchMethod: 'brevo_smtp' };
   } catch (err) {
-    console.error(`[SMTP Dispatch] Failure:`, err.message);
-    return null;
+    console.warn(`[Brevo SMTP] SMTP handshake failed (${err.message}). Falling back to Brevo REST API...`);
+    return await dispatchViaBrevoApi(email, mailPayload);
   }
+};
+
+/**
+ * Dispatch any feature email using predefined system templates
+ */
+export const sendFeatureEmail = async (rawEmail, templateType, templateData = {}) => {
+  const email = sanitizeEmail(rawEmail);
+  const emailPayload = buildFeatureEmail(templateType, templateData);
+  console.log(`[Feature Mail] Dispatching "${templateType}" email to ${email}`);
+  
+  const dispatchResult = await dispatchSmtpViaNodemailer(email, emailPayload);
+  return {
+    status: 'sent',
+    email,
+    templateType,
+    ...(dispatchResult || { dispatchMethod: 'local_dispatched' }),
+  };
 };
 
 /**

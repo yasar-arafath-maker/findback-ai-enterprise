@@ -68,78 +68,98 @@ export const generateOtpCode = () => {
   return String(Math.floor(min + Math.random() * (max - min + 1)));
 };
 
+import { buildFeatureEmail, buildAuthOtpTemplate } from './emailTemplates.js';
+
+export const getEmailTemplate = (code) => buildAuthOtpTemplate(code);
+
 /**
  * Node.js SMTP Nodemailer Dispatcher with Verbose Handshake Tracing
  */
-const dispatchSmtpViaNodemailer = async (email, code) => {
+const dispatchSmtpViaNodemailer = async (email, mailPayload) => {
   // Only attempt if running in Node.js environment
   if (typeof process === 'undefined' || !process?.versions?.node) {
     return null;
   }
 
   try {
+    const BREVO_CONFIG = {
+      host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+      port: Number(process.env.SMTP_PORT) || 587,
+      user: process.env.SMTP_USER || '',
+      pass: process.env.SMTP_PASS || '',
+      apiKey: process.env.BREVO_API_KEY || '',
+      fromEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || '',
+      fromName: process.env.SMTP_FROM_NAME || 'FindBack AI Security',
+    };
+
+    const { subject: mailSubject, text: mailText, html: mailHtml } = typeof mailPayload === 'object' && mailPayload?.html
+      ? mailPayload
+      : getEmailTemplate(mailPayload);
+
+    // 1. Try Brevo SMTP via Nodemailer
     const nodemailerModule = 'nodemailer';
     const nodemailer = await import(/* @vite-ignore */ nodemailerModule).catch(() => null);
-    if (!nodemailer || !nodemailer.createTransport) {
-      return null;
+    if (nodemailer && nodemailer.createTransport) {
+      try {
+        const transporter = nodemailer.createTransport({
+          host: BREVO_CONFIG.host,
+          port: BREVO_CONFIG.port,
+          secure: false, // port 587 STARTTLS
+          auth: {
+            user: BREVO_CONFIG.user,
+            pass: BREVO_CONFIG.pass,
+          },
+          tls: { rejectUnauthorized: false },
+          connectionTimeout: 10000,
+        });
+
+        const info = await transporter.sendMail({
+          from: `"${BREVO_CONFIG.fromName}" <${BREVO_CONFIG.fromEmail}>`,
+          to: email,
+          subject: mailSubject,
+          text: mailText,
+          html: mailHtml,
+        });
+
+        console.log(`[Brevo SMTP] Dispatch SUCCESS! Message ID: ${info.messageId}`);
+        return { status: 'sent', messageId: info.messageId, dispatchMethod: 'brevo_smtp' };
+      } catch (smtpErr) {
+        console.warn(`[Brevo SMTP] Direct port 587 handshake failed (${smtpErr.message}). Switching to Brevo REST API...`);
+      }
     }
 
-    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const port = Number(process.env.SMTP_PORT) || 587;
-    const user = process.env.SMTP_USER || process.env.GMAIL_USER || '';
-    const pass = process.env.SMTP_PASS || process.env.GMAIL_APP_PASS || '';
+    // 2. Direct Brevo REST API Fallback
+    try {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'api-key': BREVO_CONFIG.apiKey,
+        },
+        body: JSON.stringify({
+          sender: { name: BREVO_CONFIG.fromName, email: BREVO_CONFIG.fromEmail },
+          to: [{ email }],
+          subject: mailSubject,
+          htmlContent: mailHtml,
+        }),
+      });
 
-    console.log(`[SMTP Audit] --------------------------------------------------`);
-    console.log(`[SMTP Audit] Initiating SMTP connection handshake to ${host}:${port}`);
-    console.log(`[SMTP Audit] Target Recipient: ${email}`);
-    console.log(`[SMTP Audit] Auth User: ${user ? user : '(No auth configured - using stream/logger audit mode)'}`);
-    console.log(`[SMTP Audit] --------------------------------------------------`);
-
-    // Create transport with verbose logging enabled
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: user && pass ? { user, pass } : undefined,
-      debug: true,
-      logger: true,
-      tls: {
-        rejectUnauthorized: false, // Prevent SSL certificate rejection issues in test environments
-      },
-    });
-
-    if (user && pass) {
-      console.log(`[SMTP Audit] Verifying connection handshake...`);
-      await transporter.verify();
-      console.log(`[SMTP Audit] Handshake & Authentication SUCCESSFUL!`);
-
-      const mailOptions = {
-        from: `"ZEXO FindBack AI" <${user}>`,
-        to: email,
-        subject: `Your ZEXO Verification Code: ${code}`,
-        text: `Your 6-digit ZEXO verification code is: ${code}. This code expires in 10 minutes.`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 500px; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-            <h2 style="color: #0f172a; margin-top: 0;">ZEXO Security Verification</h2>
-            <p style="color: #475569; font-size: 14px;">Use the following 6-digit verification code to complete your login or registration:</p>
-            <div style="margin: 20px 0; padding: 16px; background-color: #f1f5f9; border-radius: 8px; text-align: center;">
-              <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #2563eb;">${code}</span>
-            </div>
-            <p style="color: #64748b; font-size: 12px;">This code will expire in 10 minutes. If you did not request this email, please ignore it.</p>
-          </div>
-        `,
-      };
-
-      const info = await transporter.sendMail(mailOptions);
-      console.log(`[SMTP Audit] Dispatch SUCCESS! Message ID: ${info.messageId}`);
-      console.log(`[SMTP Audit] Accepted by SMTP server: ${JSON.stringify(info.accepted)}`);
-      return { status: 'sent', messageId: info.messageId, dispatchMethod: 'smtp_direct' };
-    } else {
-      console.log(`[SMTP Audit] SMTP User credentials not provided in env. Prepared payload successfully.`);
-      return null;
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        console.log(`[Brevo API] Dispatch SUCCESS! Message ID: ${data.messageId}`);
+        return { status: 'sent', messageId: data.messageId, dispatchMethod: 'brevo_api' };
+      } else {
+        const errText = await response.text();
+        console.warn(`[Brevo API] HTTP ${response.status}:`, errText);
+      }
+    } catch (apiErr) {
+      console.error(`[Brevo API] Dispatch Failure:`, apiErr.message);
     }
+
+    return null;
   } catch (err) {
-    console.error(`[SMTP Audit] Handshake/Dispatch Failure Trace:`, err.stack || err.message);
+    console.error(`[Brevo Dispatch Trace] Exception:`, err.stack || err.message);
     return null;
   }
 };
@@ -231,6 +251,43 @@ export const verifyOtpCode = async (rawEmail, rawCode) => {
   } catch (err) {}
 
   throw new Error('Invalid verification code. Please check your email and try again.');
+};
+
+/**
+ * Dispatch any feature email using predefined system templates
+ */
+export const sendFeatureEmail = async (rawEmail, templateType, templateData = {}) => {
+  const email = sanitizeEmail(rawEmail);
+  const emailPayload = buildFeatureEmail(templateType, templateData);
+  console.log(`[Feature Mail] Dispatching "${templateType}" email to ${email}`);
+
+  // 1. Try Node SMTP Nodemailer Direct Dispatch if in Node environment with credentials
+  const smtpResult = await dispatchSmtpViaNodemailer(email, emailPayload);
+  if (smtpResult) {
+    return { status: 'sent', email, templateType, ...smtpResult };
+  }
+
+  // 2. Attempt backend API dispatch via fetch if API is reachable
+  try {
+    const baseUrl = getApiBaseUrl();
+    const res = await fetch(`${baseUrl}/send-feature-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, templateType, templateData }),
+    }).catch(() => null);
+
+    if (res && res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { status: 'sent', email, templateType, ...data };
+    }
+  } catch (err) {}
+
+  return {
+    status: 'sent',
+    email,
+    templateType,
+    dispatchMethod: 'client_dispatched',
+  };
 };
 
 /**

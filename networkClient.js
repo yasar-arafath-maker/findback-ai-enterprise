@@ -6,27 +6,42 @@
  * and robust Server-Sent Events (SSE) auto-reconnection management.
  */
 
-// Determine dynamic API Base URL
+// Determine dynamic API Base URL - strictly production cloud endpoints
 export const getApiBaseUrl = () => {
   const envUrl = typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_BACKEND_URL) : null;
-  if (envUrl) {
+  if (envUrl && envUrl.startsWith('https://')) {
     return envUrl.replace(/\/+$/, '');
   }
 
-  // If running in Capacitor Android Native environment
-  if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform()) {
-    return 'http://10.0.2.2:5000/api';
-  }
-
-  // Custom local storage IP if specified by developer
-  if (typeof localStorage !== 'undefined') {
-    const customIp = localStorage.getItem('zexo_backend_ip') || localStorage.getItem('SERVER_IP');
-    if (customIp) return customIp.startsWith('http') ? `${customIp.replace(/\/+$/, '')}/api` : `http://${customIp}:5000/api`;
-  }
-
-  // Production-ready Render backend fallback
+  // Production-ready Render cloud backend
   return 'https://findback-ai-backend.onrender.com/api';
 };
+
+/**
+ * Direct Render Cloud Boot-Up Probe
+ * Sends a lightweight health probe to wake up Render free-tier instance
+ * @returns {Promise<{ ok: boolean, data?: object, status: number, latencyMs: number }>}
+ */
+export const pingRenderBackend = async () => {
+  const baseUrl = getApiBaseUrl();
+  const healthUrl = baseUrl.endsWith('/api') ? `${baseUrl}/health` : `${baseUrl}/api/health`;
+  const start = Date.now();
+  try {
+    const res = await fetch(healthUrl, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+    const latencyMs = Date.now() - start;
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return { ok: true, data, status: res.status, latencyMs };
+    }
+    return { ok: false, status: res.status, latencyMs };
+  } catch (err) {
+    return { ok: false, error: err.message, status: 0, latencyMs: Date.now() - start };
+  }
+};
+
 
 /**
  * Fetch wrapper with global interceptor, auto-retry for Render cold-starts, and timeout handling

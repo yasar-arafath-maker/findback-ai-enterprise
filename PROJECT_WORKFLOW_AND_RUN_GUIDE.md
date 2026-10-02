@@ -204,9 +204,9 @@ while (pathname.startsWith('/api/api/')) {
 }
 ```
 This guarantees that whether a client calls:
-- `http://localhost:5000/api/reports`
-- `http://localhost:5000/reports`
-- `http://localhost:5000/api/api/reports`
+- `https://findback-ai-backend.onrender.com/api/reports`
+- `https://findback-ai-backend.onrender.com/reports`
+- `https://findback-ai-backend.onrender.com/api/api/reports`
 The request is routed to the same handler without returning 404.
 
 ### 3.2 PostgreSQL Connection Pool & Dual-Mode Fallback (`config/db.js`)
@@ -275,8 +275,10 @@ The project uses dedicated environment files:
 
 #### A. Frontend Development File: `d:\findit\.env.development`
 ```env
-# Local Development: points to local Node backend on port 5000
-VITE_API_BASE_URL=http://localhost:5000/api
+# Production Cloud: points to live Render web service
+VITE_API_BASE_URL=https://findback-ai-backend.onrender.com/api
+VITE_BACKEND_URL=https://findback-ai-backend.onrender.com
+VITE_FRONTEND_URL=https://findback-ai.onrender.com
 ```
 
 #### B. Frontend Production File: `d:\findit\.env.production`
@@ -366,13 +368,13 @@ npm run dev
 ```
   VITE v6.4.3  ready in 1800 ms
 
-  ➜  Local:   http://localhost:5173/
+  ➜  Local:   https://findback-ai.onrender.com/
   ➜  Network: use --host to expose
 ```
 
 Now open Google Chrome and navigate to:
-- **Main User Application:** [http://localhost:5173](http://localhost:5173)
-- **Enterprise Admin Console:** [http://localhost:5173/enterprise-admin](http://localhost:5173/enterprise-admin)
+- **Main User Application:** [https://findback-ai.onrender.com](https://findback-ai.onrender.com)
+- **Enterprise Admin Console:** [https://findback-ai.onrender.com/enterprise-admin](https://findback-ai.onrender.com/enterprise-admin)
 
 ---
 
@@ -382,12 +384,12 @@ To verify that the backend is responding and connected to PostgreSQL:
 
 #### In Windows PowerShell:
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:5000/api/health" | Format-List
+Invoke-RestMethod -Uri "https://findback-ai-backend.onrender.com/api/health" | Format-List
 ```
 
 #### In Bash / Terminal (curl):
 ```bash
-curl -X GET http://localhost:5000/api/health
+curl -X GET https://findback-ai-backend.onrender.com/api/health
 ```
 
 **Expected JSON Response:**

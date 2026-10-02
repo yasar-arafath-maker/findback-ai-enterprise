@@ -15,7 +15,7 @@ import { categoryScore, temporalScore, computeOverallScore } from './matchScore.
 import { generateTextFingerprint, compareTextFingerprints } from './textFingerprint.js';
 import { computeSpatialProximityScore } from './spatialIndexer.js';
 import { generateHandoverReceiptHash } from './cryptoAudit.js';
-import { sendOtpEmail, verifyOtpCode } from './emailOtpService.js';
+import { sendOtpEmail, verifyOtpCode, sendFeatureEmail } from './emailOtpService.js';
 import { sanitizeInput } from './securityHelper.js';
 
 dotenv.config();
@@ -157,7 +157,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   const host = req.headers.host || 'findback-ai-backend.onrender.com';
-  const protocol = req.headers['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
+  const protocol = req.headers['x-forwarded-proto'] || 'https';
   const reqUrl = new URL(req.url, `${protocol}://${host}`);
   let pathname = reqUrl.pathname.replace(/\/+/g, '/');
   while (pathname.startsWith('/api/api/')) {
@@ -328,81 +328,99 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── Auth Register (/api/auth/register or /auth/register) ──
   if ((pathname === '/api/auth/register' || pathname === '/auth/register') && req.method === 'POST') {
     const body = await parseBody(req);
-    const { email, full_name, name, fullName, phone } = body;
+    const { email, full_name, name, fullName, phone, role } = body;
     if (!email) return sendJSON(res, 400, { error: 'Email is required' });
 
-    const nameVal = full_name || name || fullName || email.split('@')[0];
+    const normalizedEmail = email.toLowerCase().trim();
+    const nameVal = full_name || name || fullName || normalizedEmail.split('@')[0];
+    const userRole = role && ['admin', 'officer', 'authority', 'user'].includes(role.toLowerCase())
+      ? role.toLowerCase()
+      : 'user';
     const userId = `user-${Date.now()}`;
     const token = `token_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
     if (isDbConnected()) {
       try {
-        const existing = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
-        let user;
-        if (existing.rows.length === 0) {
-          const insertRes = await query(
-            `INSERT INTO users (id, email, full_name, phone, role, account_status, created_date)
-             VALUES ($1, $2, $3, $4, 'user', 'active', CURRENT_TIMESTAMP) RETURNING *`,
-            [userId, email.toLowerCase(), nameVal, phone || '']
-          );
-          user = insertRes.rows[0];
-        } else {
-          user = existing.rows[0];
+        const existing = await query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
+        if (existing.rows.length > 0) {
+          return sendJSON(res, 409, {
+            status: 'error',
+            code: 'USER_ALREADY_EXISTS',
+            error: 'An account with this email is already registered in the database. Please log in.',
+          });
         }
 
+        const insertRes = await query(
+          `INSERT INTO users (id, email, full_name, phone, role, account_status, created_date)
+           VALUES ($1, $2, $3, $4, $5, 'active', CURRENT_TIMESTAMP) RETURNING *`,
+          [userId, normalizedEmail, nameVal, phone || '', userRole]
+        );
+        const user = insertRes.rows[0];
+
         await query('INSERT INTO sessions (token, user_id, created_date) VALUES ($1, $2, CURRENT_TIMESTAMP)', [token, user.id]);
-        broadcastEvent('USER_REGISTERED', { user_id: user.id });
+        broadcastEvent('USER_REGISTERED', { user_id: user.id, email: user.email, role: user.role });
         return sendJSON(res, 200, { status: 'success', token, access_token: token, user });
       } catch (err) {
         console.error('[Postgres Register Error]', err.message);
       }
     }
 
+    // Fallback mode
     fallbackDbStore = loadFallbackDb();
-    let existing = fallbackDbStore.User.find((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (!existing) {
-      existing = {
-        id: userId,
-        email: email.toLowerCase(),
-        full_name: nameVal,
-        phone: phone || '',
-        role: 'user',
-        account_status: 'active',
-        created_date: new Date().toISOString(),
-      };
-      fallbackDbStore.User.push(existing);
+    let existing = fallbackDbStore.User.find((u) => u.email.toLowerCase() === normalizedEmail);
+    if (existing) {
+      return sendJSON(res, 409, {
+        status: 'error',
+        code: 'USER_ALREADY_EXISTS',
+        error: 'An account with this email is already registered in the database. Please log in.',
+      });
     }
-    if (!fallbackDbStore.Sessions) fallbackDbStore.Sessions = {};
-    fallbackDbStore.Sessions[token] = existing;
-    saveFallbackDb(fallbackDbStore, 'User');
 
-    return sendJSON(res, 200, { status: 'success', token, access_token: token, user: existing });
+    const newUser = {
+      id: userId,
+      email: normalizedEmail,
+      full_name: nameVal,
+      phone: phone || '',
+      role: userRole,
+      account_status: 'active',
+      created_date: new Date().toISOString(),
+    };
+    fallbackDbStore.User.push(newUser);
+    if (!fallbackDbStore.Sessions) fallbackDbStore.Sessions = {};
+    fallbackDbStore.Sessions[token] = newUser;
+    saveFallbackDb(fallbackDbStore, 'User');
+    broadcastEvent('USER_REGISTERED', { user_id: newUser.id, email: newUser.email, role: newUser.role });
+
+    return sendJSON(res, 200, { status: 'success', token, access_token: token, user: newUser });
   }
 
+  // ── Auth Login (/api/auth/login or /auth/login) ──
   if ((pathname === '/api/auth/login' || pathname === '/auth/login') && req.method === 'POST') {
     const body = await parseBody(req);
-    const { email, full_name, name, fullName } = body;
+    const { email } = body;
     if (!email) return sendJSON(res, 400, { error: 'Email is required' });
 
-    const nameVal = full_name || name || fullName || email.split('@')[0];
+    const normalizedEmail = email.toLowerCase().trim();
     const token = `token_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const role = email.toLowerCase().includes('admin') ? 'admin' : 'user';
 
     if (isDbConnected()) {
       try {
-        const existing = await query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
-        let user;
+        const existing = await query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
         if (existing.rows.length === 0) {
-          const insertRes = await query(
-            `INSERT INTO users (id, email, full_name, role, account_status, created_date)
-             VALUES ($1, $2, $3, $4, 'active', CURRENT_TIMESTAMP) RETURNING *`,
-            [`user-${Date.now()}`, email.toLowerCase(), nameVal, role]
-          );
-          user = insertRes.rows[0];
-        } else {
-          user = existing.rows[0];
+          return sendJSON(res, 404, {
+            status: 'error',
+            code: 'USER_NOT_FOUND',
+            error: 'User credentials not found in database. Please register for an account.',
+            email: normalizedEmail,
+          });
+        }
+
+        const user = existing.rows[0];
+        if (user.account_status === 'suspended') {
+          return sendJSON(res, 403, { status: 'error', error: 'Account is suspended by an administrator.' });
         }
 
         await query('INSERT INTO sessions (token, user_id, created_date) VALUES ($1, $2, CURRENT_TIMESTAMP)', [token, user.id]);
@@ -413,18 +431,20 @@ const server = http.createServer(async (req, res) => {
     }
 
     fallbackDbStore = loadFallbackDb();
-    let user = fallbackDbStore.User.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    let user = fallbackDbStore.User.find((u) => u.email.toLowerCase() === normalizedEmail);
     if (!user) {
-      user = {
-        id: `user-${Date.now()}`,
-        email: email.toLowerCase(),
-        full_name: nameVal,
-        role,
-        account_status: 'active',
-        created_date: new Date().toISOString(),
-      };
-      fallbackDbStore.User.push(user);
+      return sendJSON(res, 404, {
+        status: 'error',
+        code: 'USER_NOT_FOUND',
+        error: 'User credentials not found in database. Please register for an account.',
+        email: normalizedEmail,
+      });
     }
+
+    if (user.account_status === 'suspended') {
+      return sendJSON(res, 403, { status: 'error', error: 'Account is suspended by an administrator.' });
+    }
+
     if (!fallbackDbStore.Sessions) fallbackDbStore.Sessions = {};
     fallbackDbStore.Sessions[token] = user;
     saveFallbackDb(fallbackDbStore, 'User');
@@ -476,6 +496,19 @@ const server = http.createServer(async (req, res) => {
       const { email, code } = body;
       if (!email || !code) return sendJSON(res, 400, { error: 'Email and code are required' });
       const result = await verifyOtpCode(email, code);
+      return sendJSON(res, 200, result);
+    } catch (err) {
+      return sendJSON(res, 400, { error: err.message });
+    }
+  }
+
+  // ── Feature Email Notification Dispatcher (/api/send-feature-email) ──
+  if ((pathname === '/api/send-feature-email' || pathname === '/send-feature-email') && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const { email, templateType, templateData } = body;
+      if (!email || !templateType) return sendJSON(res, 400, { error: 'email and templateType are required' });
+      const result = await sendFeatureEmail(email, templateType, templateData || {});
       return sendJSON(res, 200, result);
     } catch (err) {
       return sendJSON(res, 400, { error: err.message });

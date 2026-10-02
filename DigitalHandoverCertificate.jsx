@@ -37,7 +37,7 @@ export default function DigitalHandoverCertificate() {
     const certId = `FB-CERT-${Math.floor(10000000 + Math.random() * 90000000)}`;
     const hash = `0x${Math.random().toString(16).substring(2, 10)}${Math.random().toString(16).substring(2, 10)}`.toUpperCase();
 
-    const origin = (typeof window !== 'undefined' && window.location?.origin && !window.location.origin.includes('localhost'))
+    const origin = (typeof window !== 'undefined' && window.location?.origin?.startsWith('https'))
       ? window.location.origin
       : 'https://findback-ai.onrender.com';
     const verifyUrl = `${origin}/evidence/${certId}`;

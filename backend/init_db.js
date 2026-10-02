@@ -22,10 +22,10 @@ if (!DATABASE_URL) {
   process.exit(1);
 }
 
-const isLocalhost = DATABASE_URL.includes('localhost') || DATABASE_URL.includes('127.0.0.1');
+const requiresSsl = DATABASE_URL && !DATABASE_URL.includes('sslmode=disable');
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: isLocalhost ? false : { rejectUnauthorized: false },
+  ssl: requiresSsl ? { rejectUnauthorized: false } : false,
 });
 
 const standardUsers = [];

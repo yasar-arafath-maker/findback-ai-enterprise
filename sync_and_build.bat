@@ -49,8 +49,8 @@ echo.
 echo =========================================================================
 echo   SUCCESS! All services synced and production APK built successfully:
 echo   - Integration Tests:  9 PASSED / 0 FAILED
-echo   - Local Server:       http://localhost:5000 (0.0.0.0:5000)
-echo   - Telemetry Dashboard: http://localhost:5173/enterprise-admin
+echo   - Production API Gateway: https://findback-ai-backend.onrender.com
+echo   - Enterprise Web Console: https://findback-ai.onrender.com/enterprise-admin
 echo   - APK Output Location: %~dp0android\app\build\outputs\apk\release\app-release.apk
 echo =========================================================================
 echo.

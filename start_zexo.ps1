@@ -6,7 +6,7 @@ Write-Host ""
 
 $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" } | Select-Object -First 1).IPAddress
 
-Write-Host "[1/3] Local IP Address for Mobile Testing: http://$($ip):5000" -ForegroundColor Yellow
+Write-Host "[1/3] Production Cloud Gateway: https://findback-ai-backend.onrender.com" -ForegroundColor Yellow
 Write-Host "[2/3] Starting Backend Server (node server.js)..." -ForegroundColor Green
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$PSScriptRoot'; node server.js"
 

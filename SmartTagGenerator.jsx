@@ -31,7 +31,7 @@ export default function SmartTagGenerator() {
     setGenerating(true);
 
     try {
-      const origin = (typeof window !== 'undefined' && window.location?.origin && !window.location.origin.includes('localhost'))
+      const origin = (typeof window !== 'undefined' && window.location?.origin?.startsWith('https'))
         ? window.location.origin
         : 'https://findback-ai.onrender.com';
       const relayUrl = `${origin}/safe-chat?channel=${tagId}&item=${encodeURIComponent(itemName.trim())}`;

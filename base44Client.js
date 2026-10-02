@@ -141,16 +141,10 @@ const candidateBaseUrls = () => {
     }
   } catch (e) {}
 
-  if (typeof window !== 'undefined' && window.location?.hostname) {
-    const host = window.location.hostname;
-    if (host && host !== 'localhost' && host !== '127.0.0.1') {
-      list.push(window.location.origin);
-    } else {
-      list.push('http://localhost:5000');
-    }
-    if (window.Capacitor?.isNativePlatform()) {
-      list.push('https://findback-ai-backend.onrender.com');
-    }
+  if (typeof window !== 'undefined' && window.location?.origin?.startsWith('https://')) {
+    list.push(window.location.origin);
+  } else {
+    list.push('https://findback-ai-backend.onrender.com');
   }
 
   return Array.from(new Set(list));
@@ -263,102 +257,97 @@ const standaloneAuthClient = {
     isAuthenticated: async () => {
       const user = getStoredUser();
       const token = getStoredToken();
-      return Boolean(user || token);
+      return Boolean(user && token);
     },
     me: async () => {
-      const user = getStoredUser();
-      if (user) return user;
       const token = getStoredToken();
       if (token) {
-        const remoteUser = await syncServerRequest(`/api/auth/me?token=${token}`, 'GET');
-        if (remoteUser?.user) {
-          setStoredUser(remoteUser.user);
-          return remoteUser.user;
-        }
-        return {
-          id: 'user-native-session',
-          email: 'user@findback.app',
-          role: 'user',
-          account_status: 'active',
-        };
+        try {
+          const remoteUser = await syncServerRequest(`/api/auth/me?token=${token}`, 'GET');
+          if (remoteUser?.user) {
+            setStoredUser(remoteUser.user);
+            return remoteUser.user;
+          }
+        } catch (e) {}
       }
-      return null;
+      return getStoredUser() || null;
     },
     register: async (data) => {
-      const email = data?.email || 'user@example.com';
+      const email = data?.email;
+      if (!email) throw new Error('Email is required for registration');
       const fullName = data?.full_name || data?.name || data?.fullName || email.split('@')[0];
       const phone = data?.phone || '';
-      const otpRes = await sendOtpEmail(email);
-      const user = {
-        id: 'user-' + Date.now(),
-        email,
-        full_name: fullName,
-        phone,
-        role: 'user',
-        account_status: 'active',
-      };
-      setStoredUser(user);
+      const role = data?.role || 'user';
+      const password = data?.password || '';
 
-      // Directly sync new registration to local_db.json on server.js!
       const serverRes = await syncServerRequest('/api/auth/register', 'POST', {
-        email: user.email,
-        full_name: user.full_name,
-        phone: user.phone,
-      });
-
-      return { status: 'success', email: user.email, code: otpRes?.code, user: serverRes?.user || user };
-    },
-    loginViaEmailPassword: async (email, password, extraData = {}) => {
-      const fullName = extraData?.full_name || extraData?.name || extraData?.fullName || (email ? email.split('@')[0] : 'User');
-      const user = {
-        id: 'user-' + Date.now(),
-        email: email || 'user@example.com',
-        full_name: fullName,
-        role: email?.includes('admin') ? 'admin' : 'user',
-        account_status: 'active',
-      };
-      const token = 'token_' + Date.now();
-      setStoredToken(token);
-      setStoredUser(user);
-
-      // Directly sync login to local_db.json on server.js!
-      const serverRes = await syncServerRequest('/api/auth/login', 'POST', {
         email,
         password,
         full_name: fullName,
+        phone,
+        role,
       });
+
+      if (serverRes?.error) {
+        const err = new Error(serverRes.error);
+        err.code = serverRes.code || 'REGISTRATION_ERROR';
+        throw err;
+      }
+
       if (serverRes?.user) {
         setStoredUser(serverRes.user);
-        if (serverRes.access_token) setStoredToken(serverRes.access_token);
+      }
+      if (serverRes?.token || serverRes?.access_token) {
+        setStoredToken(serverRes.token || serverRes.access_token);
       }
 
       return {
-        access_token: token,
-        user: serverRes?.user || user,
+        status: 'success',
+        token: serverRes?.token || serverRes?.access_token,
+        access_token: serverRes?.token || serverRes?.access_token,
+        user: serverRes?.user,
+      };
+    },
+    loginViaEmailPassword: async (email, password) => {
+      if (!email) throw new Error('Email address is required to log in');
+
+      const serverRes = await syncServerRequest('/api/auth/login', 'POST', {
+        email,
+        password,
+      });
+
+      if (serverRes?.error) {
+        const err = new Error(serverRes.error);
+        err.code = serverRes.code || (serverRes.status === 404 ? 'USER_NOT_FOUND' : 'AUTH_ERROR');
+        err.status = serverRes.code === 'USER_NOT_FOUND' ? 404 : 400;
+        err.email = email;
+        throw err;
+      }
+
+      if (!serverRes?.user) {
+        const err = new Error('User credentials not found in database. Please register for an account.');
+        err.code = 'USER_NOT_FOUND';
+        err.status = 404;
+        err.email = email;
+        throw err;
+      }
+
+      setStoredUser(serverRes.user);
+      setStoredToken(serverRes.access_token || serverRes.token);
+
+      return {
+        access_token: serverRes.access_token || serverRes.token,
+        token: serverRes.access_token || serverRes.token,
+        user: serverRes.user,
       };
     },
     verifyOtp: async ({ email, otpCode }) => {
       const targetEmail = email || getStoredUser()?.email;
       await verifyOtpCode(targetEmail, otpCode);
-      const user = {
-        id: 'user-' + Date.now(),
-        email: targetEmail,
-        role: 'user',
-        account_status: 'active',
-      };
-      const token = 'token_' + Date.now();
-      setStoredToken(token);
-      setStoredUser(user);
-
-      // Directly sync verified user to local_db.json on server.js!
-      const serverRes = await syncServerRequest('/api/auth/register', 'POST', { email: targetEmail });
-      if (serverRes?.user) {
-        setStoredUser(serverRes.user);
-      }
-
+      const token = getStoredToken() || `token_${Date.now()}`;
       return {
         access_token: token,
-        user: serverRes?.user || user,
+        user: getStoredUser(),
       };
     },
     resendOtp: async (email) => {

@@ -26,6 +26,60 @@
       "role": "user",
       "account_status": "active",
       "created_date": "2026-10-02T05:32:41.200Z"
+    },
+    {
+      "id": "user-1790921167036",
+      "email": "test.1790921167032@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T06:06:07.037Z"
+    },
+    {
+      "id": "user-1790921312586",
+      "email": "test.1790921312584@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T06:08:32.587Z"
+    },
+    {
+      "id": "user-1790921404360",
+      "email": "test.1790921404359@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T06:10:04.360Z"
+    },
+    {
+      "id": "user-1790921550292",
+      "email": "test.1790921550294@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T06:12:30.293Z"
+    },
+    {
+      "id": "user-1790921998076",
+      "email": "test.1790921998076@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T06:19:58.076Z"
+    },
+    {
+      "id": "user-1790922282802",
+      "email": "test.1790922282800@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T06:24:42.803Z"
     }
   ],
   "LostReports": [
@@ -64,6 +118,78 @@
       "reporter_id": "test-user-123",
       "lost_date": "2026-08-27",
       "lost_time": "14:30"
+    },
+    {
+      "id": "lostreports-1790921167054-28qh",
+      "created_date": "2026-10-02T06:06:07.054Z",
+      "status": "active",
+      "title": "MacBook Air M2 Silver",
+      "category": "Electronics",
+      "description": "Silver 13-inch laptop left at cafeteria",
+      "brand": "Apple",
+      "color": "Silver",
+      "location_lat": 10.8231,
+      "location_lng": 78.6942
+    },
+    {
+      "id": "lostreports-1790921312598-gnpq",
+      "created_date": "2026-10-02T06:08:32.598Z",
+      "status": "active",
+      "title": "MacBook Air M2 Silver",
+      "category": "Electronics",
+      "description": "Silver 13-inch laptop left at cafeteria",
+      "brand": "Apple",
+      "color": "Silver",
+      "location_lat": 10.8231,
+      "location_lng": 78.6942
+    },
+    {
+      "id": "lostreports-1790921404370-ligz",
+      "created_date": "2026-10-02T06:10:04.370Z",
+      "status": "active",
+      "title": "MacBook Air M2 Silver",
+      "category": "Electronics",
+      "description": "Silver 13-inch laptop left at cafeteria",
+      "brand": "Apple",
+      "color": "Silver",
+      "location_lat": 10.8231,
+      "location_lng": 78.6942
+    },
+    {
+      "id": "lostreports-1790921550310-usfl",
+      "created_date": "2026-10-02T06:12:30.310Z",
+      "status": "active",
+      "title": "MacBook Air M2 Silver",
+      "category": "Electronics",
+      "description": "Silver 13-inch laptop left at cafeteria",
+      "brand": "Apple",
+      "color": "Silver",
+      "location_lat": 10.8231,
+      "location_lng": 78.6942
+    },
+    {
+      "id": "lostreports-1790921998084-t5pt",
+      "created_date": "2026-10-02T06:19:58.084Z",
+      "status": "active",
+      "title": "MacBook Air M2 Silver",
+      "category": "Electronics",
+      "description": "Silver 13-inch laptop left at cafeteria",
+      "brand": "Apple",
+      "color": "Silver",
+      "location_lat": 10.8231,
+      "location_lng": 78.6942
+    },
+    {
+      "id": "lostreports-1790922282811-tnlm",
+      "created_date": "2026-10-02T06:24:42.811Z",
+      "status": "active",
+      "title": "MacBook Air M2 Silver",
+      "category": "Electronics",
+      "description": "Silver 13-inch laptop left at cafeteria",
+      "brand": "Apple",
+      "color": "Silver",
+      "location_lat": 10.8231,
+      "location_lng": 78.6942
     }
   ],
   "FoundReports": [
@@ -105,9 +231,161 @@
   "AIMatches": [],
   "Claims": [],
   "OwnershipEvidence": [],
-  "Handovers": [],
+  "Handovers": [
+    {
+      "id": "handover-1790921167077",
+      "claim_id": "claim-seed-401",
+      "cert_id": "ZEXO-CERT-45667669",
+      "item_name": "Recovered Item",
+      "lost_owner_id": null,
+      "found_reporter_id": null,
+      "scheduled_location": "Central Campus Security Office Desk 1",
+      "scheduled_datetime": "2026-10-03T06:06:07.078Z",
+      "status": "completed",
+      "verification_code": "675036",
+      "admin_supervised": true,
+      "created_date": "2026-10-02T06:06:07.078Z",
+      "completed_at": "2026-10-02T06:06:07.084Z",
+      "receipt_hash": "ebff5cbde4d18da2c9484ea8261432d8b9ae67cb4770505207e3e4b8280fa9c9"
+    },
+    {
+      "id": "handover-1790921312617",
+      "claim_id": "claim-seed-401",
+      "cert_id": "ZEXO-CERT-67037123",
+      "item_name": "Recovered Item",
+      "lost_owner_id": null,
+      "found_reporter_id": null,
+      "scheduled_location": "Central Campus Security Office Desk 1",
+      "scheduled_datetime": "2026-10-03T06:08:32.618Z",
+      "status": "completed",
+      "verification_code": "981110",
+      "admin_supervised": true,
+      "created_date": "2026-10-02T06:08:32.618Z",
+      "completed_at": "2026-10-02T06:08:32.624Z",
+      "receipt_hash": "0deb3d5fda717b44e3559edf03ea2a51a2ff89c2cd857f2919807dbaa8cc7ca2"
+    },
+    {
+      "id": "handover-1790921404388",
+      "claim_id": "claim-seed-401",
+      "cert_id": "ZEXO-CERT-96799280",
+      "item_name": "Recovered Item",
+      "lost_owner_id": null,
+      "found_reporter_id": null,
+      "scheduled_location": "Central Campus Security Office Desk 1",
+      "scheduled_datetime": "2026-10-03T06:10:04.389Z",
+      "status": "completed",
+      "verification_code": "310970",
+      "admin_supervised": true,
+      "created_date": "2026-10-02T06:10:04.389Z",
+      "completed_at": "2026-10-02T06:10:04.393Z",
+      "receipt_hash": "bb945e01f756c43144780a3b71e3363ccf27bc04488362ce20eef1901aa12218"
+    },
+    {
+      "id": "handover-1790921550336",
+      "claim_id": "claim-seed-401",
+      "cert_id": "ZEXO-CERT-67405518",
+      "item_name": "Recovered Item",
+      "lost_owner_id": null,
+      "found_reporter_id": null,
+      "scheduled_location": "Central Campus Security Office Desk 1",
+      "scheduled_datetime": "2026-10-03T06:12:30.337Z",
+      "status": "completed",
+      "verification_code": "463653",
+      "admin_supervised": true,
+      "created_date": "2026-10-02T06:12:30.337Z",
+      "completed_at": "2026-10-02T06:12:30.346Z",
+      "receipt_hash": "be8e555407fbdb09ff870067c603f48c219ef0ef16bf82aaf88ebaae544c4fe7"
+    },
+    {
+      "id": "handover-1790921998098",
+      "claim_id": "claim-seed-401",
+      "cert_id": "ZEXO-CERT-16718513",
+      "item_name": "Recovered Item",
+      "lost_owner_id": null,
+      "found_reporter_id": null,
+      "scheduled_location": "Central Campus Security Office Desk 1",
+      "scheduled_datetime": "2026-10-03T06:19:58.098Z",
+      "status": "completed",
+      "verification_code": "322352",
+      "admin_supervised": true,
+      "created_date": "2026-10-02T06:19:58.098Z",
+      "completed_at": "2026-10-02T06:19:58.102Z",
+      "receipt_hash": "85ff3928cd8ebc0917e0883c2470e93f8382d590c193102c14f1cca78ac0ada5"
+    },
+    {
+      "id": "handover-1790922282831",
+      "claim_id": "claim-seed-401",
+      "cert_id": "ZEXO-CERT-91251883",
+      "item_name": "Recovered Item",
+      "lost_owner_id": null,
+      "found_reporter_id": null,
+      "scheduled_location": "Central Campus Security Office Desk 1",
+      "scheduled_datetime": "2026-10-03T06:24:42.832Z",
+      "status": "completed",
+      "verification_code": "367923",
+      "admin_supervised": true,
+      "created_date": "2026-10-02T06:24:42.832Z",
+      "completed_at": "2026-10-02T06:24:42.836Z",
+      "receipt_hash": "f841ad81a25a5c6c99f8688eb79dc867ca4e21192e4bfaf17c9146f69e0d92a5"
+    }
+  ],
   "Notifications": [],
   "AdminActions": [],
-  "Sessions": {},
+  "Sessions": {
+    "token_1790921167036_5vkcf3": {
+      "id": "user-1790921167036",
+      "email": "test.1790921167032@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T06:06:07.037Z"
+    },
+    "token_1790921312586_yyxfsz": {
+      "id": "user-1790921312586",
+      "email": "test.1790921312584@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T06:08:32.587Z"
+    },
+    "token_1790921404360_qf25n4": {
+      "id": "user-1790921404360",
+      "email": "test.1790921404359@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T06:10:04.360Z"
+    },
+    "token_1790921550292_ltal3o": {
+      "id": "user-1790921550292",
+      "email": "test.1790921550294@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T06:12:30.293Z"
+    },
+    "token_1790921998076_3op0sk": {
+      "id": "user-1790921998076",
+      "email": "test.1790921998076@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T06:19:58.076Z"
+    },
+    "token_1790922282802_8fyqg9": {
+      "id": "user-1790922282802",
+      "email": "test.1790922282800@findback.app",
+      "full_name": "Test Runner",
+      "phone": "",
+      "role": "user",
+      "account_status": "active",
+      "created_date": "2026-10-02T06:24:42.803Z"
+    }
+  },
   "ChatMessages": []
 }

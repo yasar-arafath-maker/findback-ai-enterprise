@@ -31,10 +31,10 @@ const isPlaceholderDb = !DATABASE_URL || DATABASE_URL.includes('yourproject') ||
 
 if (DATABASE_URL && !isPlaceholderDb) {
   try {
-    const isLocalhost = DATABASE_URL.includes('localhost') || DATABASE_URL.includes('127.0.0.1');
+    const requiresSsl = DATABASE_URL && !DATABASE_URL.includes('sslmode=disable');
     pool = new Pool({
       connectionString: DATABASE_URL,
-      ssl: isLocalhost ? false : { rejectUnauthorized: false },
+      ssl: requiresSsl ? { rejectUnauthorized: false } : false,
       max: 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,

@@ -101,7 +101,7 @@ node server.js
 
 ### 🌐 Backend சரியாக வேலை செய்கிறதா என்று சோதிக்க:
 உங்கள் பிரவுசரில் இந்த லிங்க்கை திறந்து பார்க்கவும்:
-👉 **[http://localhost:5000/api/health](http://localhost:5000/api/health)**
+👉 **[https://findback-ai-backend.onrender.com/api/health](https://findback-ai-backend.onrender.com/api/health)**
 
 **பிரவுசரில் வரும் பதில் (JSON Output):**
 ```json
@@ -118,25 +118,15 @@ node server.js
 
 ---
 
-# 4. படி 3: Frontend Vite ஆப்பை துவக்குதல் (Port 5173)
+# 4. படி 3: Frontend Vite ஆப்பை துவக்குதல்
 
 இப்போது Frontend UI ஆப்பை இயக்க வேண்டும்.
 
 ### 💻 நீங்கள் இயக்க வேண்டிய கமாண்ட்:
-VS Code-ல் **புதிய டெர்மினல் டேப் (New Terminal - Terminal 2)** திறந்து, மெயின் போல்டரில் (`d:\findit`) பின்வருமாறு இயக்கவும்:
+VS Code-ல் **புதிய டெர்மினல் டேப் (New Terminal - Terminal 2)** திறந்து, மெயின் போல்டரில் பின்வருமாறு இயக்கவும்:
 
 ```bash
-cd d:\findit
 npm run dev
-```
-
-### ✅ வெற்றிகரமாக இயங்கினால் வரும் வெளியீடு:
-```text
-  VITE v6.4.3  ready in 1845 ms
-
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
-  ➜  press h + enter to show help
 ```
 
 ---
@@ -146,7 +136,7 @@ npm run dev
 இப்போது உங்கள் Google Chrome அல்லது Edge பிரவுசரை திறந்து பின்வரும் பக்கங்களை பார்வையிடவும்:
 
 ### 🔗 1. பயனர் பக்கம் (User Main App):
-👉 **[http://localhost:5173](http://localhost:5173)**
+👉 **[https://findback-ai.onrender.com](https://findback-ai.onrender.com)**
 * **டாஷ்போர்டு:** தொலைந்த பொருட்கள் மற்றும் கண்டெடுக்கப்பட்ட பொருட்களின் விவரங்கள் அழகாக தோன்றும்.
 * **பொருளை ரிப்போர்ட் செய்ய (Report Lost / Found):**
   * மேல் உள்ள "Report Lost" பட்டனை கிளிக் செய்து கேமரா படம் அல்லது லொகேஷன் கொடுத்து புதிய பொருளைப் பதிவு செய்யலாம்.
@@ -156,7 +146,7 @@ npm run dev
   * மேட்ச் ஆன பொருளுக்கு நேராக உள்ள **"Claim Item"** கிளிக் செய்து உரிமையாளருக்கான ஆதாரத்தை (பில், ரசீது அல்லது குறிப்பு) பதிவேற்றலாம்.
 
 ### 🔗 2. நிர்வாகி பக்கம் (Enterprise Admin Console):
-👉 **[http://localhost:5173/enterprise-admin](http://localhost:5173/enterprise-admin)**
+👉 **[https://findback-ai.onrender.com/enterprise-admin](https://findback-ai.onrender.com/enterprise-admin)**
 * **செக்யூரிட்டி ஆபீசர் / அட்மின் டாஷ்போர்டு:**
   * பயனர்கள் கோரிய உரிமைகோரல்களை (Claims) சரிபார்த்து **"Approve"** அல்லது **"Reject"** செய்யலாம்.
   * அப்ரூவ் செய்தவுடன் சிஸ்டம் ஒரு **6-இலக்க ரகசிய OTP (Verification Code)**-ஐ உருவாக்கும்.
@@ -235,7 +225,7 @@ npx cap open android
   இதன் பின் மீண்டும் `node backend/server.js` இயக்கினால் சர்வர் சுத்தமாக துவங்கும்.
 
 ### கேள்வி 2: பிரவுசரில் `404 Endpoint not found` என்று வந்தால்?
-* **தீர்வு:** நமது பேக்கெண்ட் சர்வரில் **Universal Route Normalizer** பொருத்தப்பட்டுள்ளது. எனவே Frontend-ல் இருந்து வரும் கோரிக்கைகள் தானாகவே சீரமைக்கப்படும். பேக்கெண்ட் சர்வர் போர்ட் 5000-ல் ஓடுகிறதா என்பதை `http://localhost:5000/api/health` திறந்து உறுதி செய்யவும்.
+* **தீர்வு:** நமது பேக்கெண்ட் சர்வரில் **Universal Route Normalizer** பொருத்தப்பட்டுள்ளது. எனவே Frontend-ல் இருந்து வரும் கோரிக்கைகள் தானாகவே சீரமைக்கப்படும். பேக்கெண்ட் சர்வர் ஓடுகிறதா என்பதை `https://findback-ai-backend.onrender.com/api/health` திறந்து உறுதி செய்யவும்.
 
 ### கேள்வி 3: இன்டர்நெட் இல்லாத ஆஃப்லைன் சூழலில் இயக்க முடியுமா?
 * **தீர்வு:** ஆம்! இன்டர்நெட் அல்லது Supabase இணைப்பு கிடைக்கவில்லை என்றால், சிஸ்டம் தானாகவே உள்நாட்டில் உள்ள **`local_db.json`** கோப்பிற்கு மாறி எந்தவித பாதிப்பும் இல்லாமல் வேலை செய்யும்.

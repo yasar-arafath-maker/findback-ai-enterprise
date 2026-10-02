@@ -1,15 +1,19 @@
+import React, { useState } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { RenderBootProvider } from './RenderBootContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminGuard from '@/components/AdminGuard';
 import AppShell from '@/components/AppShell';
 import Landing from '@/pages/Landing';
+import SplashScreen from './SplashScreen';
+import Onboarding from './Onboarding';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -34,14 +38,32 @@ import SmartTagGenerator from './SmartTagGenerator';
 import SafeChatWindow from './SafeChatWindow';
 import DigitalHandoverCertificate from './DigitalHandoverCertificate';
 
+const LandingWithSplashFlow = () => {
+  const [hasSeenSplash, setHasSeenSplash] = useState(() => {
+    if (typeof sessionStorage !== 'undefined') {
+      return sessionStorage.getItem('findback_splash_done') === 'true';
+    }
+    return false;
+  });
+
+  if (!hasSeenSplash) {
+    return <SplashScreen onComplete={() => setHasSeenSplash(true)} />;
+  }
+
+  return <Landing />;
+};
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      <div className="fixed inset-0 flex items-center justify-center bg-slate-900 text-white">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-slate-700 border-t-blue-500 rounded-full animate-spin"></div>
+          <span className="text-xs font-mono text-slate-400">Verifying Supabase Session...</span>
+        </div>
       </div>
     );
   }
@@ -60,7 +82,9 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={<LandingWithSplashFlow />} />
+      <Route path="/splash" element={<SplashScreen />} />
+      <Route path="/onboarding" element={<Onboarding />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -97,18 +121,19 @@ const AuthenticatedApp = () => {
 };
 
 function App() {
-
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <ScrollToTop />
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
-  )
+    <RenderBootProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <ScrollToTop />
+            <AuthenticatedApp />
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </AuthProvider>
+    </RenderBootProvider>
+  );
 }
 
-export default App
+export default App;

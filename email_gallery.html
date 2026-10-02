@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FindBack AI — Enterprise Email Template System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070D1E;
+      --card-bg: #0F172A;
+      --surface: #1E293B;
+      --primary: #2563EB;
+      --accent: #60A5FA;
+      --emerald: #10B981;
+      --amber: #F59E0B;
+      --rose: #EF4444;
+      --text: #F8FAFC;
+      --muted: #94A3B8;
+      --border: rgba(255, 255, 255, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    /* Sidebar */
+    .sidebar {
+      width: 380px;
+      min-width: 380px;
+      background-color: var(--card-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .brand-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: linear-gradient(180deg, rgba(37, 99, 235, 0.08) 0%, transparent 100%);
+    }
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #2563EB, #3B82F6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: #fff;
+      box-shadow: 0 8px 16px -4px rgba(37, 99, 235, 0.4);
+    }
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 700;
+    }
+    .template-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 12px;
+    }
+    .category-label {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #64748B;
+      padding: 14px 12px 6px 12px;
+    }
+    .template-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      margin-bottom: 4px;
+      border: 1px solid transparent;
+    }
+    .template-item:hover {
+      background-color: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.05);
+    }
+    .template-item.active {
+      background-color: rgba(37, 99, 235, 0.15);
+      border-color: rgba(37, 99, 235, 0.4);
+    }
+    .template-item.active .item-title {
+      color: #93C5FD;
+      font-weight: 700;
+    }
+    .item-icon {
+      font-size: 18px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .item-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .item-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #E2E8F0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .item-desc {
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Main Preview Stage */
+    .preview-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: radial-gradient(circle at 50% 20%, #172554 0%, #070D1E 70%);
+    }
+    .stage-header {
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      background-color: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .stage-title-wrap h2 {
+      font-size: 17px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .stage-title-wrap p {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .stage-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s;
+      border: 1px solid var(--border);
+      background-color: var(--surface);
+      color: #F8FAFC;
+    }
+    .btn:hover {
+      background-color: #334155;
+    }
+    .btn-primary {
+      background-color: var(--primary);
+      border-color: #3B82F6;
+    }
+    .btn-primary:hover {
+      background-color: #1D4ED8;
+    }
+    .device-toggle {
+      display: flex;
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 3px;
+      border: 1px solid var(--border);
+    }
+    .device-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    .device-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+    .iframe-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: hidden;
+    }
+    .preview-frame {
+      width: 600px;
+      height: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+      background: #FFFFFF;
+      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand-header">
+      <div class="brand-icon">✦</div>
+      <div>
+        <div class="brand-title">FindBack <span style="color: var(--accent);">AI</span></div>
+        <div class="brand-sub">Enterprise Mail Suite</div>
+      </div>
+    </div>
+
+    <div class="template-list" id="templateList">
+      <!-- Templates injected by script -->
+    </div>
+  </aside>
+
+  <!-- Main Preview Stage -->
+  <main class="preview-stage">
+    <header class="stage-header">
+      <div class="stage-title-wrap">
+        <h2 id="currentTitle">Template Title</h2>
+        <p id="currentSubject">Subject Line</p>
+      </div>
+
+      <div class="stage-controls">
+        <!-- Dynamic OTP Controller (Visible on OTP / Passcode templates) -->
+        <div id="otpDynamicToolbar" style="display: flex; align-items: center; gap: 8px; background: rgba(37, 99, 235, 0.15); border: 1px solid rgba(37, 99, 235, 0.35); padding: 5px 12px; border-radius: 8px;">
+          <span style="font-size: 11px; font-weight: 800; color: #93C5FD; text-transform: uppercase;">⚡ Dynamic OTP:</span>
+          <input type="text" id="galleryOtpInput" maxlength="6" style="width: 86px; background: #070D1E; border: 1.5px solid #2563EB; color: #60A5FA; font-family: monospace; font-size: 14px; font-weight: 800; text-align: center; border-radius: 6px; padding: 4px; outline: none; letter-spacing: 2px;" value="849201" />
+          <button class="btn" style="padding: 5px 10px; font-size: 11px; background: #2563EB;" onclick="regenerateDynamicOtp()">🎲 New OTP</button>
+        </div>
+
+        <div class="device-toggle">
+          <button class="device-btn active" id="btnDesktop" onclick="setDevice('desktop')">Desktop (580px)</button>
+          <button class="device-btn" id="btnMobile" onclick="setDevice('mobile')">Mobile (380px)</button>
+        </div>
+        <button class="btn btn-primary" onclick="copyCurrentHtml()">
+          📋 Copy HTML Code
+        </button>
+      </div>
+    </header>
+
+    <div class="iframe-wrapper">
+      <iframe id="previewIframe" class="preview-frame" sandbox="allow-same-origin"></iframe>
+    </div>
+  </main>
+
+  <script type="module">
+    import { buildFeatureEmail } from './emailTemplates.js';
+
+    const templates = [
+      // 1. Auth & Identity
+      {
+        category: 'Authentication & Identity',
+        id: 'AUTH_OTP',
+        icon: '🔐',
+        title: 'Authentication Passcode (2FA)',
+        desc: '6-digit OTP code for Login & Registration',
+        data: { code: '849201' }
+      },
+      {
+        category: 'Authentication & Identity',
+        id: 'WELCOME_USER',
+        icon: '👋',
+        title: 'Welcome & Account Activation',
+        desc: 'Role-based welcome for Citizens, Officers, Admins',
+        data: { name: 'Dr. Sarah Mitchell', email: 'sarah.mitchell@campus.edu', role: 'officer' }
+      },
+      {
+        category: 'Authentication & Identity',
+        id: 'PASSWORD_RESET',
+        icon: '🔑',
+        title: 'Password Reset Request',
+        desc: 'Cryptographic 1-time password recovery link',
+        data: { email: 'alex.rivera@example.com', resetToken: 'tok_sec_994281' }
+      },
+      {
+        category: 'Authentication & Identity',
+        id: 'SECURITY_ALERT',
+        icon: '🚨',
+        title: 'Suspicious Sign-In Alert',
+        desc: 'New device / unrecognized IP telemetry alert',
+        data: { email: 'alex.rivera@example.com', ipAddress: '49.207.194.22', device: 'Edge on Windows 11', location: 'Bengaluru, India' }
+      },
+
+      // 2. Lost & Found Incidents
+      {
+        category: 'Incident Reporting',
+        id: 'REPORT_LOST_CONFIRMATION',
+        icon: '📌',
+        title: 'Lost Property Filed Receipt',
+        desc: 'Incident registration confirmation & tracking ID',
+        data: { reportId: 'LST-8849', title: 'MacBook Pro 16" Space Gray', category: 'Electronics', dateLost: '2026-10-02', location: 'Science Library 3rd Floor' }
+      },
+      {
+        category: 'Incident Reporting',
+        id: 'REPORT_FOUND_CONFIRMATION',
+        icon: '📦',
+        title: 'Found Property Registered',
+        desc: 'Good Samaritan thank-you & custody locker tag',
+        data: { reportId: 'FND-3391', title: 'Black Leather Bifold Wallet', category: 'Accessories', vaultLocker: 'Central Security Locker B-14' }
+      },
+
+      // 3. AI Autonomous Matching
+      {
+        category: 'AI Autonomous Matching',
+        id: 'AI_MATCH_FOUND',
+        icon: '🎯',
+        title: 'High-Confidence AI Match Alert',
+        desc: 'Multi-modal vision and spatial match detection (94%)',
+        data: { matchId: 'm-9481', lostTitle: 'Apple iPad Pro with Apple Pencil', foundTitle: 'iPad Pro in Navy Folio Case', confidenceScore: 94, locationProximity: 'Within 35 meters' }
+      },
+
+      // 4. Claims & Verification
+      {
+        category: 'Claims & Verification',
+        id: 'CLAIM_SUBMITTED',
+        icon: '📝',
+        title: 'Ownership Claim Queued',
+        desc: 'Claim receipt confirmation and review SLA',
+        data: { claimId: 'CLM-772', itemTitle: 'Sony WH-1000XM5 Headphones', evidenceCount: 2 }
+      },
+      {
+        category: 'Claims & Verification',
+        id: 'CLAIM_EVIDENCE_REQUESTED',
+        icon: '⚠️',
+        title: 'Additional Evidence Requested',
+        desc: 'Officer request for serial number or receipt proof',
+        data: { claimId: 'CLM-772', itemTitle: 'Sony WH-1000XM5 Headphones', officerNotes: 'Please provide a photo of the original packaging or serial number receipt.' }
+      },
+      {
+        category: 'Claims & Verification',
+        id: 'CLAIM_APPROVED',
+        icon: '🎉',
+        title: 'Claim Approved by Officer',
+        desc: 'Collection approval and security desk location',
+        data: { claimId: 'CLM-772', itemTitle: 'Sony WH-1000XM5 Headphones', pickupLocation: 'Main Campus Security Center - Desk 1', pickupHours: '08:30 AM – 05:30 PM' }
+      },
+      {
+        category: 'Claims & Verification',
+        id: 'CLAIM_REJECTED',
+        icon: '✕',
+        title: 'Claim Declined Notice',
+        desc: 'Dispute / rejection explanation and appeal guidance',
+        data: { claimId: 'CLM-772', itemTitle: 'Sony WH-1000XM5 Headphones', reasonNotes: 'Color and engraving details differ from the logged vault item.' }
+      },
+
+      // 5. Custody Handover & Verification
+      {
+        category: 'Custody Handover & Certificate',
+        id: 'HANDOVER_PASSCODE',
+        icon: '🗝️',
+        title: 'Item Release Passcode',
+        desc: '6-digit release OTP to present at physical desk',
+        data: { verificationCode: '592814', itemTitle: 'Sony WH-1000XM5 Headphones', handoverDesk: 'Central Security Desk 1' }
+      },
+      {
+        category: 'Custody Handover & Certificate',
+        id: 'HANDOVER_CERTIFICATE',
+        icon: '📜',
+        title: 'Digital Certificate of Return',
+        desc: 'Immutable SHA-256 return receipt & PDF certificate',
+        data: { certId: 'ZEXO-CERT-8849201', itemTitle: 'Sony WH-1000XM5 Headphones', receiptHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', completedAt: 'Oct 02, 2026 11:30 AM UTC', officerBadge: 'OFFICER-742 (Capt. Sharma)' }
+      },
+
+      // 6. Smart Tags & Geofence
+      {
+        category: 'Smart Tags & Security Operations',
+        id: 'SMART_TAG_SCANNED',
+        icon: '📡',
+        title: 'Smart NFC / QR Tag Scanned',
+        desc: 'Proximity detection alert with anonymous chat link',
+        data: { tagCode: 'TAG-ZEXO-991', itemTitle: 'Blue Dell XPS 15 Laptop Bag', scanTime: 'Oct 02, 2026 11:25 AM', approxLocation: 'Student Union Cafeteria, Table 8' }
+      },
+      {
+        category: 'Smart Tags & Security Operations',
+        id: 'OFFICER_VAULT_ALERT',
+        icon: '🏛️',
+        title: 'Aging Vault Inventory Warning',
+        desc: 'Unclaimed item approaching statutory 30-day limit',
+        data: { agingItemsCount: 5, oldestDays: 29, vaultSection: 'Locker Bank 2 — Personal Electronics' }
+      }
+    ];
+
+    let activeIndex = 0;
+    let currentRenderedHtml = '';
+
+    const listEl = document.getElementById('templateList');
+    const iframeEl = document.getElementById('previewIframe');
+    const titleEl = document.getElementById('currentTitle');
+    const subjectEl = document.getElementById('currentSubject');
+
+    function renderList() {
+      let currentCat = '';
+      let html = '';
+
+      templates.forEach((t, idx) => {
+        if (t.category !== currentCat) {
+          currentCat = t.category;
+          html += `<div class="category-label">${currentCat}</div>`;
+        }
+
+        html += `
+          <div class="template-item ${idx === activeIndex ? 'active' : ''}" onclick="selectTemplate(${idx})">
+            <div class="item-icon">${t.icon}</div>
+            <div class="item-info">
+              <div class="item-title">${t.title}</div>
+              <div class="item-desc">${t.desc}</div>
+            </div>
+          </div>
+        `;
+      });
+
+      listEl.innerHTML = html;
+    }
+
+    const otpToolbar = document.getElementById('otpDynamicToolbar');
+    const otpInput = document.getElementById('galleryOtpInput');
+
+    function isOtpTemplate(templateId) {
+      return templateId === 'AUTH_OTP' || templateId === 'HANDOVER_PASSCODE';
+    }
+
+    window.regenerateDynamicOtp = () => {
+      const newCode = String(Math.floor(100000 + Math.random() * 900000));
+      otpInput.value = newCode;
+      updateActiveOtpCode(newCode);
+    };
+
+    function updateActiveOtpCode(code) {
+      const current = templates[activeIndex];
+      if (current.id === 'AUTH_OTP') {
+        current.data.code = code;
+      } else if (current.id === 'HANDOVER_PASSCODE') {
+        current.data.verificationCode = code;
+      }
+      loadTemplate(current);
+    }
+
+    if (otpInput) {
+      otpInput.addEventListener('input', (e) => {
+        const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+        updateActiveOtpCode(val || '000000');
+      });
+    }
+
+    window.selectTemplate = (idx) => {
+      activeIndex = idx;
+      renderList();
+      const current = templates[idx];
+
+      if (isOtpTemplate(current.id)) {
+        otpToolbar.style.display = 'flex';
+        // Generate a fresh random code dynamically on selection
+        const freshCode = String(Math.floor(100000 + Math.random() * 900000));
+        otpInput.value = freshCode;
+        if (current.id === 'AUTH_OTP') current.data.code = freshCode;
+        if (current.id === 'HANDOVER_PASSCODE') current.data.verificationCode = freshCode;
+      } else {
+        otpToolbar.style.display = 'none';
+      }
+
+      loadTemplate(current);
+    };
+
+    function loadTemplate(t) {
+      const rendered = buildFeatureEmail(t.id, t.data);
+      currentRenderedHtml = rendered.html;
+      titleEl.innerText = `${t.icon} ${t.title}`;
+      subjectEl.innerText = rendered.subject;
+
+      const doc = iframeEl.contentDocument || iframeEl.contentWindow.document;
+      doc.open();
+      doc.write(rendered.html);
+      doc.close();
+    }
+
+    window.setDevice = (mode) => {
+      const btnD = document.getElementById('btnDesktop');
+      const btnM = document.getElementById('btnMobile');
+
+      if (mode === 'mobile') {
+        iframeEl.style.width = '380px';
+        btnM.classList.add('active');
+        btnD.classList.remove('active');
+      } else {
+        iframeEl.style.width = '600px';
+        btnD.classList.add('active');
+        btnM.classList.remove('active');
+      }
+    };
+
+    window.copyCurrentHtml = () => {
+      navigator.clipboard.writeText(currentRenderedHtml).then(() => {
+        alert('✅ Dynamic HTML Email Template copied to clipboard!');
+      });
+    };
+
+    // Initialize
+    renderList();
+    selectTemplate(0);
+  </script>
+</body>
+</html>

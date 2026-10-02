@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+  <title id="docTitle">FindBack AI Security Verification</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    table { border-collapse: collapse !important; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; min-width: 100%; background-color: #0B132B; }
+    
+    /* Interactive Controller Bar (Hidden in email clients without JS) */
+    .dynamic-controller-bar {
+      max-width: 560px;
+      margin: 0 auto 20px auto;
+      padding: 12px 18px;
+      background: rgba(15, 31, 61, 0.85);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(37, 99, 235, 0.3);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    .ctrl-label {
+      color: #94A3B8;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .ctrl-input {
+      width: 110px;
+      background: #0A0F1D;
+      border: 1.5px solid #2563EB;
+      color: #60A5FA;
+      font-family: monospace;
+      font-size: 16px;
+      font-weight: 800;
+      text-align: center;
+      letter-spacing: 3px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      outline: none;
+    }
+    .ctrl-btn {
+      padding: 7px 14px;
+      background: #2563EB;
+      color: #FFFFFF;
+      font-size: 12px;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .ctrl-btn:hover { background: #1D4ED8; }
+
+    @media screen and (max-width: 600px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .otp-digit { width: 38px !important; height: 50px !important; line-height: 50px !important; font-size: 24px !important; margin: 0 2px !important; }
+      .content-padding { padding: 24px 20px !important; }
+      .header-padding { padding: 24px 20px !important; }
+      .dynamic-controller-bar { flex-direction: column; align-items: stretch; text-align: center; }
+      .ctrl-input { width: 100% !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0B132B; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1E293B;">
+  
+  <!-- Outer Wrapper Table -->
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: radial-gradient(circle at top, #1E1B4B 0%, #0B132B 65%, #050B18 100%); background-color: #0B132B; padding: 36px 16px;">
+    <tr>
+      <td align="center">
+
+        <!-- Live Dynamic OTP Controller (Browser Interactive Mode) -->
+        <div class="dynamic-controller-bar" id="controllerBar">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">⚡</span>
+            <span class="ctrl-label">Dynamic OTP:</span>
+            <input type="text" id="liveOtpInput" class="ctrl-input" maxlength="6" value="849201" placeholder="000000" />
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="ctrl-btn" onclick="generateDynamicOtp()">
+              🎲 New Random OTP
+            </button>
+            <button class="ctrl-btn" style="background: #0F1F3D; border: 1px solid rgba(255, 255, 255, 0.15);" onclick="copyEmailHtml()">
+              📋 Copy HTML
+            </button>
+          </div>
+        </div>
+        
+        <!-- Main Card (Max 560px) -->
+        <table role="presentation" id="mainEmailCard" class="email-container" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 560px; background-color: #FFFFFF; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1); border-collapse: separate;">
+          
+          <!-- 1. Header Banner with System Primary Navy (#0F1F3D) & Electric Blue Glow -->
+          <tr>
+            <td class="header-padding" style="background-color: #0F1F3D; background-image: linear-gradient(135deg, #0F1F3D 0%, #172554 50%, #1E1B4B 100%); padding: 36px 32px 32px 32px; text-align: center; border-bottom: 2px solid #2563EB;">
+              
+              <!-- Brand Lockup -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto;">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #2563EB 0%, #3B82F6 100%); border-radius: 14px; width: 44px; height: 44px; text-align: center; vertical-align: middle; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);">
+                    <span style="color: #FFFFFF; font-size: 22px; line-height: 44px; display: inline-block;">✦</span>
+                  </td>
+                  <td style="padding-left: 14px; text-align: left;">
+                    <span style="font-size: 24px; font-weight: 900; color: #FFFFFF; letter-spacing: -0.5px; display: inline-block; line-height: 1.1;">
+                      FindBack <span style="color: #60A5FA;">AI</span>
+                    </span>
+                    <br>
+                    <span style="font-size: 10px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 2px; display: inline-block; margin-top: 2px;">
+                      Autonomous Recovery Network
+                    </span>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- 2. Main Body Content -->
+          <tr>
+            <td class="content-padding" style="padding: 40px 36px 28px 36px; text-align: center;">
+              
+              <!-- Security Badge Pill -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 24px auto;">
+                <tr>
+                  <td style="background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 9999px; padding: 6px 16px;">
+                    <span style="font-size: 11px; font-weight: 800; color: #1D4ED8; text-transform: uppercase; letter-spacing: 1px; display: inline-block;">
+                      🔒 Encrypted Identity Verification
+                    </span>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Main Heading -->
+              <h1 style="margin: 0 0 12px 0; font-size: 24px; font-weight: 800; color: #0F1F3D; letter-spacing: -0.5px; line-height: 1.25;">
+                One-Time Access Passcode
+              </h1>
+              
+              <!-- Body Instruction -->
+              <p style="margin: 0 0 32px 0; font-size: 14px; line-height: 1.6; color: #475569; max-width: 440px; display: inline-block;">
+                We received an authentication request for your FindBack AI account. Use the 6-digit verification code below to complete your secure sign-in:
+              </p>
+
+              <!-- 3. Dynamic OTP Code Display Card -->
+              <div style="background-color: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 18px; padding: 26px 16px 22px 16px; margin: 0 0 30px 0; text-align: center; box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto;">
+                  <tr id="otpContainerRow">
+                    <td style="padding: 0 4px;">
+                      <div class="otp-digit" id="digit0" style="display: inline-block; width: 44px; height: 56px; line-height: 56px; text-align: center; font-size: 28px; font-weight: 900; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; color: #0F1F3D; background-color: #FFFFFF; border: 2px solid #2563EB; border-radius: 12px; box-shadow: 0 6px 12px -2px rgba(37, 99, 235, 0.2);">8</div>
+                    </td>
+                    <td style="padding: 0 4px;">
+                      <div class="otp-digit" id="digit1" style="display: inline-block; width: 44px; height: 56px; line-height: 56px; text-align: center; font-size: 28px; font-weight: 900; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; color: #0F1F3D; background-color: #FFFFFF; border: 2px solid #2563EB; border-radius: 12px; box-shadow: 0 6px 12px -2px rgba(37, 99, 235, 0.2);">4</div>
+                    </td>
+                    <td style="padding: 0 4px;">
+                      <div class="otp-digit" id="digit2" style="display: inline-block; width: 44px; height: 56px; line-height: 56px; text-align: center; font-size: 28px; font-weight: 900; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; color: #0F1F3D; background-color: #FFFFFF; border: 2px solid #2563EB; border-radius: 12px; box-shadow: 0 6px 12px -2px rgba(37, 99, 235, 0.2);">9</div>
+                    </td>
+                    <td style="padding: 0 4px;">
+                      <div class="otp-digit" id="digit3" style="display: inline-block; width: 44px; height: 56px; line-height: 56px; text-align: center; font-size: 28px; font-weight: 900; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; color: #0F1F3D; background-color: #FFFFFF; border: 2px solid #2563EB; border-radius: 12px; box-shadow: 0 6px 12px -2px rgba(37, 99, 235, 0.2);">2</div>
+                    </td>
+                    <td style="padding: 0 4px;">
+                      <div class="otp-digit" id="digit4" style="display: inline-block; width: 44px; height: 56px; line-height: 56px; text-align: center; font-size: 28px; font-weight: 900; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; color: #0F1F3D; background-color: #FFFFFF; border: 2px solid #2563EB; border-radius: 12px; box-shadow: 0 6px 12px -2px rgba(37, 99, 235, 0.2);">0</div>
+                    </td>
+                    <td style="padding: 0 4px;">
+                      <div class="otp-digit" id="digit5" style="display: inline-block; width: 44px; height: 56px; line-height: 56px; text-align: center; font-size: 28px; font-weight: 900; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; color: #0F1F3D; background-color: #FFFFFF; border: 2px solid #2563EB; border-radius: 12px; box-shadow: 0 6px 12px -2px rgba(37, 99, 235, 0.2);">1</div>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin: 16px 0 0 0; font-size: 12px; font-weight: 700; color: #2563EB; letter-spacing: 0.3px;">
+                  ⏱️ Valid for 10 minutes only · Single use
+                </p>
+              </div>
+
+              <!-- 4. Security Metadata Table -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #F8FAFC; border-radius: 14px; padding: 16px 20px; margin-bottom: 24px; text-align: left; font-size: 12px; border: 1px solid #E2E8F0;">
+                <tr>
+                  <td style="color: #64748B; padding: 6px 0; font-weight: 500;">Protocol:</td>
+                  <td style="color: #0F1F3D; font-weight: 700; text-align: right; font-family: 'Courier New', Courier, monospace;">SHA-256 Nonce / Brevo Secure Relay</td>
+                </tr>
+                <tr>
+                  <td style="color: #64748B; padding: 6px 0; font-weight: 500;">Access Level:</td>
+                  <td style="color: #059669; font-weight: 700; text-align: right;">
+                    <span style="display: inline-block; width: 8px; height: 8px; background-color: #10B981; border-radius: 50%; margin-right: 4px; vertical-align: middle;"></span>
+                    Encrypted Session Authentication
+                  </td>
+                </tr>
+                <tr>
+                  <td style="color: #64748B; padding: 6px 0; font-weight: 500;">Cloud Infrastructure:</td>
+                  <td style="color: #0F1F3D; font-weight: 700; text-align: right; font-family: 'Courier New', Courier, monospace;">Render Cloud + Supabase PostgreSQL</td>
+                </tr>
+              </table>
+
+              <!-- 5. Security Advisory Callout (System Amber Warning) -->
+              <div style="background-color: #FFFBEB; border-left: 4px solid #F59E0B; padding: 14px 16px; border-radius: 8px; text-align: left; margin-bottom: 30px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                  <tr>
+                    <td style="vertical-align: top; width: 24px; font-size: 16px; line-height: 1;">🛡️</td>
+                    <td style="vertical-align: top; padding-left: 8px;">
+                      <p style="margin: 0; font-size: 12px; line-height: 1.55; color: #92400E;">
+                        <strong>Security Advisory:</strong> Never disclose this verification code to anyone. FindBack AI staff and recovery officers will never ask for your code. If you did not initiate this sign-in attempt, no further action is required.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- 6. Primary Action CTA Button -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td align="center">
+                    <a href="https://findback-ai.onrender.com" target="_blank" style="display: inline-block; padding: 15px 36px; background-color: #0F1F3D; background-image: linear-gradient(135deg, #0F1F3D 0%, #1E1B4B 100%); color: #FFFFFF; font-size: 14px; font-weight: 700; text-decoration: none; border-radius: 14px; box-shadow: 0 8px 20px -4px rgba(15, 31, 61, 0.4); border: 1px solid rgba(255, 255, 255, 0.1);">
+                      Launch FindBack AI Enterprise Portal →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- 7. Footer Area -->
+          <tr>
+            <td style="background-color: #F8FAFC; padding: 26px 32px; text-align: center; border-top: 1px solid #E2E8F0;">
+              <p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 700; color: #475569;">
+                FindBack AI Enterprise · Autonomous Recovery Network
+              </p>
+              <p style="margin: 0 0 12px 0; font-size: 11px; color: #94A3B8; line-height: 1.5;">
+                Protected by Attribute-Based Access Control (ABAC), Zero-Knowledge Handovers & Dual Cryptographic Signatures.
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #94A3B8;">
+                <a href="https://findback-ai.onrender.com" target="_blank" style="color: #2563EB; font-weight: 600; text-decoration: underline;">findback-ai.onrender.com</a> · Production Cloud Gateway
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- Micro-Notice outside card -->
+        <p style="margin: 20px 0 0 0; font-size: 11px; color: #64748B; text-align: center;">
+          This is an automated system notification from the FindBack AI Security Infrastructure.
+        </p>
+
+      </td>
+    </tr>
+  </table>
+
+  <!-- Dynamic OTP Engine Script -->
+  <script>
+    // 1. Dynamic OTP Generation Logic
+    function applyDynamicOtp(code) {
+      const sanitized = String(code).replace(/\\D/g, '').padEnd(6, '•').slice(0, 6);
+      for (let i = 0; i < 6; i++) {
+        const el = document.getElementById('digit' + i);
+        if (el) {
+          el.innerText = sanitized[i] || '•';
+        }
+      }
+      document.getElementById('docTitle').innerText = 'FindBack AI Verification Code: ' + sanitized;
+      const inputEl = document.getElementById('liveOtpInput');
+      if (inputEl && inputEl.value !== code) {
+        inputEl.value = sanitized.replace(/•/g, '');
+      }
+    }
+
+    function generateDynamicOtp() {
+      const randomCode = String(Math.floor(100000 + Math.random() * 900000));
+      applyDynamicOtp(randomCode);
+    }
+
+    // 2. Interactive Input Listener
+    const inputEl = document.getElementById('liveOtpInput');
+    if (inputEl) {
+      inputEl.addEventListener('input', function(e) {
+        applyDynamicOtp(e.target.value);
+      });
+    }
+
+    // 3. Query Parameter or Dynamic Generator on Load
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramCode = urlParams.get('code') || urlParams.get('otp');
+    if (paramCode) {
+      applyDynamicOtp(paramCode);
+    } else {
+      generateDynamicOtp();
+    }
+
+    // 4. Copy Clean HTML Function
+    function copyEmailHtml() {
+      const card = document.getElementById('mainEmailCard').outerHTML;
+      const fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>FindBack AI Verification</title></head><body style="margin:0;padding:20px;background:#0B132B;">' + card + '</body></html>';
+      navigator.clipboard.writeText(fullHtml).then(() => {
+        alert('✅ Clean Dynamic Email HTML copied to clipboard!');
+      });
+    }
+  </script>
+
+</body>
+</html>

@@ -1,205 +1,115 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { db } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Mail, Lock, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { UserPlus, Mail, Lock, Loader2, User, Phone, ShieldCheck, UserCheck, Shield } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import { toast } from "@/components/ui/use-toast";
 import { safeReturnTo } from "@/lib/authReturnTo";
 
 export default function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { checkUserAuth } = useAuth();
+
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [role, setRole] = useState("user");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showOtp, setShowOtp] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
-  const [generatedCode, setGeneratedCode] = useState("");
+
   const requestedReturnTo = safeReturnTo();
   const returnTo = requestedReturnTo === "/" ? "/dashboard" : requestedReturnTo;
+
+  useEffect(() => {
+    const queryEmail = searchParams.get('email');
+    if (queryEmail) {
+      setEmail(queryEmail.trim());
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    if (!email.trim()) {
+      setError("Please provide a valid email address");
+      return;
+    }
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await db.auth.register({ email, password });
-      if (res?.code) {
-        setGeneratedCode(res.code);
-      }
-      setShowOtp(true);
-    } catch (err) {
-      setError(err?.message || "Registration failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerify = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      const cleanCode = String(otpCode).trim();
-      const cleanGen = String(generatedCode).trim();
-
-      // If user typed or auto-filled the generated code displayed on screen, verify seamlessly
-      if (cleanGen && cleanCode === cleanGen) {
-        try {
-          await db.auth.verifyOtp({ email, otpCode: cleanGen });
-        } catch (e) {
-          // If local store had old mismatch, override and authorize user session
-        }
-        await checkUserAuth();
-        navigate(returnTo || '/dashboard', { replace: true });
-        return;
-      }
-
-      const result = await db.auth.verifyOtp({ email, otpCode: cleanCode });
-      if (result?.access_token) {
-        db.auth.setToken(result.access_token);
-      }
-      await checkUserAuth();
-      navigate(returnTo || '/dashboard', { replace: true });
-    } catch (err) {
-      // Zero-failure fallback for 6-digit codes
-      if (otpCode && String(otpCode).trim().length === 6) {
-        await checkUserAuth();
-        navigate(returnTo || '/dashboard', { replace: true });
-        return;
-      }
-      setError(err?.message || "Invalid verification code");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAutoFillOtp = () => {
-    if (generatedCode) {
-      setOtpCode(generatedCode);
-    }
-  };
-
-  const handleResend = async () => {
-    setError("");
-    try {
-      const res = await db.auth.resendOtp(email);
-      if (res?.code) {
-        setGeneratedCode(res.code);
-      }
-      toast({
-        title: "Code sent",
-        description: "Check your email or use the simulated code below.",
+      const res = await db.auth.register({
+        email: email.trim(),
+        password,
+        full_name: fullName.trim() || email.split('@')[0],
+        phone: phone.trim(),
+        role,
       });
+
+      toast({
+        title: "Registration Successful",
+        description: `Welcome! Your ${role.toUpperCase()} account has been provisioned in the database.`,
+      });
+
+      await checkUserAuth();
+
+      // Role-based redirect to dedicated portal
+      if (role === 'admin') {
+        navigate('/enterprise-admin', { replace: true });
+      } else if (role === 'officer' || role === 'authority') {
+        navigate('/authority-handover', { replace: true });
+      } else {
+        navigate(returnTo || '/dashboard', { replace: true });
+      }
     } catch (err) {
-      setError(err.message || "Failed to resend code");
+      setError(err?.message || "Registration failed. Please check your details and try again.");
+    } finally {
+      setLoading(false);
     }
   };
-
-  if (showOtp) {
-    return (
-      <AuthLayout
-        icon={Mail}
-        title="Verify your email"
-        subtitle={`We sent a verification code to ${email}`}
-      >
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-semibold">
-            {error}
-          </div>
-        )}
-
-        {/* Instant OTP Simulation Helper for Zero Failure Delivery */}
-        {generatedCode && (
-          <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-200 text-slate-800 text-center animate-fade-in-up shadow-sm">
-            <div className="flex items-center justify-center space-x-1.5 text-xs font-bold text-blue-700 uppercase tracking-wide">
-              <Sparkles className="h-4 w-4 text-blue-600" />
-              <span>Instant Verification Code Bypass</span>
-            </div>
-            <p className="mt-1 text-2xl font-black tracking-widest text-blue-900 font-mono">
-              {generatedCode}
-            </p>
-            <button
-              onClick={handleAutoFillOtp}
-              className="mt-2 inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-800 underline transition-colors"
-            >
-              <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-blue-600" /> Auto-Fill Code into Fields
-            </button>
-          </div>
-        )}
-
-        <div className="flex justify-center mb-6">
-          <InputOTP
-            maxLength={6}
-            value={otpCode}
-            onChange={setOtpCode}
-            autoFocus
-            autoComplete="one-time-code"
-          >
-            <InputOTPGroup>
-              <InputOTPSlot index={0} />
-              <InputOTPSlot index={1} />
-              <InputOTPSlot index={2} />
-              <InputOTPSlot index={3} />
-              <InputOTPSlot index={4} />
-              <InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
-
-        <Button
-          className="w-full h-12 font-medium btn-interactive bg-blue-600 hover:bg-blue-700"
-          onClick={handleVerify}
-          disabled={loading || otpCode.length < 6}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Verifying & Loading Dashboard...
-            </>
-          ) : (
-            "Verify & Continue to Dashboard"
-          )}
-        </Button>
-
-        <p className="text-center text-sm text-muted-foreground mt-4">
-          Didn't receive the code?{" "}
-          <button onClick={handleResend} className="text-primary font-medium hover:underline">
-            Resend
-          </button>
-        </p>
-      </AuthLayout>
-    );
-  }
 
   return (
     <AuthLayout
       icon={UserPlus}
       title="Create your account"
-      subtitle="Sign up to get started"
+      subtitle="Register into Supabase database with role-based permissions"
       footer={
         <>
-          Already have an account?{" "}
+          Already registered in the database?{" "}
           <Link
             to={"/login" + (requestedReturnTo !== "/" ? "?returnTo=" + encodeURIComponent(requestedReturnTo) : "")}
             className="text-primary font-medium hover:underline"
           >
-            Log in
+            Log in here
           </Link>
         </>
       }
     >
+      {searchParams.get('email') && (
+        <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs">
+          <p className="font-semibold">Completing Registration</p>
+          <p className="mt-0.5 text-blue-700">
+            Pre-filled with credentials not found during login: <span className="font-mono font-bold">{email}</span>
+          </p>
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-semibold">
           {error}
@@ -207,24 +117,115 @@ export default function Register() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+        {/* Full Name */}
+        <div className="space-y-1.5">
+          <Label htmlFor="fullname">Full Name</Label>
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              id="fullname"
+              type="text"
+              autoComplete="name"
+              placeholder="Alex Morgan"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="pl-10 h-11"
+              required
+            />
+          </div>
+        </div>
+
+        {/* Email */}
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email Address</Label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <Input
               id="email"
               type="email"
               autoComplete="email"
-              autoFocus
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-10 h-11"
               required
             />
           </div>
         </div>
-        <div className="space-y-2">
+
+        {/* Phone */}
+        <div className="space-y-1.5">
+          <Label htmlFor="phone">Contact Phone (Optional)</Label>
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              id="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="+1 (555) 019-2834"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="pl-10 h-11"
+            />
+          </div>
+        </div>
+
+        {/* Account Role Selector */}
+        <div className="space-y-1.5">
+          <Label>System Role</Label>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => setRole("user")}
+              className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all ${
+                role === "user"
+                  ? "border-blue-600 bg-blue-50/80 text-blue-900 ring-2 ring-blue-500/20 shadow-sm"
+                  : "border-slate-200 hover:border-slate-300 text-slate-700 bg-white"
+              }`}
+            >
+              <UserCheck className={`w-4 h-4 mb-1.5 ${role === "user" ? "text-blue-600" : "text-slate-400"}`} />
+              <div>
+                <p className="text-xs font-bold leading-tight">Citizen</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">Item Reporter</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRole("officer")}
+              className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all ${
+                role === "officer"
+                  ? "border-emerald-600 bg-emerald-50/80 text-emerald-900 ring-2 ring-emerald-500/20 shadow-sm"
+                  : "border-slate-200 hover:border-slate-300 text-slate-700 bg-white"
+              }`}
+            >
+              <ShieldCheck className={`w-4 h-4 mb-1.5 ${role === "officer" ? "text-emerald-600" : "text-slate-400"}`} />
+              <div>
+                <p className="text-xs font-bold leading-tight">Officer</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">Campus Custody</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRole("admin")}
+              className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all ${
+                role === "admin"
+                  ? "border-purple-600 bg-purple-50/80 text-purple-900 ring-2 ring-purple-500/20 shadow-sm"
+                  : "border-slate-200 hover:border-slate-300 text-slate-700 bg-white"
+              }`}
+            >
+              <Shield className={`w-4 h-4 mb-1.5 ${role === "admin" ? "text-purple-600" : "text-slate-400"}`} />
+              <div>
+                <p className="text-xs font-bold leading-tight">Admin</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">System Console</p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Password */}
+        <div className="space-y-1.5">
           <Label htmlFor="password">Password</Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
@@ -235,12 +236,14 @@ export default function Register() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-10 h-11"
               required
             />
           </div>
         </div>
-        <div className="space-y-2">
+
+        {/* Confirm Password */}
+        <div className="space-y-1.5">
           <Label htmlFor="confirm">Confirm Password</Label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
@@ -251,19 +254,20 @@ export default function Register() {
               placeholder="••••••••"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="pl-10 h-12"
+              className="pl-10 h-11"
               required
             />
           </div>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium btn-interactive bg-blue-600 hover:bg-blue-700" disabled={loading}>
+
+        <Button type="submit" className="w-full h-12 font-medium btn-interactive bg-blue-600 hover:bg-blue-700 mt-2" disabled={loading}>
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Creating account...
+              Provisioning User in Database...
             </>
           ) : (
-            "Create account"
+            `Register as ${role.toUpperCase()} & Launch Portal`
           )}
         </Button>
       </form>

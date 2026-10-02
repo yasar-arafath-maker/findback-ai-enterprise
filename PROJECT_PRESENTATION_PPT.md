@@ -439,5 +439,5 @@ git push origin main ──> GitHub Actions CI ──> Render Webhook ──> Li
 
 - **Project Repository:** GitHub / `findback-ai-enterprise`
 - **Live Production Backend:** `https://findback-ai-backend.onrender.com/api/health`
-- **Frontend App:** `http://localhost:5173` (Development) / Mobile Capacitor APK
+- **Frontend App:** `https://findback-ai.onrender.com` / Mobile Capacitor APK
 - **Thank you for your time and guidance!**

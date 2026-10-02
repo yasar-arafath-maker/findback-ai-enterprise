@@ -27,7 +27,7 @@ start "ZEXO Frontend Web Server (Vite)" cmd /k "cd /d %~dp0 && npm run dev"
 echo.
 echo =========================================================================
 echo   SUCCESS! Both ZEXO Services are launching in parallel:
-echo   - Backend Server:  http://localhost:5000
+echo   - Backend Server:  https://findback-ai-backend.onrender.com
 echo   - Local File DB:   %~dp0local_db.json
 echo   - Frontend Web App: Check terminal window for Vite port
 echo =========================================================================
