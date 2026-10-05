@@ -33,7 +33,7 @@ export default function SmartTagGenerator() {
     try {
       const origin = (typeof window !== 'undefined' && window.location?.origin?.startsWith('https'))
         ? window.location.origin
-        : 'https://findback-ai.onrender.com';
+        : 'https://findbac.onrender.com';
       const relayUrl = `${origin}/safe-chat?channel=${tagId}&item=${encodeURIComponent(itemName.trim())}`;
 
       // Generate local QR Data URL (100% offline, zero external API calls)

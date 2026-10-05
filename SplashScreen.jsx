@@ -178,7 +178,7 @@ export default function SplashScreen({ onComplete }) {
 
       {/* Footer Info */}
       <footer className="w-full max-w-md text-center text-[11px] text-slate-400 z-10 pb-2">
-        <p>Production Cloud Gateway: <span className="font-mono text-slate-300">findback-ai-backend.onrender.com</span></p>
+        <p>Production Cloud Gateway: <span className="font-mono text-slate-300">findbac-backend.onrender.com</span></p>
         <p className="text-slate-400 mt-0.5">Database: Supabase PostgreSQL · Real-Time SSE Stream Active</p>
       </footer>
     </div>

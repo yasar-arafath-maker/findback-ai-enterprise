@@ -574,7 +574,7 @@ export default function Landing() {
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-3">Production Endpoints</p>
               <ul className="space-y-1.5 text-[11px] font-mono text-slate-500">
-                <li>API: <span className="text-blue-600">findback-ai-backend.onrender.com</span></li>
+                <li>API: <span className="text-blue-600">findbac-backend.onrender.com</span></li>
                 <li>Database: <span className="text-emerald-600">Supabase PostgreSQL</span></li>
                 <li>Protocol: <span className="text-purple-600">HTTPS / TLS 1.3 / SSE</span></li>
                 <li>Integrity: <span className="text-slate-700">100% Data-Driven (0 Mock)</span></li>

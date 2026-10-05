@@ -29,9 +29,9 @@ const devBypassDb = {
       user: { id: 'dev-user', email },
     }),
     resendOtp: async () => ({ status: 'sent' }),
-    setToken: (token) => { try { localStorage.setItem('b44_token', token); } catch {} },
+    setToken: (token) => { try { localStorage.setItem('b44_token', token); } catch { } },
     logout: (redirectUrl) => {
-      try { localStorage.removeItem('b44_token'); } catch {}
+      try { localStorage.removeItem('b44_token'); } catch { }
       if (redirectUrl) window.location.href = redirectUrl;
     },
     redirectToLogin: (redirectUrl) => {
@@ -120,7 +120,7 @@ let cachedWorkingBaseUrl = null;
 
 const candidateBaseUrls = () => {
   if (cachedWorkingBaseUrl) {
-    return [cachedWorkingBaseUrl, 'https://findbac-backend.onrender.com', 'https://findback-ai-backend.onrender.com'];
+    return [cachedWorkingBaseUrl, 'https://findbac-backend.onrender.com'];
   }
 
   const list = [];
@@ -135,9 +135,8 @@ const candidateBaseUrls = () => {
     console.debug('[candidateBaseUrls] Env read error:', e);
   }
 
-  // Production-Ready Cloud Backends
+  // Production-Ready Cloud Backend
   list.push('https://findbac-backend.onrender.com');
-  list.push('https://findback-ai-backend.onrender.com');
 
   try {
     if (typeof localStorage !== 'undefined') {
@@ -525,7 +524,7 @@ const standaloneAuthClient = {
           };
           const saveList = (name, list) => {
             try { localStorage.setItem(`entity_${name}`, JSON.stringify(list)); }
-            catch {}
+            catch { }
           };
 
           const sourceList = getList(sourceEntity);

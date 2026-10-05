@@ -4,7 +4,7 @@
  * Designed with the FindBack AI System Palette (#0F1F3D, #2563EB, #10B981, #F59E0B)
  */
 
-const BASE_URL = 'https://findback-ai.onrender.com';
+const BASE_URL = 'https://findbac.onrender.com';
 
 /**
  * Standard Email Shell Wrapper

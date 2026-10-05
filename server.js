@@ -160,7 +160,7 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
 
-  const host = req.headers.host || 'findback-ai-backend.onrender.com';
+  const host = req.headers.host || 'findbac-backend.onrender.com';
   const protocol = req.headers['x-forwarded-proto'] || 'https';
   const reqUrl = new URL(req.url, `${protocol}://${host}`);
   let pathname = reqUrl.pathname.replace(/\/+/g, '/');

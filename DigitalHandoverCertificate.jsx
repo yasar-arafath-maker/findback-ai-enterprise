@@ -39,7 +39,7 @@ export default function DigitalHandoverCertificate() {
 
     const origin = (typeof window !== 'undefined' && window.location?.origin?.startsWith('https'))
       ? window.location.origin
-      : 'https://findback-ai.onrender.com';
+      : 'https://findbac.onrender.com';
     const verifyUrl = `${origin}/evidence/${certId}`;
     let qrDataUrl = '';
     try {

@@ -141,7 +141,7 @@ export async function generateHandoverCertificatePdf(certificate) {
   // Generate / Retrieve QR Code
   let qrImage = certificate.qr_url;
   if (!qrImage) {
-    const origin = 'https://findback-ai.onrender.com';
+    const origin = 'https://findbac.onrender.com';
     const verifyUrl = `${origin}/evidence/${certificate.cert_id || certificate.id}`;
     qrImage = await QRCode.toDataURL(verifyUrl, {
       width: 240,
@@ -208,7 +208,7 @@ export async function generateHandoverCertificatePdf(certificate) {
   doc.setFontSize(7);
   doc.setTextColor(148, 163, 184);
   doc.text(
-    'FindBack AI Enterprise · Autonomous Recovery & Restitution Platform · https://findback-ai.onrender.com',
+    'FindBack AI Enterprise · Autonomous Recovery & Restitution Platform · https://findbac.onrender.com',
     pageWidth / 2,
     285,
     { align: 'center' }
@@ -258,7 +258,7 @@ export async function generateSmartTagPdf(tag) {
   // QR Code
   let qrImage = tag.qr_url;
   if (!qrImage) {
-    const origin = 'https://findback-ai.onrender.com';
+    const origin = 'https://findbac.onrender.com';
     const relayUrl = `${origin}/safe-chat?channel=${tag.tag_id}&item=${encodeURIComponent(tag.item_name || 'Protected Item')}`;
     qrImage = await QRCode.toDataURL(relayUrl, {
       width: 280,

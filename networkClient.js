@@ -14,7 +14,7 @@ export const getApiBaseUrl = () => {
   }
 
   // Production-ready Render cloud backend
-  return 'https://findback-ai-backend.onrender.com/api';
+  return 'https://findbac-backend.onrender.com/api';
 };
 
 /**

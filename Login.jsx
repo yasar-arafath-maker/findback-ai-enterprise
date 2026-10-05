@@ -49,10 +49,14 @@ export default function Login() {
     }
   };
 
+  const [slowLoading, setSlowLoading] = useState(false);
+
   const performLogin = async (loginEmail, loginPassword) => {
     setError("");
     setUserNotFound(false);
     setLoading(true);
+    setSlowLoading(false);
+    const slowTimer = setTimeout(() => setSlowLoading(true), 3500);
     try {
       const res = await db.auth.loginViaEmailPassword(loginEmail, loginPassword);
       if (res?.access_token) {
@@ -77,7 +81,9 @@ export default function Login() {
         setError(err?.message || "Invalid email or password");
       }
     } finally {
+      clearTimeout(slowTimer);
       setLoading(false);
+      setSlowLoading(false);
     }
   };
 
@@ -204,12 +210,18 @@ export default function Login() {
           </div>
         </div>
 
+        {slowLoading && (
+          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs text-center font-medium animate-pulse">
+            ⚡ Connecting to cloud server (warming up backend, please wait)...
+          </div>
+        )}
+
         <div className="flex gap-2 pt-1">
           <Button type="submit" className="flex-1 h-12 font-medium" disabled={loading}>
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Logging in...
+                {slowLoading ? 'Waking Up Backend...' : 'Logging in...'}
               </>
             ) : (
               "Log in"
