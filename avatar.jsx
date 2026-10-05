@@ -21,14 +21,23 @@ const AvatarImage = React.forwardRef(({ className, ...props }, ref) => (
 ))
 AvatarImage.displayName = AvatarPrimitive.Image.displayName
 
-const AvatarFallback = React.forwardRef(({ className, ...props }, ref) => (
+const AvatarFallback = React.forwardRef(({ className, children, ...props }, ref) => (
   <AvatarPrimitive.Fallback
     ref={ref}
     className={cn(
-      "flex h-full w-full items-center justify-center rounded-full bg-muted",
+      "flex h-full w-full items-center justify-center rounded-full bg-slate-900 border border-slate-700/50 overflow-hidden",
       className
     )}
-    {...props} />
+    {...props}
+  >
+    {children || (
+      <img
+        src="/z_icon_cropped.png"
+        alt="User Account Icon"
+        className="h-full w-full object-cover"
+      />
+    )}
+  </AvatarPrimitive.Fallback>
 ))
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 
