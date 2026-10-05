@@ -419,30 +419,36 @@ const server = http.createServer(async (req, res) => {
 
     if (isDbConnected()) {
       try {
-        const existing = await query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
-        if (existing.rows.length === 0) {
-          return sendJSON(res, 404, {
-            status: 'error',
-            code: 'USER_NOT_FOUND',
-            error: 'User credentials not found in database. Please register for an account.',
-            email: normalizedEmail,
-          });
+        const existing = await query(
+          `SELECT * FROM users 
+           WHERE LOWER(email) = $1 
+              OR LOWER(email) = $1 || '@findback.app' 
+              OR LOWER(email) = $1 || '@zexo.app' 
+              OR LOWER(full_name) = $1 
+              OR LOWER(id) = $1`,
+          [normalizedEmail]
+        );
+        if (existing.rows.length > 0) {
+          const user = existing.rows[0];
+          if (user.account_status === 'suspended') {
+            return sendJSON(res, 403, { status: 'error', error: 'Account is suspended by an administrator.' });
+          }
+          await query('INSERT INTO sessions (token, user_id, created_date) VALUES ($1, $2, CURRENT_TIMESTAMP)', [token, user.id]);
+          return sendJSON(res, 200, { status: 'success', token, access_token: token, user });
         }
-
-        const user = existing.rows[0];
-        if (user.account_status === 'suspended') {
-          return sendJSON(res, 403, { status: 'error', error: 'Account is suspended by an administrator.' });
-        }
-
-        await query('INSERT INTO sessions (token, user_id, created_date) VALUES ($1, $2, CURRENT_TIMESTAMP)', [token, user.id]);
-        return sendJSON(res, 200, { status: 'success', token, access_token: token, user });
       } catch (err) {
         console.error('[Postgres Login Error]', err.message);
       }
     }
 
     fallbackDbStore = loadFallbackDb();
-    let user = fallbackDbStore.User.find((u) => u.email.toLowerCase() === normalizedEmail);
+    let user = (fallbackDbStore.User || []).find(
+      (u) =>
+        u.email.toLowerCase() === normalizedEmail ||
+        u.email.toLowerCase().startsWith(normalizedEmail + '@') ||
+        (u.full_name && u.full_name.toLowerCase() === normalizedEmail) ||
+        (u.id && u.id.toLowerCase() === normalizedEmail)
+    );
     if (!user) {
       return sendJSON(res, 404, {
         status: 'error',
