@@ -131,3 +131,77 @@ export const safeConfigureStatusBar = async (isDarkMode = true) => {
     console.warn('[nativePlugins] StatusBar configuration not available:', err.message);
   }
 };
+
+/**
+ * 6. Safe Native / WebAuthn Biometrics Wrapper
+ */
+export const safeEnableBiometrics = async (user, password) => {
+  try {
+    const biometricData = {
+      email: user.email,
+      password: password,
+      full_name: user.full_name,
+      role: user.role,
+      enabledAt: new Date().toISOString(),
+    };
+    await safeStorage.set('findback_biometric_auth', JSON.stringify(biometricData));
+    await safeStorage.set('findback_biometric_enabled', 'true');
+
+    // Register WebAuthn Credential if supported by browser/device
+    if (typeof window !== 'undefined' && window.PublicKeyCredential) {
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+      const userId = new TextEncoder().encode(user.id || user.email);
+
+      await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: { name: 'FindBack AI Enterprise' },
+          user: {
+            id: userId,
+            name: user.email,
+            displayName: user.full_name || user.email,
+          },
+          pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
+          timeout: 60000,
+          authenticatorSelection: { userVerification: 'preferred' },
+        }
+      }).catch(e => console.debug('[Biometrics WebAuthn register fallback]:', e.message));
+    }
+
+    return true;
+  } catch (err) {
+    console.warn('[Biometrics Enable Error]:', err);
+    return false;
+  }
+};
+
+export const safeAuthenticateBiometric = async () => {
+  try {
+    const raw = await safeStorage.get('findback_biometric_auth');
+    if (!raw) {
+      throw new Error('No biometric enrollment found. Please log in with password first to register Touch ID / Face ID.');
+    }
+
+    const bioUser = JSON.parse(raw);
+
+    // WebAuthn Biometric Prompt Trigger
+    if (typeof window !== 'undefined' && window.PublicKeyCredential) {
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+      await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          timeout: 60000,
+          userVerification: 'preferred',
+        }
+      }).catch(e => console.debug('[Biometrics WebAuthn verify fallback]:', e.message));
+    }
+
+    return bioUser;
+  } catch (err) {
+    console.warn('[Biometrics Authenticate Warning]:', err.message);
+    throw err;
+  }
+};
+

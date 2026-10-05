@@ -74,7 +74,7 @@ async function initializeDatabase() {
              ON CONFLICT (id) DO NOTHING
              ON CONFLICT (email) DO NOTHING`,
             [u.id, u.email, u.full_name || '', u.phone || '', u.role || 'user', u.account_status || 'active', u.created_date || new Date().toISOString()]
-          ).catch(() => {});
+          ).catch(() => { });
         }
       }
 
@@ -136,7 +136,7 @@ async function initializeDatabase() {
               m.temporal_proximity_hours || 0, m.status || 'suggested',
               m.ai_recommendation || '', m.created_date || new Date().toISOString()
             ]
-          ).catch(() => {});
+          ).catch(() => { });
         }
       }
 
@@ -154,7 +154,7 @@ async function initializeDatabase() {
               c.status || 'submitted', c.evidence_score || 0,
               c.verification_hash || '', c.created_date || new Date().toISOString()
             ]
-          ).catch(() => {});
+          ).catch(() => { });
         }
       }
 
@@ -172,7 +172,7 @@ async function initializeDatabase() {
               h.timestamp || new Date().toISOString(), h.lost_owner_id || null, h.found_reporter_id || null,
               h.status || 'scheduled', h.verification_code || '', h.created_date || new Date().toISOString()
             ]
-          ).catch(() => {});
+          ).catch(() => { });
         }
       }
     }

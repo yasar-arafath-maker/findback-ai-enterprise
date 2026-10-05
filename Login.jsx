@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { db } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -6,9 +6,11 @@ import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
+import { LogIn, Mail, Lock, Loader2, Fingerprint, ShieldCheck } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import { safeReturnTo } from "@/lib/authReturnTo";
+import { safeEnableBiometrics, safeAuthenticateBiometric, safeStorage } from "@/nativePluginsHelper";
+import { toast } from "@/components/ui/use-toast";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -19,36 +21,58 @@ export default function Login() {
   const [notFoundEmail, setNotFoundEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [showBiometricModal, setShowBiometricModal] = useState(false);
+  const [pendingUserRes, setPendingUserRes] = useState(null);
 
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const returnTo = safeReturnTo(searchParams?.get('returnTo'));
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    async function checkBio() {
+      const bioEnabled = await safeStorage.get('findback_biometric_enabled');
+      if (bioEnabled === 'true') {
+        setBiometricAvailable(true);
+      }
+    }
+    checkBio();
+  }, []);
+
+  const routeUserByRole = (user) => {
+    const userRole = user?.role || 'user';
+    if (userRole === 'admin') {
+      navigate('/enterprise-admin', { replace: true });
+    } else if (userRole === 'campus' || userRole === 'officer' || userRole === 'authority') {
+      navigate('/authority-handover', { replace: true });
+    } else {
+      navigate(returnTo !== '/' ? returnTo : '/dashboard', { replace: true });
+    }
+  };
+
+  const performLogin = async (loginEmail, loginPassword) => {
     setError("");
     setUserNotFound(false);
     setLoading(true);
     try {
-      const res = await db.auth.loginViaEmailPassword(email, password);
+      const res = await db.auth.loginViaEmailPassword(loginEmail, loginPassword);
       if (res?.access_token) {
         db.auth.setToken(res.access_token);
       }
       await checkUserAuth();
 
-      // Role-based dashboard routing from verified database role
-      const userRole = res?.user?.role || 'user';
-      if (userRole === 'admin') {
-        navigate('/enterprise-admin', { replace: true });
-      } else if (userRole === 'officer' || userRole === 'authority') {
-        navigate('/authority-handover', { replace: true });
+      // Check if user has already enabled biometrics
+      const bioEnabled = await safeStorage.get('findback_biometric_enabled');
+      if (!bioEnabled && res?.user) {
+        setPendingUserRes(res);
+        setShowBiometricModal(true);
       } else {
-        navigate(returnTo !== '/' ? returnTo : '/dashboard', { replace: true });
+        routeUserByRole(res?.user);
       }
     } catch (err) {
       if (err?.code === 'USER_NOT_FOUND' || err?.status === 404 || err?.message?.toLowerCase().includes('not found')) {
         setUserNotFound(true);
-        setNotFoundEmail(email);
-        setError("Account not found in the database. Please register to create your account.");
+        setNotFoundEmail(loginEmail);
+        setError("Account not found in the database. Please register for an account.");
       } else {
         setError(err?.message || "Invalid email or password");
       }
@@ -57,11 +81,50 @@ export default function Login() {
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    performLogin(email, password);
+  };
+
+  const handleBiometricLogin = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const bioUser = await safeAuthenticateBiometric();
+      toast({
+        title: "Touch ID / Face ID Verified",
+        description: `Authenticated successfully as ${bioUser.full_name || bioUser.email}`
+      });
+      await performLogin(bioUser.email, bioUser.password);
+    } catch (err) {
+      setError(err?.message || "Biometric authentication failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEnableBiometricsConfirm = async () => {
+    if (pendingUserRes?.user) {
+      await safeEnableBiometrics(pendingUserRes.user, password);
+      toast({
+        title: "Biometric Authentication Activated",
+        description: "Touch ID / Face ID is now enabled for 1-tap fast logins!"
+      });
+    }
+    setShowBiometricModal(false);
+    routeUserByRole(pendingUserRes?.user);
+  };
+
+  const handleSkipBiometrics = () => {
+    setShowBiometricModal(false);
+    routeUserByRole(pendingUserRes?.user);
+  };
+
   return (
     <AuthLayout
       icon={LogIn}
       title="Welcome back"
-      subtitle="Log in to your account with Supabase database credentials"
+      subtitle="Log in to your account with verified credentials"
       footer={
         <>
           Don't have an account?{" "}
@@ -104,14 +167,13 @@ export default function Login() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">Email address / Username</Label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <Input
               id="email"
-              type="email"
-              autoComplete="email"
-              autoFocus
+              type="text"
+              autoComplete="username"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -141,17 +203,72 @@ export default function Login() {
             />
           </div>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Logging in...
-            </>
-          ) : (
-            "Log in"
+
+        <div className="flex gap-2 pt-1">
+          <Button type="submit" className="flex-1 h-12 font-medium" disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Logging in...
+              </>
+            ) : (
+              "Log in"
+            )}
+          </Button>
+
+          {biometricAvailable && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleBiometricLogin}
+              className="h-12 px-4 border-slate-700 hover:bg-slate-800 text-slate-200"
+              title="Log in with Touch ID / Face ID"
+            >
+              <Fingerprint className="w-5 h-5 text-indigo-400" />
+            </Button>
           )}
-        </Button>
+        </div>
       </form>
+
+      {/* Biometrics Authorization Modal Prompt */}
+      {showBiometricModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md p-6 rounded-2xl bg-slate-900 border border-slate-800 text-white shadow-2xl text-center space-y-4">
+            <div className="w-14 h-14 mx-auto rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+              <Fingerprint className="w-8 h-8" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-slate-100">Enable Biometric Login?</h3>
+              <p className="text-xs text-slate-400">
+                Use Touch ID, Face ID, or your device biometric scanner for fast logins on FindBack AI.
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-800/80 border border-slate-700/60 text-left text-xs space-y-1 text-slate-300">
+              <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                <ShieldCheck className="w-4 h-4" /> Hardware Secured
+              </div>
+              <p className="text-slate-400">
+                Your credentials will be stored safely inside your device's native secure enclave.
+              </p>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="ghost"
+                onClick={handleSkipBiometrics}
+                className="flex-1 text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+              >
+                Skip for Now
+              </Button>
+              <Button
+                onClick={handleEnableBiometricsConfirm}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold"
+              >
+                Enable Biometrics
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </AuthLayout>
   );
 }

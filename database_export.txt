@@ -1,0 +1,363 @@
+=================================================================
+FINDBACK AI ENTERPRISE - DATABASE EXPORT
+Export Timestamp: 2026-10-05T09:43:53.349Z
+=================================================================
+
+-----------------------------------------------------------------
+TABLE: ADMIN_ACTIONS
+-----------------------------------------------------------------
+[No records found]
+
+-----------------------------------------------------------------
+TABLE: AI_MATCHES
+-----------------------------------------------------------------
+Total Records: 1
+
+--- Record #1 ---
+{
+  "id": "match-godfrey-alen-backpack",
+  "lost_report_id": "lost-godfrey-backpack",
+  "found_report_id": "found-alen-backpack",
+  "overall_confidence_score": "94.00",
+  "overall_score": "94.00",
+  "text_similarity_score": "95.00",
+  "image_similarity_score": "0.00",
+  "category_match_score": "0.00",
+  "location_proximity_score": "96.00",
+  "time_proximity_score": "0.00",
+  "spatial_proximity_km": "0.0300",
+  "temporal_proximity_hours": "0.50",
+  "status": "matched",
+  "ai_recommendation": "94.0% High Match: Student ID card inside bag confirms ownership.",
+  "match_reasons": [],
+  "created_date": "2026-10-05T05:25:58.435Z"
+}
+
+-----------------------------------------------------------------
+TABLE: CLAIMS
+-----------------------------------------------------------------
+[No records found]
+
+-----------------------------------------------------------------
+TABLE: FOUND_REPORTS
+-----------------------------------------------------------------
+Total Records: 2
+
+--- Record #1 ---
+{
+  "id": "found-godfrey-macbook",
+  "title": "Space Black Apple Laptop found on Library Desk",
+  "category": "Electronics",
+  "description": "Found high-end dark Apple laptop left unattended on study desk 24.",
+  "brand": "Apple",
+  "color": "Space Black",
+  "distinguishing_marks": "Has sticker near logo.",
+  "location_text": "Central Library Desk 24",
+  "location_lat": "10.823200",
+  "location_lng": "78.694300",
+  "finder_id": "user-godfrey-citizen",
+  "current_holder_location": "Central Campus Security Desk",
+  "found_date": "2026-10-03T18:30:00.000Z",
+  "found_time": "15:00",
+  "status": "active",
+  "ai_tags": [
+    "Electronics",
+    "Apple",
+    "Laptop",
+    "Space Black"
+  ],
+  "ai_confidence": "96.00",
+  "created_date": "2026-10-04T11:05:58.435Z",
+  "updated_date": null
+}
+--- Record #2 ---
+{
+  "id": "found-alen-backpack",
+  "title": "Brown Wildcraft Leather Bag found in CS Hallway",
+  "category": "Bags",
+  "description": "Found brown leather backpack near Lab 3 entrance.",
+  "brand": "Wildcraft",
+  "color": "Brown",
+  "distinguishing_marks": "Student ID card visible.",
+  "location_text": "CS Building Hallway 1st Floor",
+  "location_lat": "10.823900",
+  "location_lng": "78.693900",
+  "finder_id": "user-alen-citizen",
+  "current_holder_location": "CS Department HOD Office",
+  "found_date": "2026-10-04T18:30:00.000Z",
+  "found_time": "10:15",
+  "status": "active",
+  "ai_tags": [
+    "Bags",
+    "Wildcraft",
+    "Leather",
+    "Brown"
+  ],
+  "ai_confidence": "94.50",
+  "created_date": "2026-10-05T05:09:18.435Z",
+  "updated_date": null
+}
+
+-----------------------------------------------------------------
+TABLE: HANDOVERS
+-----------------------------------------------------------------
+[No records found]
+
+-----------------------------------------------------------------
+TABLE: LOST_REPORTS
+-----------------------------------------------------------------
+Total Records: 3
+
+--- Record #1 ---
+{
+  "id": "lost-alen-sony-headphones",
+  "title": "Sony WH-1000XM5 Wireless Headphones",
+  "category": "Electronics",
+  "description": "Silver Sony noise-canceling headphones inside original dark grey zippered travel case.",
+  "brand": "Sony",
+  "color": "Silver",
+  "distinguishing_marks": "Initial \"A.K.\" written inside headband right side.",
+  "location_text": "Student Cafeteria Main Dining Hall",
+  "location_lat": "10.824500",
+  "location_lng": "78.695500",
+  "reporter_id": "user-alen-citizen",
+  "lost_date": "2026-10-03T18:30:00.000Z",
+  "lost_time": "12:15",
+  "status": "active",
+  "ai_tags": [
+    "Electronics",
+    "Audio",
+    "Headphones",
+    "Sony",
+    "Silver"
+  ],
+  "ai_confidence": "98.20",
+  "created_date": "2026-10-04T08:19:18.435Z",
+  "updated_date": null
+}
+--- Record #2 ---
+{
+  "id": "lost-godfrey-backpack",
+  "title": "Leather Laptop Backpack with College ID",
+  "category": "Bags",
+  "description": "Brown leather Wildcraft backpack containing CS Lab notebooks and college ID card.",
+  "brand": "Wildcraft",
+  "color": "Brown",
+  "distinguishing_marks": "KRCT CS Student ID in front mesh pocket.",
+  "location_text": "Computer Science Lab 3",
+  "location_lat": "10.823800",
+  "location_lng": "78.693800",
+  "reporter_id": "user-godfrey-citizen",
+  "lost_date": "2026-10-04T18:30:00.000Z",
+  "lost_time": "09:45",
+  "status": "active",
+  "ai_tags": [
+    "Bags",
+    "Backpack",
+    "Leather",
+    "Wildcraft",
+    "Brown"
+  ],
+  "ai_confidence": "94.00",
+  "created_date": "2026-10-05T04:19:18.435Z",
+  "updated_date": null
+}
+--- Record #3 ---
+{
+  "id": "lost-alan-apple-watch",
+  "title": "Apple Watch Series 9 GPS + Cellular",
+  "category": "Electronics",
+  "description": "Midnight Aluminum 45mm Apple Watch with Sport Band.",
+  "brand": "Apple",
+  "color": "Midnight Black",
+  "distinguishing_marks": "Scratch resistant glass cover with tiny air bubble.",
+  "location_text": "Campus Sports Complex Gym Locker Room",
+  "location_lat": "10.825000",
+  "location_lng": "78.696000",
+  "reporter_id": "user-alan-citizen",
+  "lost_date": "2026-10-04T18:30:00.000Z",
+  "lost_time": "11:00",
+  "status": "active",
+  "ai_tags": [
+    "Electronics",
+    "Wearable",
+    "Smartwatch",
+    "Apple",
+    "Midnight"
+  ],
+  "ai_confidence": "95.80",
+  "created_date": "2026-10-05T05:59:18.435Z",
+  "updated_date": null
+}
+
+-----------------------------------------------------------------
+TABLE: NOTIFICATIONS
+-----------------------------------------------------------------
+[No records found]
+
+-----------------------------------------------------------------
+TABLE: OWNERSHIP_EVIDENCE
+-----------------------------------------------------------------
+[No records found]
+
+-----------------------------------------------------------------
+TABLE: SESSIONS
+-----------------------------------------------------------------
+[No records found]
+
+-----------------------------------------------------------------
+TABLE: USERS
+-----------------------------------------------------------------
+Total Records: 15
+
+--- Record #1 ---
+{
+  "id": "user-yasar-admin-02",
+  "email": "yasar@zexo.app",
+  "full_name": "YASAR",
+  "phone": "+91 9876543210",
+  "role": "admin",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:13:14.674Z"
+}
+--- Record #2 ---
+{
+  "id": "user-theoriongd-campus-02",
+  "email": "theoriongd@zexo.app",
+  "full_name": "THEORIONGD",
+  "phone": "+91 9876543211",
+  "role": "campus",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:13:15.045Z"
+}
+--- Record #3 ---
+{
+  "id": "user-arun-citizen-02",
+  "email": "arun@zexo.app",
+  "full_name": "ARUN",
+  "phone": "+91 9876543212",
+  "role": "citizen",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:13:15.464Z"
+}
+--- Record #4 ---
+{
+  "id": "user-yasar-admin-01",
+  "email": "yasar@findback.app",
+  "full_name": "YASAR",
+  "phone": "+91 9876543210",
+  "role": "admin",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:13:14.535Z"
+}
+--- Record #5 ---
+{
+  "id": "user-yasar-admin-03",
+  "email": "yasar",
+  "full_name": "YASAR",
+  "phone": "+91 9876543210",
+  "role": "admin",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:13:14.796Z"
+}
+--- Record #6 ---
+{
+  "id": "user-theoriongd-campus-01",
+  "email": "theoriongd@findback.app",
+  "full_name": "THEORIONGD",
+  "phone": "+91 9876543211",
+  "role": "campus",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:13:14.924Z"
+}
+--- Record #7 ---
+{
+  "id": "user-theoriongd-campus-03",
+  "email": "theoriongd",
+  "full_name": "THEORIONGD",
+  "phone": "+91 9876543211",
+  "role": "campus",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:13:15.168Z"
+}
+--- Record #8 ---
+{
+  "id": "user-arun-citizen-01",
+  "email": "arun@findback.app",
+  "full_name": "ARUN",
+  "phone": "+91 9876543212",
+  "role": "citizen",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:13:15.296Z"
+}
+--- Record #9 ---
+{
+  "id": "user-arun-citizen-03",
+  "email": "arun",
+  "full_name": "ARUN",
+  "phone": "+91 9876543212",
+  "role": "citizen",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:13:15.585Z"
+}
+--- Record #10 ---
+{
+  "id": "user-alen-citizen",
+  "email": "alen@findback.app",
+  "full_name": "ALEN",
+  "phone": "+91 9876543213",
+  "role": "citizen",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:19:07.189Z"
+}
+--- Record #11 ---
+{
+  "id": "user-alen-plain",
+  "email": "alen",
+  "full_name": "ALEN",
+  "phone": "+91 9876543213",
+  "role": "citizen",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:19:07.311Z"
+}
+--- Record #12 ---
+{
+  "id": "user-godfrey-citizen",
+  "email": "godfrey@findback.app",
+  "full_name": "GODFREY",
+  "phone": "+91 9876543214",
+  "role": "citizen",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:19:07.432Z"
+}
+--- Record #13 ---
+{
+  "id": "user-godfrey-plain",
+  "email": "godfrey",
+  "full_name": "GODFREY",
+  "phone": "+91 9876543214",
+  "role": "citizen",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:19:07.554Z"
+}
+--- Record #14 ---
+{
+  "id": "user-alan-citizen",
+  "email": "alan@findback.app",
+  "full_name": "ALAN",
+  "phone": "+91 9876543215",
+  "role": "citizen",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:19:07.675Z"
+}
+--- Record #15 ---
+{
+  "id": "user-alan-plain",
+  "email": "alan",
+  "full_name": "ALAN",
+  "phone": "+91 9876543215",
+  "role": "citizen",
+  "account_status": "active",
+  "created_date": "2026-10-05T09:19:07.797Z"
+}
+
