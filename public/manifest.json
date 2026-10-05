@@ -1,0 +1,16 @@
+{
+  "short_name": "FindBack AI",
+  "name": "FindBack AI — Lost & Found Enterprise Platform",
+  "icons": [
+    {
+      "src": "/z_icon_cropped.png",
+      "type": "image/png",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "display": "standalone",
+  "orientation": "portrait"
+}

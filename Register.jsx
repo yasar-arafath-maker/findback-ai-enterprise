@@ -59,7 +59,7 @@ export default function Register() {
         password,
         full_name: fullName.trim() || email.split('@')[0],
         phone: phone.trim(),
-        role,
+        role: 'user',
       });
 
       if (res?.access_token) {
@@ -174,58 +174,26 @@ export default function Register() {
           </div>
         </div>
 
-        {/* Account Role Selector */}
+        {/* Enforced System Role Info */}
         <div className="space-y-1.5">
           <Label>System Role</Label>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => setRole("user")}
-              className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all ${
-                role === "user"
-                  ? "border-blue-600 bg-blue-50/80 text-blue-900 ring-2 ring-blue-500/20 shadow-sm"
-                  : "border-slate-200 hover:border-slate-300 text-slate-700 bg-white"
-              }`}
-            >
-              <UserCheck className={`w-4 h-4 mb-1.5 ${role === "user" ? "text-blue-600" : "text-slate-400"}`} />
-              <div>
-                <p className="text-xs font-bold leading-tight">Citizen</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">Item Reporter</p>
+          <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/70 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold">
+                <UserCheck className="w-5 h-5" />
               </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setRole("officer")}
-              className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all ${
-                role === "officer"
-                  ? "border-emerald-600 bg-emerald-50/80 text-emerald-900 ring-2 ring-emerald-500/20 shadow-sm"
-                  : "border-slate-200 hover:border-slate-300 text-slate-700 bg-white"
-              }`}
-            >
-              <ShieldCheck className={`w-4 h-4 mb-1.5 ${role === "officer" ? "text-emerald-600" : "text-slate-400"}`} />
               <div>
-                <p className="text-xs font-bold leading-tight">Officer</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">Campus Custody</p>
+                <p className="text-xs font-bold text-blue-950">Citizen (Item Reporter)</p>
+                <p className="text-[11px] text-blue-700">Standard user account for lost & found reporting</p>
               </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setRole("admin")}
-              className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all ${
-                role === "admin"
-                  ? "border-purple-600 bg-purple-50/80 text-purple-900 ring-2 ring-purple-500/20 shadow-sm"
-                  : "border-slate-200 hover:border-slate-300 text-slate-700 bg-white"
-              }`}
-            >
-              <Shield className={`w-4 h-4 mb-1.5 ${role === "admin" ? "text-purple-600" : "text-slate-400"}`} />
-              <div>
-                <p className="text-xs font-bold leading-tight">Admin</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">System Console</p>
-              </div>
-            </button>
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-wider bg-blue-600 text-white px-2 py-0.5 rounded-md">
+              Default
+            </span>
           </div>
+          <p className="text-[11px] text-slate-500 mt-1">
+            * Officer (Campus Custody) accounts are provisioned directly by System Console Admins.
+          </p>
         </div>
 
         {/* Password */}
@@ -271,7 +239,7 @@ export default function Register() {
               Provisioning User in Database...
             </>
           ) : (
-            `Register as ${role.toUpperCase()} & Launch Portal`
+            "Register as Citizen & Launch Portal"
           )}
         </Button>
       </form>
