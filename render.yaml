@@ -1,0 +1,77 @@
+# Render Blueprint Spec for FindBack AI Enterprise
+# Single Unified Root Blueprint for Backend Microservice & Frontend Application
+version: "1"
+projects:
+- name: FindBack-AI-Enterprise
+  environments:
+  - name: Production
+    services:
+
+    # ----------------------------------------------------
+    # 1. Backend Microservice (Node.js Express API)
+    # ----------------------------------------------------
+    - type: web
+      name: findbac-backend
+      runtime: node
+      plan: free
+      region: singapore
+      rootDir: backend
+      buildCommand: npm install
+      startCommand: npm start
+      healthCheckPath: /api/health
+      autoDeployTrigger: commit
+      envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        value: https://jshmunmgnkfoeaehiacr.supabase.co
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: FRONTEND_URL
+        value: https://findbac.onrender.com
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        value: godfrey.cs23@krct.ac.in
+      - key: SMTP_FROM_NAME
+        value: FindBack AI Security
+
+    # ----------------------------------------------------
+    # 2. Frontend Client (Vite / React Web Application)
+    # ----------------------------------------------------
+    - type: web
+      name: findbac
+      runtime: node
+      plan: free
+      region: singapore
+      buildCommand: npm config set fetch-retry-mintimeout 20000 && npm config set fetch-retry-maxtimeout 120000 && npm config set fetch-retries 5 && npm install && npm run build
+      startCommand: npx serve -s dist -l $PORT
+      healthCheckPath: /
+      autoDeployTrigger: commit
+      envVars:
+      - key: NODE_VERSION
+        value: 20.10.0
+      - key: VITE_API_BASE_URL
+        value: https://findbac-backend.onrender.com/api
+      - key: VITE_BACKEND_URL
+        value: https://findbac-backend.onrender.com
+      - key: VITE_FRONTEND_URL
+        value: https://findbac.onrender.com
+      - key: VITE_SUPABASE_URL
+        value: https://jshmunmgnkfoeaehiacr.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false

@@ -1,26 +1,42 @@
-# Render Blueprint Specification for FindBack AI Enterprise
+# Render Blueprint Specification for FindBack AI Enterprise Backend
 # Deploy instructions: https://render.com/docs/blueprint-spec
 services:
   - type: web
-    name: findback-ai-backend
+    name: findbac-backend
     runtime: node
     plan: free
-    region: oregon
+    region: singapore
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeployTrigger: commit
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
-      - key: SMTP_HOST
+        value: "10000"
+      - key: DATABASE_URL
         sync: false
+      - key: SUPABASE_URL
+        value: https://jshmunmgnkfoeaehiacr.supabase.co
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: FRONTEND_URL
+        value: https://findbac.onrender.com
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
       - key: SMTP_PORT
-        value: 587
+        value: "587"
       - key: SMTP_USER
         sync: false
       - key: SMTP_PASS
         sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        value: godfrey.cs23@krct.ac.in
+      - key: SMTP_FROM_NAME
+        value: FindBack AI Security
