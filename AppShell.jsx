@@ -1,8 +1,8 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { db } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { LayoutDashboard, Search, PlusCircle, Bell, User, ShieldCheck, LogOut, QrCode, MessageSquare, Award } from 'lucide-react';
+import { LayoutDashboard, Search, PlusCircle, Bell, User, ShieldCheck, LogOut, QrCode, MessageSquare, Award, ChevronLeft } from 'lucide-react';
 import Brand from '@/components/Brand';
 
 const links = [
@@ -20,6 +20,8 @@ const links = [
 export default function AppShell() {
   const { user: authUser, logout } = useAuth();
   const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     (async () => {
@@ -27,6 +29,8 @@ export default function AppShell() {
       setUser(u);
     })();
   }, [authUser]);
+
+  const showBackButton = location.pathname !== '/dashboard' && location.pathname !== '/';
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -67,16 +71,28 @@ export default function AppShell() {
       </aside>
 
       <main className="pb-20 md:ml-64 md:pb-0">
-        {/* Mobile Top Header with Exit/Logout Button */}
+        {/* Mobile Top Header with Back Button and Exit/Logout Button */}
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-800 bg-[#0F1F3D] px-4 py-3 md:hidden shadow-md">
-          <button
-            onClick={() => (logout ? logout() : db.auth.logout('/'))}
-            className="flex items-center gap-2 rounded-xl bg-red-500/20 border border-red-500/30 px-3 py-1.5 text-xs font-bold text-red-300 hover:bg-red-500/30 transition-all active:scale-95 shadow-sm"
-            title="Exit Application / Log Out"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            <span>Exit / Log Out</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {showBackButton && (
+              <button
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-1 rounded-xl bg-slate-800/80 border border-slate-700/80 px-2.5 py-1.5 text-xs font-bold text-slate-200 hover:bg-slate-700 active:scale-95 transition-all shadow-sm"
+                title="Go Back"
+              >
+                <ChevronLeft className="h-4 w-4 text-blue-400" />
+                <span>Back</span>
+              </button>
+            )}
+            <button
+              onClick={() => (logout ? logout() : db.auth.logout('/'))}
+              className="flex items-center gap-2 rounded-xl bg-red-500/20 border border-red-500/30 px-3 py-1.5 text-xs font-bold text-red-300 hover:bg-red-500/30 transition-all active:scale-95 shadow-sm"
+              title="Exit Application / Log Out"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Exit</span>
+            </button>
+          </div>
 
           <div className="flex items-center space-x-2">
             <span className="text-xs font-bold text-slate-200 truncate max-w-[130px]">

@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { App as CapApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import PageNotFound from './PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { RenderBootProvider } from './RenderBootContext';
@@ -37,6 +39,39 @@ import EnterpriseAdminDashboard from './EnterpriseAdminDashboard';
 import SmartTagGenerator from './SmartTagGenerator';
 import SafeChatWindow from './SafeChatWindow';
 import DigitalHandoverCertificate from './DigitalHandoverCertificate';
+
+const AppBackButtonHandler = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let listenerHandle;
+    const registerListener = async () => {
+      listenerHandle = await CapApp.addListener('backButton', ({ canGoBack }) => {
+        const rootPaths = ['/', '/dashboard', '/login', '/splash', '/onboarding'];
+        const isRoot = rootPaths.includes(location.pathname);
+
+        if (isRoot || !canGoBack) {
+          CapApp.exitApp();
+        } else {
+          navigate(-1);
+        }
+      });
+    };
+
+    registerListener();
+
+    return () => {
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
+    };
+  }, [navigate, location.pathname]);
+
+  return null;
+};
 
 const LandingWithSplashFlow = () => {
   const [hasSeenSplash, setHasSeenSplash] = useState(() => {
@@ -127,6 +162,7 @@ function App() {
         <QueryClientProvider client={queryClientInstance}>
           <Router>
             <ScrollToTop />
+            <AppBackButtonHandler />
             <AuthenticatedApp />
           </Router>
           <Toaster />

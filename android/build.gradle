@@ -26,8 +26,8 @@ subprojects {
         if (project.hasProperty('android')) {
             project.android {
                 compileOptions {
-                    sourceCompatibility JavaVersion.VERSION_21
-                    targetCompatibility JavaVersion.VERSION_21
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
                 }
                 lintOptions {
                     abortOnError false
@@ -35,9 +35,15 @@ subprojects {
                 }
             }
         }
-        // Suppress Kotlin warnings-as-errors safely
+        // Suppress Kotlin warnings-as-errors safely and match Java 17 target
         project.tasks.configureEach { task ->
             if (task.name.contains("KotlinCompile") || task.class.name.contains("KotlinCompile")) {
+                try {
+                    task.kotlinOptions.jvmTarget = "17"
+                } catch (Exception e) {}
+                try {
+                    task.compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+                } catch (Exception e) {}
                 try {
                     task.compilerOptions.allWarningsAsErrors.set(false)
                 } catch (Exception e) {}
