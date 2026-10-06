@@ -2,8 +2,6 @@
 FINDBACK AI ENTERPRISE - GOOGLE PLAY STORE LAUNCH DETAILS & TEAM DATA SHEET
 Generated from Codebase Analysis on 2026-10-06
 ================================================================================
-
---------------------------------------------------------------------------------
 2. APP DETAILS
 --------------------------------------------------------------------------------
 • App Name: FindBack AI
