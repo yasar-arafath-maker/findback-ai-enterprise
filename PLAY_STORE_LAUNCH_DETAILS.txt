@@ -23,12 +23,41 @@ Generated from Codebase Analysis on 2026-10-06
 • App Type: Free
 • Version Name (App Version): 1.3.0
 • Version Code: 4
-• App Icon Path: z_icon_cropped.png / android/app/src/main/res/mipmap-*
+• App Icon Path: public/assets/app_icon_v1.jpg / android/app/src/main/res/mipmap-*
+• Feature Graphic Path: public/assets/feature_graphic_v1.jpg
+• Screenshots Path: public/assets/phone_screenshot_dashboard.jpg, public/assets/phone_screenshot_certificate.jpg
 • Short Description:
-  AI-powered multi-modal lost and found recovery platform with real-time location matching and secure verification.
+  AI-powered multi-modal lost and found recovery platform with location matching.
 
 • Full Description:
-  FindBack AI Enterprise is an intelligent, multi-modal lost and found item recovery platform designed for campuses, organizations, and public spaces. Combining 64-bit text SimHash fingerprinting, Gemini AI image similarity analysis, Haversine GPS geospatial proximity, and temporal decay algorithms, FindBack AI connects item finders with rightful owners automatically. Features secure zero-knowledge claim evidence submission, cryptographic SHA-256 digital recovery certificates, and real-time push notifications.
+  FindBack AI Enterprise is an intelligent, multi-modal lost and found item recovery platform designed for campuses, organizations, public spaces, and communities. Combining 64-bit text SimHash fingerprinting, Gemini AI image similarity analysis, Haversine GPS geospatial proximity indexing, and temporal decay algorithms, FindBack AI connects item finders with rightful owners automatically.
+
+  KEY FEATURES & CAPABILITIES:
+
+  🔍 Multi-Modal AI Match Engine
+  • Gemini AI Vision: Automatically extracts feature tags and visual similarity matrices from item photos.
+  • SimHash Text Fingerprinting: Generates 64-bit cryptographic text signatures of item descriptions to detect duplicate reports instantly.
+  • Spatial & Temporal Proximity: Uses Haversine GPS distance calculation and time-elapsed decay to rank high-confidence matches.
+
+  🔒 Privacy-Preserving Protection & Relays
+  • Smart Anti-Loss QR Tags: Attach printable QR tags to your laptops, keys, and bags. Finders scan with any camera to contact you safely.
+  • Masked Contact Relays: Virtual masked phone trunks and encrypted chat keep your phone number and personal email strictly private.
+  • Zero-Knowledge Evidence Isolation: Claim evidence (purchase invoices, lockscreen wallpapers) is guarded via Row-Level Security (RLS) and is visible ONLY to verifying administrators.
+
+  📜 Cryptographic Verification & Finality
+  • 6-Digit Verification Handovers: Handover requires one-time verification codes generated at the time of claim finalization.
+  • SHA-256 Recovery Certificates: Issues cryptographically signed PDF handover certificates for audit compliance and fraud prevention.
+
+  HOW IT WORKS:
+  1. Report: Submit a lost or found item report with photo, location, and key details.
+  2. AI Match: Our AI engine continuously scans and calculates similarity scores across active reports.
+  3. Claim & Verify: Verify ownership via secure zero-knowledge evidence submission.
+  4. Handover: Complete the item recovery using a 6-digit OTP code and receive a SHA-256 digital certificate.
+
+  SUPPORT & PRIVACY:
+  • Privacy Policy: https://findbac.onrender.com/privacy
+  • Support Email: yasararafath.tech@gmail.com
+  • Website: https://findbac.onrender.com
 
 • Support Email: yasararafath.tech@gmail.com
 • Support / Web App Website: https://findbac.onrender.com
@@ -118,11 +147,21 @@ Generated from Codebase Analysis on 2026-10-06
 --------------------------------------------------------------------------------
 9. STORE ASSETS CHECKLIST
 --------------------------------------------------------------------------------
-[x] App Icon (512 x 512 px PNG)
-[x] Feature Graphic (1024 x 500 px PNG/JPEG)
-[x] Phone Screenshots (Minimum 2, 16:9 or 9:16 aspect ratio)
-[x] Short Description (Up to 80 characters)
-[x] Full Description (Up to 4000 characters)
+[x] App Icon (512 x 512 px PNG):
+    • Option 1: public/assets/app_icon_v1.jpg
+    • Option 2: public/assets/app_icon_v2.jpg
+    • Native Launcher: android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+[x] Feature Graphic (1024 x 500 px PNG/JPEG):
+    • Option 1 (Match Radar Banner): public/assets/feature_graphic_v1.jpg
+    • Option 2 (3D Platform Architecture): public/assets/feature_graphic_v2.jpg
+
+[x] Phone Screenshots (Minimum 2, 16:9 or 9:16 aspect ratio):
+    • Screenshot 1 (AI Match Radar & Proximity): public/assets/phone_screenshot_dashboard.jpg
+    • Screenshot 2 (Cryptographic SHA-256 Certificate): public/assets/phone_screenshot_certificate.jpg
+
+[x] Short Description (Up to 80 characters): Populated in Section 2 & Section 10
+[x] Full Description (Up to 4000 characters): Populated in Section 2 & Section 10
 
 --------------------------------------------------------------------------------
 10. TEAM DATA COLLECTION SHEET (20/20 ITEMS POPULATED)
@@ -134,9 +173,9 @@ Generated from Codebase Analysis on 2026-10-06
 5. 📱 App Name: FindBack AI
 6. 📦 Package Name: com.findback.ai.app
 7. 📝 Short Description: AI-powered multi-modal lost and found recovery platform with location matching.
-8. 📄 Full Description: FindBack AI Enterprise is an intelligent lost and found recovery engine using text fingerprinting, Gemini AI vision, geospatial location proximity, zero-knowledge evidence verification, and cryptographic SHA-256 handover certificates.
-9. 🖼️ App Icon: z_icon_cropped.png / res/mipmap-xxxhdpi/ic_launcher.png
-10. 📸 Screenshots: Captured from web & mobile UI (Dashboard, Matches, Report, Handover)
+8. 📄 Full Description: FindBack AI Enterprise is an intelligent, multi-modal lost and found item recovery platform using 64-bit SimHash fingerprinting, Gemini AI vision, geospatial proximity indexing, privacy-masked relay channels, zero-knowledge evidence isolation, and SHA-256 cryptographic handover certificates.
+9. 🖼️ App Icon: public/assets/app_icon_v1.jpg / android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+10. 📸 Screenshots & Graphics: public/assets/feature_graphic_v1.jpg, public/assets/phone_screenshot_dashboard.jpg, public/assets/phone_screenshot_certificate.jpg
 11. 🌐 Privacy Policy URL: https://findbac.onrender.com/privacy
 12. 🌐 Website/Support URL: https://findbac.onrender.com
 13. 📧 Support Email: yasararafath.tech@gmail.com
