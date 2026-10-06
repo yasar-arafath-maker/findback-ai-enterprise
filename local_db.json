@@ -1,0 +1,91 @@
+{
+  "User": [
+    {
+      "id": "user-yasar-admin",
+      "email": "yasar@zexo.app",
+      "full_name": "YASAR",
+      "phone": "+91 9876543210",
+      "role": "admin",
+      "password": "Zero@123",
+      "security_key": "SEC123",
+      "account_status": "active",
+      "created_date": "2026-10-06T04:41:10.168Z"
+    },
+    {
+      "id": "user-theoriongd-campus",
+      "email": "theoriongd@zexo.app",
+      "full_name": "THEORIONGD",
+      "phone": "+91 9344462238",
+      "role": "campus",
+      "password": "Zero@123",
+      "security_key": "SEC123",
+      "account_status": "active",
+      "created_date": "2026-10-06T04:41:10.169Z"
+    },
+    {
+      "id": "user-arun-citizen",
+      "email": "arun@zexo.app",
+      "full_name": "ARUN",
+      "phone": "+91 9876543212",
+      "role": "citizen",
+      "password": "Zero@123",
+      "security_key": "SEC123",
+      "account_status": "active",
+      "created_date": "2026-10-06T04:41:10.169Z"
+    },
+    {
+      "id": "user-alen-citizen",
+      "email": "alen@findback.app",
+      "full_name": "ALEN",
+      "phone": "+91 9876543213",
+      "role": "citizen",
+      "password": "Zero@123",
+      "security_key": "SEC123",
+      "account_status": "active",
+      "created_date": "2026-10-06T04:41:10.169Z"
+    },
+    {
+      "id": "user-godfrey-citizen",
+      "email": "godfrey@findback.app",
+      "full_name": "GODFREY",
+      "phone": "+91 9876543214",
+      "role": "citizen",
+      "password": "Zero@123",
+      "security_key": "SEC123",
+      "account_status": "active",
+      "created_date": "2026-10-06T04:41:10.169Z"
+    },
+    {
+      "id": "user-alan-citizen",
+      "email": "alan@findback.app",
+      "full_name": "ALAN",
+      "phone": "+91 9876543215",
+      "role": "citizen",
+      "password": "Zero@123",
+      "security_key": "SEC123",
+      "account_status": "active",
+      "created_date": "2026-10-06T04:41:10.169Z"
+    },
+    {
+      "id": "user-yasar-tech",
+      "email": "yasararafath.tech@gmail.com",
+      "full_name": "Yasar",
+      "phone": "+91 7200894218",
+      "role": "user",
+      "password": "Zero@123",
+      "security_key": "SEC123",
+      "account_status": "active",
+      "created_date": "2026-10-06T04:41:10.169Z"
+    }
+  ],
+  "LostReports": [],
+  "FoundReports": [],
+  "AIMatches": [],
+  "Claims": [],
+  "OwnershipEvidence": [],
+  "Handovers": [],
+  "Notifications": [],
+  "AdminActions": [],
+  "Sessions": {},
+  "ChatMessages": []
+}

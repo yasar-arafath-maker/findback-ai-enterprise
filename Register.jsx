@@ -11,6 +11,7 @@ import AuthLayout from "@/components/AuthLayout";
 import { toast } from "@/components/ui/use-toast";
 import { safeReturnTo } from "@/lib/authReturnTo";
 import NativePermissionsModal from "@/NativePermissionsModal";
+import { fetchNativeSimPhoneNumber } from "./nativePluginsHelper";
 
 const COUNTRY_CODES = [
   { code: "+91", flag: "🇮🇳", name: "India" },
@@ -35,6 +36,7 @@ export default function Register() {
   const [phoneNum, setPhoneNum] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [securityKey, setSecurityKey] = useState("SEC123");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetchingPhone, setFetchingPhone] = useState(false);
@@ -50,36 +52,25 @@ export default function Register() {
     }
   }, [searchParams]);
 
-  // Telegram-style Phone Auto-Fetch (via Web OTP / Credential API or Device SIM query)
+  // Real SIM Mobile Number Auto-Detection (Banking App / GPay Style via Android SubscriptionManager & Credential API)
   const handleAutoFetchPhone = async () => {
     setFetchingPhone(true);
     try {
-      if (typeof window !== 'undefined' && 'credentials' in navigator && navigator.credentials.get) {
-        const cred = await navigator.credentials.get({
-          otp: { transport: ['sms'] }
-        }).catch(() => null);
-
-        if (cred?.code) {
-          setPhoneNum(cred.code);
-          toast({
-            title: "SIM Phone Number Fetched",
-            description: `Auto-populated device number into registration form.`
-          });
-          setFetchingPhone(false);
-          return;
-        }
+      const res = await fetchNativeSimPhoneNumber();
+      if (res && res.success && res.phoneNumber) {
+        // Strip country code prefix if returned by native SIM info
+        let numOnly = res.phoneNumber.replace(/^\+91|^91/, '').trim();
+        setPhoneNum(numOnly);
+        toast({
+          title: "SIM Mobile Number Auto-Detected",
+          description: `Auto-populated real device SIM number (${countryCode} ${numOnly}).`
+        });
+      } else {
+        toast({
+          title: "Manual Entry Required",
+          description: res.message || "Could not detect SIM number. Please enter your mobile number manually."
+        });
       }
-
-      // High-precision Telegram SIM fetch simulation fallback
-      await new Promise(resolve => setTimeout(resolve, 600));
-      const sampleNumbers = ["9876543210", "9812345678", "9012345678"];
-      const fetched = sampleNumbers[Math.floor(Math.random() * sampleNumbers.length)];
-      setPhoneNum(fetched);
-
-      toast({
-        title: "SIM Mobile Number Fetched",
-        description: `Telegram-style auto-detected device SIM number (${countryCode} ${fetched}).`
-      });
     } catch (err) {
       console.warn('[Phone Fetch Error]:', err);
       toast({
@@ -107,6 +98,10 @@ export default function Register() {
       setError("Password must be at least 6 characters long");
       return;
     }
+    if (!securityKey.trim() || securityKey.trim().length !== 6) {
+      setError("Security Key must be exactly 6 characters long");
+      return;
+    }
 
     const fullPhoneString = phoneNum.trim() ? `${countryCode} ${phoneNum.trim()}` : '';
 
@@ -115,6 +110,7 @@ export default function Register() {
       const res = await db.auth.register({
         email: email.trim(),
         password,
+        security_key: securityKey.trim(),
         full_name: fullName.trim() || email.split('@')[0],
         phone: fullPhoneString,
         role: 'user',
@@ -327,6 +323,30 @@ export default function Register() {
               required
             />
           </div>
+        </div>
+
+        {/* 6-Character Security Key for Account Recovery */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="securityKey">6-Character Security Key (Account Recovery)</Label>
+            <span className="text-[10px] text-muted-foreground font-semibold">6 Characters</span>
+          </div>
+          <div className="relative">
+            <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-500" aria-hidden="true" />
+            <Input
+              id="securityKey"
+              type="text"
+              maxLength={6}
+              placeholder="SEC123"
+              value={securityKey}
+              onChange={(e) => setSecurityKey(e.target.value.toUpperCase().substring(0, 6))}
+              className="pl-10 h-11 font-mono uppercase font-bold tracking-widest border-indigo-200 focus:border-indigo-500"
+              required
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Keep this key safe! Used to recover your account if you forget your password.
+          </p>
         </div>
 
         <Button type="submit" className="w-full h-12 font-medium btn-interactive bg-blue-600 hover:bg-blue-700 mt-2" disabled={loading}>

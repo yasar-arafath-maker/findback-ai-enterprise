@@ -6,6 +6,8 @@
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(128) PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) DEFAULT 'Zero@123',
+    security_key VARCHAR(64) DEFAULT 'SEC123',
     full_name VARCHAR(255),
     phone VARCHAR(50),
     role VARCHAR(32) DEFAULT 'user',

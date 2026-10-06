@@ -2,6 +2,14 @@
   "name": "User",
   "type": "object",
   "properties": {
+    "password": {
+      "type": "string",
+      "default": "Zero@123"
+    },
+    "security_key": {
+      "type": "string",
+      "default": "SEC123"
+    },
     "role": {
       "type": "string",
       "enum": [

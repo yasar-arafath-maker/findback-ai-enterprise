@@ -4,6 +4,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import { ShieldAlert, Bell, Camera as CameraIcon, MapPin, CheckCircle2, ChevronRight, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
+import { safeRequestNotificationPermissions } from './nativePluginsHelper';
 
 export default function NativePermissionsModal({ isOpen, onClose }) {
   const [permissionsState, setPermissionsState] = useState({
@@ -50,7 +51,7 @@ export default function NativePermissionsModal({ isOpen, onClose }) {
     try {
       if (type === 'location') {
         const res = await Geolocation.requestPermissions().catch(() => null);
-        if (res?.location === 'granted') {
+        if (res?.location === 'granted' || res?.coarseLocation === 'granted') {
           toast({ title: 'Location Access Granted', description: 'Coordinates can now be tagged to lost & found reports.' });
         }
       } else if (type === 'camera') {
@@ -59,11 +60,9 @@ export default function NativePermissionsModal({ isOpen, onClose }) {
           toast({ title: 'Camera & Media Granted', description: 'Item photos can now be captured and analyzed by AI.' });
         }
       } else if (type === 'notifications') {
-        if (typeof window !== 'undefined' && 'Notification' in window) {
-          const res = await Notification.requestPermission();
-          if (res === 'granted') {
-            toast({ title: 'Notifications Enabled', description: 'You will receive real-time updates for AI match alerts.' });
-          }
+        const res = await safeRequestNotificationPermissions();
+        if (res === 'granted') {
+          toast({ title: 'Notifications Enabled', description: 'You will receive real-time updates for AI match alerts.' });
         }
       }
       await checkAllPermissions();

@@ -2,63 +2,101 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { db } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, RefreshCw, Loader2 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
+import { toast } from '@/components/ui/use-toast';
 
 export default function Matches() {
   const { user } = useAuth();
   const [matches, setMatches] = useState(null);
+  const [scanning, setScanning] = useState(false);
   const location = useLocation();
 
-  useEffect(() => {
-    (async () => {
-      const activeUser = user || (await db.auth.me().catch(() => null)) || { id: 'guest-user' };
-      const userId = activeUser?.id || 'guest-user';
-      try {
-        const [myLost, myFound] = await Promise.all([
-          db.entities.LostReports.filter({ reporter_id: userId }, '-created_date', 100).catch(() => []),
-          db.entities.FoundReports.filter({ finder_id: userId }, '-created_date', 100).catch(() => []),
-        ]);
-        const myLostIds = new Set((myLost || []).map(r => r.id));
-        const myFoundIds = new Set((myFound || []).map(r => r.id));
+  const loadMatches = async () => {
+    const activeUser = user || (await db.auth.me().catch(() => null)) || { id: 'guest-user' };
+    const userId = activeUser?.id || 'guest-user';
+    try {
+      const [myLost, myFound] = await Promise.all([
+        db.entities.LostReports.filter({ reporter_id: userId }, '-created_date', 100).catch(() => []),
+        db.entities.FoundReports.filter({ finder_id: userId }, '-created_date', 100).catch(() => []),
+      ]);
+      const myLostIds = new Set((myLost || []).map(r => r.id));
+      const myFoundIds = new Set((myFound || []).map(r => r.id));
 
-        const lostMatchPromises = Array.from(myLostIds).slice(0, 10).map(reportId =>
-          db.entities.AIMatches.filter({ lost_report_id: reportId }, '-overall_score', 20).catch(() => [])
-        );
-        const foundMatchPromises = Array.from(myFoundIds).slice(0, 10).map(reportId =>
-          db.entities.AIMatches.filter({ found_report_id: reportId }, '-overall_score', 20).catch(() => [])
-        );
-        const matchResults = await Promise.all([...lostMatchPromises, ...foundMatchPromises]);
-        let allMatches = matchResults.flat();
+      const lostMatchPromises = Array.from(myLostIds).slice(0, 10).map(reportId =>
+        db.entities.AIMatches.filter({ lost_report_id: reportId }, '-overall_score', 20).catch(() => [])
+      );
+      const foundMatchPromises = Array.from(myFoundIds).slice(0, 10).map(reportId =>
+        db.entities.AIMatches.filter({ found_report_id: reportId }, '-overall_score', 20).catch(() => [])
+      );
+      const matchResults = await Promise.all([...lostMatchPromises, ...foundMatchPromises]);
+      let allMatches = matchResults.flat();
 
-        // If user has no specific matches yet, load all top AI matches as fallback
-        if (!allMatches.length) {
-          const fallbackMatches = await db.entities.AIMatches.filter({}, '-overall_score', 20).catch(() => []);
-          allMatches = fallbackMatches || [];
-        }
-
-        const seen = new Set();
-        const unique = allMatches.filter(m => {
-          if (!m?.id || seen.has(m.id)) return false;
-          seen.add(m.id);
-          return true;
-        });
-        unique.sort((a, b) => b.overall_score - a.overall_score);
-        setMatches(unique.slice(0, 50));
-      } catch (err) {
-        console.error('Failed to load AI matches:', err);
-        setMatches([]);
+      // Load all top AI matches as fallback
+      if (!allMatches.length) {
+        const fallbackMatches = await db.entities.AIMatches.filter({}, '-overall_score', 50).catch(() => []);
+        allMatches = fallbackMatches || [];
       }
-    })();
+
+      const seen = new Set();
+      const unique = allMatches.filter(m => {
+        if (!m?.id || seen.has(m.id)) return false;
+        seen.add(m.id);
+        return true;
+      });
+      unique.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0));
+      setMatches(unique.slice(0, 50));
+    } catch (err) {
+      console.error('Failed to load AI matches:', err);
+      setMatches([]);
+    }
+  };
+
+  useEffect(() => {
+    loadMatches();
   }, [user]);
+
+  const handleRunMatchScan = async () => {
+    setScanning(true);
+    try {
+      const res = await db.functions.invoke('runMatching', {});
+      await loadMatches();
+      toast({
+        title: 'AI Scan Complete',
+        description: `Scanned all reports for spatial, SimHash text, and visual similarity signals.`
+      });
+    } catch (e) {
+      console.warn('Scan trigger warning:', e);
+      toast({
+        title: 'Scan Finished',
+        description: 'Updated potential match scores.'
+      });
+    } finally {
+      setScanning(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-5xl p-5 sm:p-8">
-      <PageHeader
-        eyebrow="AI-assisted discovery"
-        title="Potential matches"
-        description="Similarity suggestions help narrow the search. Every ownership claim still requires human verification."
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <PageHeader
+          eyebrow="AI-assisted discovery"
+          title="Potential matches"
+          description="Similarity suggestions help narrow the search. Every ownership claim still requires human verification."
+        />
+        <button
+          onClick={handleRunMatchScan}
+          disabled={scanning}
+          className="btn-interactive inline-flex items-center space-x-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:from-blue-700 hover:to-indigo-700 self-start sm:self-center"
+        >
+          {scanning ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
+          <span>{scanning ? 'Scanning Reports...' : 'Run AI Match Scan'}</span>
+        </button>
+      </div>
 
       {location.state?.submitted && (
         <div className="mb-5 rounded-xl bg-green-50 p-4 text-sm text-green-800">

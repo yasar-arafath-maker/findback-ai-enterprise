@@ -39,6 +39,7 @@ import EnterpriseAdminDashboard from './EnterpriseAdminDashboard';
 import SmartTagGenerator from './SmartTagGenerator';
 import SafeChatWindow from './SafeChatWindow';
 import DigitalHandoverCertificate from './DigitalHandoverCertificate';
+import PrivacyPolicy from './PrivacyPolicy';
 
 const AppBackButtonHandler = () => {
   const navigate = useNavigate();
@@ -124,6 +125,7 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/enterprise-admin" element={<EnterpriseAdminDashboard />} />
       <Route path="/admin-console" element={<EnterpriseAdminDashboard />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>

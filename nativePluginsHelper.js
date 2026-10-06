@@ -4,11 +4,14 @@
  * @capacitor/preferences, @capacitor/status-bar with robust fallbacks.
  */
 
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Geolocation } from '@capacitor/geolocation';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Preferences } from '@capacitor/preferences';
 import { StatusBar, Style } from '@capacitor/status-bar';
+
+const PhoneDetection = registerPlugin('PhoneDetection');
 
 /**
  * 1. Safe Camera Plugin Wrapper
@@ -204,4 +207,68 @@ export const safeAuthenticateBiometric = async () => {
     throw err;
   }
 };
+
+/**
+ * 7. Real SIM Phone Number Auto-Detection (Android Native SubscriptionManager / TelephonyManager + Web Credential Manager)
+ */
+export const fetchNativeSimPhoneNumber = async () => {
+  // 1. Try Native Android Capacitor PhoneDetection Plugin if on Android / Native platform
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const res = await PhoneDetection.getSimPhoneNumber();
+      if (res && res.success && res.phoneNumber) {
+        return {
+          success: true,
+          phoneNumber: res.phoneNumber,
+          source: 'android_sim',
+        };
+      } else if (res && res.message) {
+        console.info('[Native SIM Detection]:', res.message);
+      }
+    } catch (err) {
+      console.warn('[Native SIM Detection Plugin Error]:', err?.message || err);
+    }
+  }
+
+  // 2. Try Web Credential / Web OTP Manager API if available
+  if (typeof window !== 'undefined' && 'credentials' in navigator && navigator.credentials.get) {
+    try {
+      const cred = await navigator.credentials.get({
+        otp: { transport: ['sms'] }
+      }).catch(() => null);
+
+      if (cred?.code) {
+        return {
+          success: true,
+          phoneNumber: cred.code,
+          source: 'web_otp',
+        };
+      }
+    } catch (e) {
+      console.debug('[Web Credential Phone Hint Error]:', e);
+    }
+  }
+
+  return {
+    success: false,
+    message: 'Could not read phone number from SIM card directly. Please enter your mobile phone number manually.',
+  };
+};
+
+/**
+ * 8. Safe Notification Permission Request Helper
+ */
+export const safeRequestNotificationPermissions = async () => {
+  try {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const res = await Notification.requestPermission();
+      return res;
+    }
+    return 'denied';
+  } catch (e) {
+    console.warn('[Notification Permission Request Error]:', e);
+    return 'denied';
+  }
+};
+
 

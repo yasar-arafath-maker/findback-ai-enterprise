@@ -7,10 +7,15 @@
   },
   "plugins": {
     "Camera": {
-      "permissions": ["camera", "photos"]
+      "permissions": [
+        "camera",
+        "photos"
+      ]
     },
     "Geolocation": {
-      "permissions": ["location"]
+      "permissions": [
+        "location"
+      ]
     },
     "SplashScreen": {
       "launchShowDuration": 2000,

@@ -50,7 +50,32 @@ const devBypassDb = {
     }),
   }),
   integrations: {
-    Core: { UploadFile: async () => ({ file_url: '' }) },
+    Core: {
+      UploadFile: async ({ file }) => {
+        if (!file) return { file_url: '' };
+        if (typeof file === 'string') return { file_url: file };
+        try {
+          let dataUrl = '';
+          if (typeof FileReader !== 'undefined' && (file instanceof Blob || file instanceof File)) {
+            dataUrl = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result || '');
+              reader.onerror = () => resolve('');
+              reader.readAsDataURL(file);
+            });
+          }
+          if (!dataUrl) return { file_url: '' };
+          const ext = file.name ? file.name.split('.').pop() : 'png';
+          const filename = `img_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+          const res = await syncServerRequest('/api/upload', 'POST', { filename, file_data: dataUrl }).catch(() => null);
+          if (res && res.file_url) return { file_url: res.file_url };
+          return { file_url: dataUrl };
+        } catch (e) {
+          console.warn('[UploadFile Error]:', e);
+          return { file_url: '' };
+        }
+      }
+    },
   },
 };
 
@@ -158,7 +183,7 @@ const candidateBaseUrls = () => {
   return Array.from(new Set(list));
 };
 
-const syncServerRequest = async (path, method = 'GET', body = null) => {
+export const syncServerRequest = async (path, method = 'GET', body = null) => {
   try {
     if (typeof window === 'undefined') {
       try {
@@ -507,12 +532,44 @@ const standaloneAuthClient = {
     }),
   }),
   integrations: {
-    Core: { UploadFile: async () => ({ file_url: '' }) },
+    Core: {
+      UploadFile: async ({ file }) => {
+        if (!file) return { file_url: '' };
+        if (typeof file === 'string') return { file_url: file };
+        try {
+          let dataUrl = '';
+          if (typeof FileReader !== 'undefined' && (file instanceof Blob || file instanceof File)) {
+            dataUrl = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result || '');
+              reader.onerror = () => resolve('');
+              reader.readAsDataURL(file);
+            });
+          }
+          if (!dataUrl) return { file_url: '' };
+          const ext = file.name ? file.name.split('.').pop() : 'png';
+          const filename = `img_${Date.now()}_${Math.random().toString(36).substring(2, 6)}.${ext}`;
+          const res = await syncServerRequest('/api/upload', 'POST', { filename, file_data: dataUrl }).catch(() => null);
+          if (res && res.file_url) return { file_url: res.file_url };
+          return { file_url: dataUrl };
+        } catch (e) {
+          console.warn('[UploadFile Error]:', e);
+          return { file_url: '' };
+        }
+      }
+    },
   },
   functions: {
     invoke: async (fnName, params = {}) => {
       if (fnName === 'runMatching') {
         try {
+          // 1. Try server function API execution first
+          const serverRes = await syncServerRequest('/api/functions/runMatching', 'POST', params).catch(() => null);
+          if (serverRes && (serverRes.status === 'success' || Array.isArray(serverRes.matches))) {
+            return serverRes;
+          }
+
+          // 2. Client-side fallback matching engine
           const { reportId, reportType } = params;
           const isLost = reportType === 'lost' || reportType === 'LostReports';
           const sourceEntity = isLost ? 'LostReports' : 'FoundReports';
@@ -529,8 +586,12 @@ const standaloneAuthClient = {
 
           const sourceList = getList(sourceEntity);
           const targetList = getList(targetEntity);
-          const sourceItem = sourceList.find(r => r.id === reportId) || sourceList[sourceList.length - 1];
 
+          if (!sourceList.length || !targetList.length) {
+            return { status: 'success', matchesCount: 0 };
+          }
+
+          const sourceItem = (reportId ? sourceList.find(r => r.id === reportId) : null) || sourceList[sourceList.length - 1];
           if (!sourceItem) return { status: 'no_report_found' };
 
           const matches = getList('AIMatches');
@@ -538,24 +599,34 @@ const standaloneAuthClient = {
           for (const targetItem of targetList) {
             const lostRep = isLost ? sourceItem : targetItem;
             const foundRep = isLost ? targetItem : sourceItem;
+            if (!lostRep || !foundRep) continue;
 
-            const cScore = categoryScore(lostRep.category, foundRep.category);
+            const cScore = categoryScore(lostRep.category || 'Other', foundRep.category || 'Other');
             const textSim = compareTextFingerprints(
-              generateTextFingerprint(`${lostRep.title} ${lostRep.description}`),
-              generateTextFingerprint(`${foundRep.title} ${foundRep.description}`)
+              generateTextFingerprint(`${lostRep.title || ''} ${lostRep.description || ''}`.trim()),
+              generateTextFingerprint(`${foundRep.title || ''} ${foundRep.description || ''}`.trim())
             );
-            const tScore = temporalScore(lostRep.lost_date, foundRep.found_date);
+            const tScore = temporalScore(lostRep.lost_date || lostRep.created_date, foundRep.found_date || foundRep.created_date);
             const gScore = computeSpatialProximityScore(lostRep, foundRep);
 
+            let imgScore = 50;
+            if (lostRep.primary_image_url && foundRep.primary_image_url) {
+              const imgSim = compareTextFingerprints(
+                generateTextFingerprint(lostRep.primary_image_url),
+                generateTextFingerprint(foundRep.primary_image_url)
+              );
+              imgScore = Math.max(50, imgSim);
+            }
+
             const overall = computeOverallScore({
-              imageScore: 50,
+              imageScore: imgScore,
               textScore: textSim,
               geoScore: gScore,
               categoryScore: cScore,
               timeScore: tScore,
             });
 
-            if (overall >= 40) {
+            if (overall >= 35) {
               const existingIdx = matches.findIndex(m => m.lost_report_id === lostRep.id && m.found_report_id === foundRep.id);
               const matchRecord = {
                 id: existingIdx >= 0 ? matches[existingIdx].id : `match-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -563,25 +634,32 @@ const standaloneAuthClient = {
                 found_report_id: foundRep.id,
                 overall_score: overall,
                 text_similarity_score: textSim,
-                image_similarity_score: 50,
+                image_similarity_score: imgScore,
                 category_match_score: cScore,
                 location_proximity_score: gScore,
                 time_proximity_score: tScore,
                 status: 'pending_review',
+                confidence_level: overall >= 75 ? 'high' : overall >= 50 ? 'medium' : 'low',
                 match_reasons: [
                   `Category score: ${cScore}%`,
                   `Text similarity: ${textSim}%`,
                   `Location proximity: ${gScore}%`,
                 ],
+                created_date: new Date().toISOString(),
               };
+
               if (existingIdx >= 0) matches[existingIdx] = matchRecord;
               else matches.push(matchRecord);
+
+              // Sync entity to server async
+              syncServerRequest('/api/entities/AIMatches', 'POST', matchRecord).catch(() => null);
             }
           }
 
           saveList('AIMatches', matches);
           return { status: 'success', matchesCount: matches.length };
         } catch (e) {
+          console.warn('[runMatching Error]:', e);
           return { status: 'error', message: e.message };
         }
       }

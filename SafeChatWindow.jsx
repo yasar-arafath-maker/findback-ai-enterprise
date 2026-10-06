@@ -23,7 +23,12 @@ import {
   VolumeX,
   AlertCircle,
   Radio,
-  RefreshCw
+  RefreshCw,
+  Image as ImageIcon,
+  Paperclip,
+  Camera as CameraIcon,
+  X,
+  Loader2
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { db } from '@/api/base44Client';
@@ -46,10 +51,14 @@ export default function SafeChatWindow() {
     { id: 'CHANNEL-REPORT-5512', title: 'Campus Access Keys & Lanyard', category: 'Keys', role: 'Owner' },
   ]);
 
-  // Messages state
+  // Messages & Image Attachment state
   const [messages, setMessages] = useState([]);
   const [inputMsg, setInputMsg] = useState('');
   const [piiWarning, setPiiWarning] = useState(false);
+  const [attachedImage, setAttachedImage] = useState(null); // { file_url, preview }
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Masked Call state machine
   const [callState, setCallState] = useState('idle'); // 'idle' | 'dialing' | 'ringing' | 'connected' | 'ended'
@@ -165,20 +174,59 @@ export default function SafeChatWindow() {
     setPiiWarning(hasPhone || hasEmail);
   };
 
+  // Image File & Camera Upload Handlers
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const { file_url } = await db.integrations.Core.UploadFile({ file }).catch(() => ({ file_url: '' }));
+      if (file_url) {
+        setAttachedImage(file_url);
+      }
+    } catch (err) {
+      console.warn('[Chat Image Upload Error]:', err);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleCameraCapture = async () => {
+    try {
+      const { safeTakeCameraPhoto } = await import('./nativePluginsHelper');
+      setUploadingImage(true);
+      const dataUrl = await safeTakeCameraPhoto().catch(() => null);
+      if (dataUrl) {
+        const { file_url } = await db.integrations.Core.UploadFile({ file: dataUrl }).catch(() => ({ file_url: dataUrl }));
+        setAttachedImage(file_url || dataUrl);
+      }
+    } catch (err) {
+      console.warn('[Camera Capture Error]:', err);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!inputMsg.trim()) return;
+    if (!inputMsg.trim() && !attachedImage) return;
 
     const currentChannel = availableChannels.find(c => c.id === activeChannelId);
     const userRole = currentChannel?.role === 'Owner' ? 'Owner' : 'Finder';
 
-    const sentMessage = await db.chat.sendMessage(activeChannelId, {
+    const payload = {
       text: inputMsg.trim(),
       sender_role: userRole,
-    });
+    };
+    if (attachedImage) {
+      payload.image_url = attachedImage;
+    }
+
+    const sentMessage = await db.chat.sendMessage(activeChannelId, payload);
 
     setMessages((prev) => [...prev, sentMessage]);
     setInputMsg('');
+    setAttachedImage(null);
     setPiiWarning(false);
   };
 
@@ -359,7 +407,17 @@ export default function SafeChatWindow() {
                       <span>{msg.sender_name || (isMe ? 'You (Verified)' : 'Finder (Anonymous)')}</span>
                       <span className="font-mono text-[9px] opacity-60">({msg.sender_role || 'Party'})</span>
                     </div>
-                    <p className="leading-relaxed font-sans text-xs whitespace-pre-wrap">{msg.text}</p>
+                    {msg.image_url && (
+                      <div className="mb-2 overflow-hidden rounded-xl border border-white/20">
+                        <img
+                          src={msg.image_url}
+                          alt="Message attachment"
+                          className="max-h-52 w-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                          onClick={() => setLightboxUrl(msg.image_url)}
+                        />
+                      </div>
+                    )}
+                    {msg.text && <p className="leading-relaxed font-sans text-xs whitespace-pre-wrap">{msg.text}</p>}
                     <div className={`mt-1.5 flex items-center justify-end space-x-1 text-[9px] ${isMe ? 'text-blue-100' : 'text-slate-400'}`}>
                       <span>{msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}</span>
                       {isMe && <CheckCheck className="h-3 w-3" />}
@@ -371,6 +429,23 @@ export default function SafeChatWindow() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Attached Image Preview Box before send */}
+          {attachedImage && (
+            <div className="bg-slate-100 p-2.5 border-t border-slate-200 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <img src={attachedImage} alt="Attachment preview" className="h-12 w-12 object-cover rounded-lg border border-slate-300" />
+                <span className="text-xs text-slate-600 font-medium">Image attached ready to send</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAttachedImage(null)}
+                className="p-1 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           {/* PII Detection Warning Banner */}
           {piiWarning && (
             <div className="bg-amber-50 px-4 py-2 border-t border-amber-200 flex items-center gap-2 text-xs text-amber-900 font-semibold">
@@ -379,18 +454,48 @@ export default function SafeChatWindow() {
             </div>
           )}
 
-          {/* Message Input Box */}
-          <form onSubmit={handleSend} className="p-4 bg-white border-t border-slate-200 flex items-center space-x-3">
+          {/* Message Input Box with File & Camera Attachments */}
+          <form onSubmit={handleSend} className="p-3 bg-white border-t border-slate-200 flex items-center space-x-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingImage}
+              title="Attach Image"
+              className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+            >
+              {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin text-blue-600" /> : <Paperclip className="h-4 w-4" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCameraCapture}
+              disabled={uploadingImage}
+              title="Capture Photo"
+              className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+            >
+              <CameraIcon className="h-4 w-4" />
+            </button>
+
             <input
               type="text"
               value={inputMsg}
               onChange={handleInputChange}
-              placeholder="Type your safe encrypted message (e.g. Can we meet near campus security?)..."
-              className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-800 focus:bg-white focus:border-blue-600 focus:outline-none transition-colors"
+              placeholder="Type your safe encrypted message (or attach an image)..."
+              className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-blue-600 focus:outline-none transition-colors"
             />
+            
             <button
               type="submit"
-              className="btn-interactive rounded-xl bg-blue-600 px-5 py-3 text-xs font-bold text-white shadow-md hover:bg-blue-700 transition-colors flex items-center space-x-1.5"
+              disabled={uploadingImage}
+              className="btn-interactive rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-blue-700 transition-colors flex items-center space-x-1.5"
             >
               <Send className="h-3.5 w-3.5" />
               <span>Send</span>
@@ -398,6 +503,21 @@ export default function SafeChatWindow() {
           </form>
         </div>
       </div>
+
+      {/* Lightbox Modal for Image Zoom */}
+      {lightboxUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setLightboxUrl(null)}>
+          <div className="relative max-w-4xl max-h-[90vh] bg-slate-900 rounded-2xl overflow-hidden p-2">
+            <button
+              onClick={() => setLightboxUrl(null)}
+              className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-slate-800/80 text-white flex items-center justify-center hover:bg-slate-700"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img src={lightboxUrl} alt="Enlarged preview" className="max-h-[85vh] max-w-full object-contain mx-auto rounded-lg" />
+          </div>
+        </div>
+      )}
 
       {/* Masked Call Interactive Modal */}
       {callState !== 'idle' && (
