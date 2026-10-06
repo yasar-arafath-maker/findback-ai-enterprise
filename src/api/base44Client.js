@@ -418,6 +418,10 @@ const standaloneAuthClient = {
       setStoredToken(token);
     },
     logout: (redirectUrl) => {
+      const token = getStoredToken();
+      if (token) {
+        syncServerRequest('/api/auth/logout', 'POST', { token }).catch(() => null);
+      }
       setStoredToken(null);
       setStoredUser(null);
       if (redirectUrl && typeof window !== 'undefined') window.location.href = redirectUrl;
@@ -440,26 +444,7 @@ const standaloneAuthClient = {
       filter: async (query = {}, orderBy = '', limit = 100) => {
         try {
           const serverList = await syncServerRequest(`/api/entities/${entityName}`, 'GET');
-          if (Array.isArray(serverList) && serverList.length > 0) {
-            localStorage.setItem(`entity_${entityName}`, JSON.stringify(serverList));
-            let list = serverList;
-            if (query && typeof query === 'object') {
-              const keys = Object.keys(query);
-              if (keys.length > 0) {
-                list = list.filter(item => {
-                  return keys.every(key => String(item[key]) === String(query[key]));
-                });
-              }
-            }
-            if (typeof orderBy === 'string' && orderBy.startsWith('-')) {
-              const field = orderBy.substring(1);
-              list.sort((a, b) => String(b[field] || '').localeCompare(String(a[field] || '')));
-            }
-            return list.slice(0, limit);
-          }
-
-          const raw = localStorage.getItem(`entity_${entityName}`);
-          let list = raw ? JSON.parse(raw) : [];
+          let list = Array.isArray(serverList) ? serverList : [];
           if (query && typeof query === 'object') {
             const keys = Object.keys(query);
             if (keys.length > 0) {
@@ -473,59 +458,31 @@ const standaloneAuthClient = {
             list.sort((a, b) => String(b[field] || '').localeCompare(String(a[field] || '')));
           }
           return list.slice(0, limit);
-        } catch (e) { console.debug(`[entity filter ${entityName}]`, e); return []; }
+        } catch (e) {
+          console.debug(`[entity filter ${entityName}]`, e);
+          return [];
+        }
       },
       get: async (id) => {
         try {
           const serverItem = await syncServerRequest(`/api/entities/${entityName}/${id}`, 'GET');
-          if (serverItem) return serverItem;
-
-          const raw = localStorage.getItem(`entity_${entityName}`);
-          const list = raw ? JSON.parse(raw) : [];
-          return list.find(item => item.id === id) || null;
-        } catch (e) { console.debug(`[entity get ${entityName}]`, e); return null; }
+          if (serverItem && !serverItem.error) return serverItem;
+          return null;
+        } catch (e) {
+          console.debug(`[entity get ${entityName}]`, e);
+          return null;
+        }
       },
       create: async (data) => {
         const newItem = { id: 'id-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4), created_date: new Date().toISOString(), status: 'active', ...data };
-        try {
-          const raw = localStorage.getItem(`entity_${entityName}`);
-          const list = raw ? JSON.parse(raw) : [];
-          list.push(newItem);
-          localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
-        } catch (e) { console.debug(`[entity create localStorage ${entityName}]`, e); }
-
-        // Directly sync new record to local_db.json on server.js!
         const serverItem = await syncServerRequest(`/api/entities/${entityName}`, 'POST', newItem);
         return serverItem || newItem;
       },
       update: async (id, data) => {
-        let updatedItem = null;
-        try {
-          const raw = localStorage.getItem(`entity_${entityName}`);
-          let list = raw ? JSON.parse(raw) : [];
-          list = list.map(item => {
-            if (item.id === id) {
-              updatedItem = { ...item, ...data, updated_date: new Date().toISOString() };
-              return updatedItem;
-            }
-            return item;
-          });
-          localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
-        } catch (e) { console.debug(`[entity update localStorage ${entityName}]`, e); }
-
-        // Directly sync update to local_db.json on server.js!
-        await syncServerRequest(`/api/entities/${entityName}/${id}`, 'PUT', data);
-        return updatedItem || { id, ...data };
+        const serverItem = await syncServerRequest(`/api/entities/${entityName}/${id}`, 'PUT', data);
+        return serverItem || { id, ...data };
       },
       delete: async (id) => {
-        try {
-          const raw = localStorage.getItem(`entity_${entityName}`);
-          let list = raw ? JSON.parse(raw) : [];
-          list = list.filter(item => item.id !== id);
-          localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
-        } catch (e) { console.debug(`[entity delete localStorage ${entityName}]`, e); }
-
-        // Directly sync delete to local_db.json on server.js!
         await syncServerRequest(`/api/entities/${entityName}/${id}`, 'DELETE');
         return { id, deleted: true };
       },

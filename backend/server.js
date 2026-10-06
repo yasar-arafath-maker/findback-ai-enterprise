@@ -136,7 +136,7 @@ const saveFallbackDb = (dbData, updatedEntity = '') => {
 let fallbackDbStore = loadFallbackDb();
 
 // Initialize Postgres schema if connected
-initSchema().catch(() => {});
+initSchema().catch(() => { });
 
 const sendJSON = (res, statusCode, data) => {
   res.writeHead(statusCode, {
@@ -179,7 +179,7 @@ const server = http.createServer(async (req, res) => {
   const host = req.headers.host || 'findbac-backend.onrender.com';
   const protocol = req.headers['x-forwarded-proto'] || 'https';
   const reqUrl = new URL(req.url, `${protocol}://${host}`);
-  
+
   // ── Universal Route Normalization ──
   // Strip duplicate slashes and duplicate /api/api prefixes
   let pathname = reqUrl.pathname.replace(/\/+/g, '/');
@@ -602,6 +602,29 @@ const server = http.createServer(async (req, res) => {
     }
 
     return sendJSON(res, 200, { user: null });
+  }
+
+  // ── Auth Logout (/api/auth/logout or /auth/logout) ──
+  if ((pathname === '/api/auth/logout' || pathname === '/auth/logout') && req.method === 'POST') {
+    const authHeader = req.headers.authorization || '';
+    const body = await parseBody(req);
+    const token = authHeader.replace('Bearer ', '') || body.token || reqUrl.searchParams.get('token');
+
+    if (isDbConnected() && token) {
+      try {
+        await query('DELETE FROM sessions WHERE token = $1', [token]);
+      } catch (err) {
+        console.warn('[Postgres Logout Error]', err?.message || err);
+      }
+    }
+
+    fallbackDbStore = loadFallbackDb();
+    if (token && fallbackDbStore.Sessions && fallbackDbStore.Sessions[token]) {
+      delete fallbackDbStore.Sessions[token];
+      saveFallbackDb(fallbackDbStore, 'User');
+    }
+
+    return sendJSON(res, 200, { status: 'success', message: 'Logged out successfully from database session' });
   }
 
   // ── OTP Endpoints (/api/send-otp or /send-otp) ──
@@ -1140,14 +1163,22 @@ const server = http.createServer(async (req, res) => {
     return masked;
   };
 
-  // ── Secure Chat & Messaging Endpoints ──
+  // ── Secure Chat & Messaging Endpoints (Supabase Database Storage) ──
   const chatMatch = pathname.match(/^(?:\/api)?\/chat\/([^\/]+)(?:\/messages)?$/i);
   if (chatMatch) {
     const channelId = chatMatch[1];
-    fallbackDbStore = loadFallbackDb();
-    if (!fallbackDbStore.ChatMessages) fallbackDbStore.ChatMessages = [];
 
     if (req.method === 'GET') {
+      if (isDbConnected()) {
+        try {
+          const resDb = await query(`SELECT * FROM chat_messages WHERE channel_id = $1 ORDER BY created_at ASC`, [channelId]);
+          return sendJSON(res, 200, resDb.rows);
+        } catch (err) {
+          console.warn('[Postgres Chat GET Error]', err.message);
+        }
+      }
+      fallbackDbStore = loadFallbackDb();
+      if (!fallbackDbStore.ChatMessages) fallbackDbStore.ChatMessages = [];
       const channelMessages = fallbackDbStore.ChatMessages.filter(m => m.channel_id === channelId);
       return sendJSON(res, 200, channelMessages);
     }
@@ -1158,12 +1189,34 @@ const server = http.createServer(async (req, res) => {
       if (!rawText.trim()) return sendJSON(res, 400, { error: 'Message text required' });
 
       const safeText = maskPiiContent(rawText);
+      const msgId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      const senderId = body.sender_id;
+      const senderName = body.sender_name;
+      const senderRole = body.sender_role;
+
+      if (isDbConnected()) {
+        try {
+          const resDb = await query(
+            `INSERT INTO chat_messages (id, channel_id, sender_id, sender_name, sender_role, text, read, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, false, CURRENT_TIMESTAMP) RETURNING *`,
+            [msgId, channelId, senderId, senderName, senderRole, safeText]
+          );
+          const newMsg = resDb.rows[0];
+          broadcastEvent('CHAT_MESSAGE', { channel_id: channelId, message: newMsg });
+          return sendJSON(res, 201, { status: 'success', message: newMsg });
+        } catch (err) {
+          console.warn('[Postgres Chat POST Error]', err.message);
+        }
+      }
+
+      fallbackDbStore = loadFallbackDb();
+      if (!fallbackDbStore.ChatMessages) fallbackDbStore.ChatMessages = [];
       const newMsg = {
-        id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        id: msgId,
         channel_id: channelId,
-        sender_id: body.sender_id || 'user-anonymous',
-        sender_name: body.sender_name || 'Anonymous User',
-        sender_role: body.sender_role || 'Finder',
+        sender_id: senderId,
+        sender_name: senderName,
+        sender_role: senderRole,
         text: safeText,
         created_at: new Date().toISOString(),
         read: false,

@@ -171,7 +171,19 @@ CREATE TABLE IF NOT EXISTS sessions (
     created_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes for Fast Geospatial and Status Queries
+-- 11. Secure Chat Messages Table
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id VARCHAR(128) PRIMARY KEY,
+    channel_id VARCHAR(128) NOT NULL,
+    sender_id VARCHAR(128) REFERENCES users(id) ON DELETE SET NULL,
+    sender_name VARCHAR(255),
+    sender_role VARCHAR(64),
+    text TEXT NOT NULL,
+    read BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for Fast Geospatial, Status, and Channel Queries
 CREATE INDEX IF NOT EXISTS idx_lost_reports_status ON lost_reports(status);
 CREATE INDEX IF NOT EXISTS idx_found_reports_status ON found_reports(status);
 CREATE INDEX IF NOT EXISTS idx_ai_matches_lost ON ai_matches(lost_report_id);
@@ -179,3 +191,4 @@ CREATE INDEX IF NOT EXISTS idx_ai_matches_found ON ai_matches(found_report_id);
 CREATE INDEX IF NOT EXISTS idx_claims_status ON claims(status);
 CREATE INDEX IF NOT EXISTS idx_handovers_status ON handovers(status);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_channel ON chat_messages(channel_id);
