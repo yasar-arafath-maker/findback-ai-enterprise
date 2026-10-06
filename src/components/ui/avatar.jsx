@@ -32,7 +32,7 @@ const AvatarFallback = React.forwardRef(({ className, children, ...props }, ref)
   >
     {children || (
       <img
-        src="/z_icon_cropped.png"
+        src="/favicon.png"
         alt="User Account Icon"
         className="h-full w-full object-cover"
       />

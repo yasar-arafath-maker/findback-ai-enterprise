@@ -1,7 +1,7 @@
 {
   "name": "base44-app",
   "private": true,
-  "version": "1.4.0",
+  "version": "1.5.0",
   "type": "module",
   "scripts": {
     "start": "node run_all.js",
@@ -10,6 +10,8 @@
     "server": "node backend/server.js",
     "build": "vite build",
     "build:all": "node tests/live_integration_diagnostic.test.js && vite build && npx cap sync android",
+    "android:build": "npm run build && npx cap sync android && cd android && gradlew assembleDebug",
+    "android:release": "npm run build && npx cap sync android && cd android && gradlew assembleRelease bundleRelease",
     "lint": "eslint . --quiet",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",

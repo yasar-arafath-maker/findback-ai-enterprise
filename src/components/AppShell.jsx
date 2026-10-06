@@ -4,24 +4,28 @@ import { db } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { LayoutDashboard, Search, PlusCircle, Bell, User, ShieldCheck, LogOut, QrCode, MessageSquare, Award, ChevronLeft } from 'lucide-react';
 import Brand from '@/components/Brand';
+import LanguageSelector from '@/components/LanguageSelector';
 
-const links = [
-  ['/dashboard', 'Overview', LayoutDashboard],
-  ['/report/lost', 'Report', PlusCircle],
-  ['/reports', 'My reports', Search],
-  ['/matches', 'Matches', ShieldCheck],
-  ['/smart-tag', 'Smart QR Tag', QrCode],
-  ['/safe-chat', 'Safe Chat', MessageSquare],
-  ['/authority-handover', 'Police Receipt', Award],
-  ['/notifications', 'Alerts', Bell],
-  ['/profile', 'Profile', User],
-];
+import { useTranslation } from '@/context/LanguageContext';
 
 export default function AppShell() {
   const { user: authUser, logout } = useAuth();
+  const { t } = useTranslation();
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const links = [
+    ['/dashboard', t('nav.dashboard') || 'Overview', LayoutDashboard],
+    ['/report/lost', t('nav.report_lost') || 'Report', PlusCircle],
+    ['/reports', t('nav.my_reports') || 'My reports', Search],
+    ['/matches', t('nav.matches') || 'Matches', ShieldCheck],
+    ['/smart-tag', t('nav.smart_tag') || 'Smart QR Tag', QrCode],
+    ['/safe-chat', t('nav.safe_chat') || 'Safe Chat', MessageSquare],
+    ['/authority-handover', t('nav.police_receipt') || 'Police Receipt', Award],
+    ['/notifications', t('nav.notifications') || 'Alerts', Bell],
+    ['/profile', t('nav.profile') || 'Profile', User],
+  ];
 
   useEffect(() => {
     (async () => {
@@ -62,15 +66,52 @@ export default function AppShell() {
             </NavLink>
           )}
         </nav>
+        <div className="mt-auto mb-2 px-1">
+          <LanguageSelector variant="ghost" className="w-full justify-start text-slate-300 hover:bg-white/10 hover:text-white text-xs" />
+        </div>
         <button
           onClick={() => (logout ? logout() : db.auth.logout('/'))}
-          className="mt-auto flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-red-500/10 hover:text-red-300 transition-colors"
         >
           <LogOut className="h-4 w-4" /> Log out
         </button>
       </aside>
 
       <main className="pb-20 md:ml-64 md:pb-0">
+        {/* Desktop Top Navigation Header */}
+        <header className="hidden md:flex sticky top-0 z-30 items-center justify-between border-b border-slate-200 bg-white/90 backdrop-blur-md px-8 py-3.5 shadow-sm">
+          <div className="flex items-center gap-3">
+            {showBackButton && (
+              <button
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all active:scale-95"
+              >
+                <ChevronLeft className="h-4 w-4 text-blue-600" />
+                <span>Back</span>
+              </button>
+            )}
+            <span className="text-xs font-mono text-slate-400">Enterprise Cloud Portal</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <LanguageSelector size="sm" variant="outline" className="border-slate-200 text-xs" />
+            <button
+              type="button"
+              onClick={() => navigate('/profile')}
+              className="flex items-center space-x-2.5 cursor-pointer hover:opacity-80 transition-all bg-slate-100/80 hover:bg-slate-200/80 px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-sm"
+              title="Open Profile & Account Settings"
+            >
+              <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-[11px] font-black text-white shadow-sm">
+                {(user?.full_name || user?.email || 'U')[0].toUpperCase()}
+              </div>
+              <span className="text-xs font-bold text-slate-800">
+                {user?.full_name || user?.email?.split('@')[0] || 'FindBack User'}
+              </span>
+              <User className="h-3.5 w-3.5 text-blue-600 ml-1" />
+            </button>
+          </div>
+        </header>
+
         {/* Mobile Top Header with Back Button and Exit/Logout Button */}
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-800 bg-[#0F1F3D] px-4 py-3 md:hidden shadow-md">
           <div className="flex items-center gap-2">
@@ -84,6 +125,7 @@ export default function AppShell() {
                 <span>Back</span>
               </button>
             )}
+            <LanguageSelector size="sm" variant="ghost" className="text-slate-200 px-2 text-xs" />
             <button
               onClick={() => (logout ? logout() : db.auth.logout('/'))}
               className="flex items-center gap-2 rounded-xl bg-red-500/20 border border-red-500/30 px-3 py-1.5 text-xs font-bold text-red-300 hover:bg-red-500/30 transition-all active:scale-95 shadow-sm"
@@ -94,14 +136,19 @@ export default function AppShell() {
             </button>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            className="flex items-center space-x-2 text-left cursor-pointer hover:opacity-80 transition-opacity p-1 rounded-lg hover:bg-slate-800/50"
+            title="Open Profile & Account Settings"
+          >
             <span className="text-xs font-bold text-slate-200 truncate max-w-[130px]">
-              {user?.full_name || user?.email?.split('@')[0] || 'ZEXO Mobile'}
+              {user?.full_name || user?.email?.split('@')[0] || 'FindBack User'}
             </span>
             <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-[11px] font-black text-white shadow-sm border border-cyan-400/30">
               {(user?.full_name || user?.email || 'U')[0].toUpperCase()}
             </div>
-          </div>
+          </button>
         </header>
 
         <Outlet />

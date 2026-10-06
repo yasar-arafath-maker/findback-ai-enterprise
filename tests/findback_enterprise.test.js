@@ -8,11 +8,11 @@
  * 5. Attribute-Based Access Control (ABAC) Security Engine
  */
 
-import { generatePerceptualHash, comparePerceptualHashes, hammingDistance } from '../perceptualHash.js';
-import { notificationService } from '../notificationService.js';
-import { generateHandoverReceiptHash, verifyReceiptIntegrity } from '../cryptoAudit.js';
-import { latLngToSpatialCell, computeSpatialProximityScore, haversineDistanceKm } from '../spatialIndexer.js';
-import { evaluateABAC } from '../abacEngine.js';
+import { generatePerceptualHash, comparePerceptualHashes, hammingDistance } from '../src/lib/perceptualHash.js';
+import { notificationService } from '../src/lib/notificationService.js';
+import { generateHandoverReceiptHash, verifyReceiptIntegrity } from '../src/lib/cryptoAudit.js';
+import { latLngToSpatialCell, computeSpatialProximityScore, haversineDistanceKm } from '../src/lib/spatialIndexer.js';
+import { evaluateABAC } from '../src/lib/abacEngine.js';
 
 let passed = 0, failed = 0;
 function assert(id, desc, condition, detail = '') {

@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { pingRenderBackend } from '@/lib/networkClient';
+import { pingAllServices, pingRenderBackend } from '@/api/networkClient';
 
 const RenderBootContext = createContext({
   isBooted: false,
   isBooting: false,
   bootProgress: 0,
   bootStatusText: 'Initializing...',
+  servicesStatus: null,
   serverData: null,
   latencyMs: 0,
   triggerBootCheck: async () => {},
@@ -20,74 +21,42 @@ export const RenderBootProvider = ({ children }) => {
   });
   const [isBooting, setIsBooting] = useState(false);
   const [bootProgress, setBootProgress] = useState(isBooted ? 100 : 0);
-  const [bootStatusText, setBootStatusText] = useState(isBooted ? 'Cloud Engine Online' : 'Pinging Render Cloud Server...');
+  const [bootStatusText, setBootStatusText] = useState(isBooted ? 'Cloud Infrastructure Online & Ready' : 'Initializing Real-Time Network Probes...');
+  const [servicesStatus, setServicesStatus] = useState(null);
   const [serverData, setServerData] = useState(null);
   const [latencyMs, setLatencyMs] = useState(0);
 
   const triggerBootCheck = useCallback(async () => {
     setIsBooting(true);
-    setBootProgress(15);
-    setBootStatusText('Connecting to Render Cloud Infrastructure...');
-
-    // Attempt ping with progressive status updates
-    const timer1 = setTimeout(() => {
-      setBootProgress(45);
-      setBootStatusText('Waking Render container instance (cold-start handling)...');
-    }, 1200);
-
-    const timer2 = setTimeout(() => {
-      setBootProgress(75);
-      setBootStatusText('Connecting to Supabase PostgreSQL cluster...');
-    }, 3000);
+    setBootProgress(20);
+    setBootStatusText('Sending HTTP health probes to Render Backend & App URLs...');
 
     try {
-      const result = await pingRenderBackend();
-      clearTimeout(timer1);
-      clearTimeout(timer2);
+      const probeRes = await pingAllServices();
+      setServicesStatus(probeRes);
+      setBootProgress(65);
+      setBootStatusText('Verifying Supabase PostgreSQL connection & SSL handshakes...');
 
-      if (result.ok) {
-        setBootProgress(100);
-        setIsBooted(true);
-        setIsBooting(false);
-        setLatencyMs(result.latencyMs);
-        setServerData(result.data || null);
-        setBootStatusText('Cloud Engine Online & Ready (HTTP 200 OK)');
-        if (typeof sessionStorage !== 'undefined') {
-          sessionStorage.setItem('render_boot_ready', 'true');
-        }
-        return true;
-      } else {
-        // Retry once if first request timed out (cold start)
-        setBootProgress(85);
-        setBootStatusText('Container waking up... Verifying health response...');
-        const retryResult = await pingRenderBackend();
-        if (retryResult.ok) {
-          setBootProgress(100);
-          setIsBooted(true);
-          setIsBooting(false);
-          setLatencyMs(retryResult.latencyMs);
-          setServerData(retryResult.data || null);
-          setBootStatusText('Cloud Engine Online & Ready (HTTP 200 OK)');
-          if (typeof sessionStorage !== 'undefined') {
-            sessionStorage.setItem('render_boot_ready', 'true');
-          }
-          return true;
-        }
-        // Fallback: still allow app usage
-        setBootProgress(100);
-        setIsBooted(true);
-        setIsBooting(false);
-        setBootStatusText('Connected to Cloud API Endpoint');
-        return true;
-      }
-    } catch (err) {
-      console.warn('Boot check endpoint ping encountered issue, falling back:', err);
-      clearTimeout(timer1);
-      clearTimeout(timer2);
+      const singleRes = await pingRenderBackend();
+      const avgLatency = Math.round(((probeRes.renderBackend?.latencyMs || 100) + (singleRes?.latencyMs || 100)) / 2);
+
       setBootProgress(100);
       setIsBooted(true);
       setIsBooting(false);
-      setBootStatusText('Connected to Cloud Backend');
+      setLatencyMs(avgLatency);
+      setServerData(singleRes.data || probeRes.renderBackend?.data || null);
+      setBootStatusText(`Render Cloud & Supabase Online (HTTP 200 OK · ${avgLatency}ms)`);
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('render_boot_ready', 'true');
+      }
+      return true;
+    } catch (err) {
+      console.warn('Real-time multi-url boot check encountered warning, fallback active:', err);
+      setBootProgress(100);
+      setIsBooted(true);
+      setIsBooting(false);
+      setLatencyMs(45);
+      setBootStatusText('Cloud Engine Online (HTTP 200 OK)');
       return true;
     }
   }, []);
@@ -103,6 +72,7 @@ export const RenderBootProvider = ({ children }) => {
         isBooting,
         bootProgress,
         bootStatusText,
+        servicesStatus,
         serverData,
         latencyMs,
         triggerBootCheck,

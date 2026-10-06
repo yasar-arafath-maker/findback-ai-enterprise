@@ -8,8 +8,8 @@ Generated from Codebase Analysis on 2026-10-06
 • Application ID / Package Name: com.findback.ai.app
 • App Category: Productivity / Tools & Utilities
 • App Type: Free
-• Version Name (App Version): 1.4.0
-• Version Code: 5
+• Version Name (App Version): 1.5.0
+• Version Code: 6
 • App Icon Path: public/assets/app_icon_v1.jpg / android/app/src/main/res/mipmap-*
 • Feature Graphic Path: public/assets/feature_graphic_v1.jpg
 • Screenshots Path: public/assets/phone_screenshot_dashboard.jpg, public/assets/phone_screenshot_certificate.jpg

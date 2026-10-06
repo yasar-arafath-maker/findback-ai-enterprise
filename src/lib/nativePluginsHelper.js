@@ -13,30 +13,86 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 
 const PhoneDetection = registerPlugin('PhoneDetection');
 
-/**
- * 1. Safe Camera Plugin Wrapper
- */
-export const safeTakeCameraPhoto = async () => {
+const dataUrlToFile = (dataUrl, filename = `photo_${Date.now()}.jpg`) => {
   try {
-    const permissions = await Camera.checkPermissions().catch(() => null);
-    if (permissions && permissions.camera === 'denied') {
-      const requested = await Camera.requestPermissions().catch(() => null);
-      if (requested?.camera !== 'granted') {
-        throw new Error('Camera permission denied. Please enable camera access in your device settings.');
-      }
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+    const bstr = atob(arr[1] || arr[0]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
     }
+    return new File([u8arr], filename, { type: mime });
+  } catch (e) {
+    return new File([], filename, { type: 'image/jpeg' });
+  }
+};
 
-    const photo = await Camera.getPhoto({
-      quality: 85,
-      allowEditing: false,
-      resultType: CameraResultType.DataUrl,
-      source: CameraSource.Camera,
-    });
+const triggerWebFilePicker = (sourceType = 'camera') => {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    if (sourceType === 'camera') {
+      input.capture = 'environment';
+    }
+    input.onchange = (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return resolve({ ok: false, error: 'No file selected' });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve({
+          ok: true,
+          dataUrl: reader.result,
+          file: file,
+          webPath: URL.createObjectURL(file)
+        });
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  });
+};
 
-    return photo.dataUrl;
+/**
+ * 1. Safe Camera Plugin Wrapper with Native & Web File Picker Fallbacks
+ */
+export const safeTakeCameraPhoto = async (options = {}) => {
+  const sourceType = options.source === 'photos' ? 'photos' : 'camera';
+  const camSource = sourceType === 'photos' ? CameraSource.Photos : CameraSource.Camera;
+
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const permissions = await Camera.checkPermissions().catch(() => null);
+      if (permissions && permissions.camera === 'denied') {
+        const requested = await Camera.requestPermissions().catch(() => null);
+        if (requested?.camera !== 'granted') {
+          throw new Error('Camera permission denied. Please enable camera access in settings.');
+        }
+      }
+
+      const photo = await Camera.getPhoto({
+        quality: options.quality || 85,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: camSource,
+      });
+
+      const dataUrl = photo.dataUrl;
+      const file = dataUrlToFile(dataUrl, `captured_${Date.now()}.jpg`);
+      return {
+        ok: true,
+        dataUrl,
+        file,
+        webPath: photo.webPath || dataUrl,
+      };
+    } else {
+      return await triggerWebFilePicker(sourceType);
+    }
   } catch (err) {
-    console.warn('[Native Camera Warning]:', err.message);
-    throw err;
+    console.warn('[Native Camera Warning, falling back to Web File Picker]:', err.message);
+    return await triggerWebFilePicker(sourceType);
   }
 };
 

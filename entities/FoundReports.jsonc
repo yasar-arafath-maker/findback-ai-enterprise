@@ -55,6 +55,30 @@
     "primary_image_url": {
       "type": "string"
     },
+    "storage_location": {
+      "type": "string"
+    },
+    "owner_response_status": {
+      "type": "string",
+      "enum": [
+        "awaiting_response",
+        "notified",
+        "responded_claimed",
+        "responded_rejected",
+        "retention_extended",
+        "expired_unclaimed"
+      ],
+      "default": "awaiting_response"
+    },
+    "owner_notified_at": {
+      "type": "string"
+    },
+    "owner_response_deadline": {
+      "type": "string"
+    },
+    "retention_until": {
+      "type": "string"
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -63,7 +87,8 @@
         "claim_pending",
         "returned",
         "closed",
-        "duplicate"
+        "duplicate",
+        "expired_unclaimed"
       ],
       "default": "active"
     },

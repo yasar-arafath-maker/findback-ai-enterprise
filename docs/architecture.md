@@ -7,18 +7,19 @@ FindBack AI Enterprise is architected around a zero-trust, privacy-first item re
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                          User Device Layer                             │
-│      React 18 SPA  ──  Capacitor (Camera & High-Accuracy GPS)          │
+│   React 18 SPA (src/) ── Capacitor (Camera & High-Accuracy GPS)        │
+│   Multi-Lingual Engine (English, Spanish, Hindi, French, German)      │
 └───────────────────────────────────┬────────────────────────────────────┘
-                                    │ HTTPS API / WebSockets
+                                    │ HTTPS API / SSE Stream
 ┌───────────────────────────────────▼────────────────────────────────────┐
-│                        Base44 Backend Platform                         │
+│                        Backend Engine (backend/)                       │
 │  ┌─────────────────────────┐  ┌─────────────────────────────────────┐  │
-│  │   Auth & Access Control │  │        Row-Level Security           │  │
+│  │   Auth & Access Control │  │        Row-Level Security (RLS)     │  │
 │  │   Token / Session Guard │  │   User / Admin / Finder Isolation   │  │
 │  └────────────┬────────────┘  └──────────────────┬──────────────────┘  │
 │               │                                  │                     │
 │  ┌────────────▼──────────────────────────────────▼──────────────────┐  │
-│  │                     Serverless Entry Functions                   │  │
+│  │                  Serverless & Express API Functions              │  │
 │  │   runMatching  │  submitClaim  │  decideClaim  │ completeHandover│  │
 │  └────────────┬──────────────────────────────────┬──────────────────┘  │
 │               │                                  │                     │
@@ -33,7 +34,7 @@ FindBack AI Enterprise is architected around a zero-trust, privacy-first item re
 
 ## 1. Multi-Modal AI & Spatial Indexing Engine
 
-The AI matching pipeline in `entry.ts__3` leverages a multi-stage candidate discovery and ranking process:
+The AI matching pipeline in `entities/entry.ts__3` leverages a multi-stage candidate discovery and ranking process:
 
 ### Stage 1: Cheap Pre-Filtering
 To prevent redundant API consumption and eliminate unnecessary computation:
@@ -42,9 +43,9 @@ To prevent redundant API consumption and eliminate unnecessary computation:
 3. **Temporal Window:** Filters candidates with report dates differing by more than 14 days.
 
 ### Stage 2: Feature Extraction & Spatial Indexing
-- **SimHash Text Fingerprinting (`textFingerprint.js`):** Extracts 64-bit structural SimHash fingerprints from report title, color, and description. Computes Hamming distance similarity.
-- **Uber H3 Spatial Cell Indexing (`spatialIndexer.js`):** Maps latitude/longitude coordinates to resolution-8 H3 hexagonal spatial cells (~0.7 km² area) for fast spatial proximity indexing.
-- **Haversine Distance Scoring (`haversineScore.js`):** Computes precise great-circle distance between coordinates and converts to a proximity score via exponential decay:
+- **SimHash Text Fingerprinting (`src/lib/textFingerprint.js`):** Extracts 64-bit structural SimHash fingerprints from report title, color, and description. Computes Hamming distance similarity.
+- **Uber H3 Spatial Cell Indexing (`src/lib/spatialIndexer.js`):** Maps latitude/longitude coordinates to resolution-8 H3 hexagonal spatial cells (~0.7 km² area) for fast spatial proximity indexing.
+- **Haversine Distance Scoring (`src/lib/matchScore.js`):** Computes precise great-circle distance between coordinates and converts to a proximity score via exponential decay:
   $$\text{Geo Score} = 100 \cdot e^{-\text{distance\_km} / 20}$$
 
 ### Stage 3: LLM Vision & Semantic Synthesis
@@ -52,7 +53,22 @@ For top-ranked candidates, the system invokes `base44.asServiceRole.integrations
 
 ---
 
-## 2. Claim Lifecycle & Evidence Security
+## 2. Multi-Lingual Architecture (5 Languages)
+
+FindBack AI Enterprise implements full multi-lingual support managed via `src/context/LanguageContext.jsx` and `src/components/LanguageSelector.jsx`:
+
+- **Supported Languages:**
+  - 🇺🇸 **English (`en`)** — Default
+  - 🇪🇸 **Spanish (`es`)** — Español
+  - 🇮🇳 **Hindi (`hi`)** — हिंदी
+  - 🇫🇷 **French (`fr`)** — Français
+  - 🇩🇪 **German (`de`)** — Deutsch
+- **Persistence:** Selected language persists across browser sessions using `localStorage` (`findback_language`) and synchronizes with `document.documentElement.lang`.
+- **Global Selector:** Integrated into `src/components/AppShell.jsx` (sidebar & mobile header) and `src/pages/Landing.jsx` (navbar).
+
+---
+
+## 3. Claim Lifecycle & Evidence Security
 
 Claims follow a strict state machine to prevent unauthorized item takeovers:
 
@@ -70,7 +86,7 @@ Claims follow a strict state machine to prevent unauthorized item takeovers:
 
 ---
 
-## 3. Cryptographic Handover Protocol
+## 4. Cryptographic Handover Protocol
 
 Handovers ensure safe, in-person item return without exposing verification secrets:
 
@@ -85,8 +101,9 @@ Handovers ensure safe, in-person item return without exposing verification secre
 
 ---
 
-## 4. Administrative Controls & Audit Trail
+## 5. Administrative Controls & Application Assets
 
+- **App Icon & Favicon:** Standardized on `public/favicon.png` across web application icons, PWA manifest (`public/manifest.json`), mobile splash screens, and navbar branding (`src/components/Brand.jsx`).
 - **Privilege Escalation Prevention:** User table RLS policies disallow non-admins from modifying `role` or `account_status` fields.
-- **Suspended Account Enforcement:** Suspended users (`account_status === 'suspended'`) are blocked with HTTP `403 Forbidden` across all 4 server functions before processing logic.
+- **Suspended Account Enforcement:** Suspended users (`account_status === 'suspended'`) are blocked with HTTP `403 Forbidden` across all server functions before processing logic.
 - **Append-Only Audit Log:** Sensitive administrative actions generate immutable records in `AdminActions`. Direct user writes/updates/deletes on audit logs are blocked at the database level.

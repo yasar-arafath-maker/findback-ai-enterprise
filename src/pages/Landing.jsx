@@ -20,6 +20,7 @@ import {
   Server
 } from 'lucide-react';
 import Brand from '@/components/Brand';
+import LanguageSelector from '@/components/LanguageSelector';
 import { useRenderBoot } from '@/RenderBootContext';
 import { resilientFetch, createLiveEventStream } from '@/lib/networkClient';
 
@@ -206,6 +207,7 @@ export default function Landing() {
           </nav>
 
           <div className="flex items-center gap-3">
+            <LanguageSelector variant="outline" size="sm" className="border-slate-300 text-slate-700 hover:bg-slate-100 shadow-sm" />
             {/* Conditional Login Button - enabled upon receiving bootup response from Render */}
             {isBooted ? (
               <Link

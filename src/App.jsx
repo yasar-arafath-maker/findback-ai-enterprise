@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import { LanguageProvider } from '@/context/LanguageContext';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
-import PageNotFound from './PageNotFound';
+import PageNotFound from '@/pages/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import { RenderBootProvider } from './RenderBootContext';
+import { RenderBootProvider } from '@/context/RenderBootContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-import ScrollToTop from './ScrollToTop';
+import ScrollToTop from '@/components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminGuard from '@/components/AdminGuard';
 import AppShell from '@/components/AppShell';
 import Landing from '@/pages/Landing';
-import SplashScreen from './SplashScreen';
-import Onboarding from './Onboarding';
+import SplashScreen from '@/components/SplashScreen';
+import Onboarding from '@/pages/Onboarding';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -26,20 +27,20 @@ import MyReports from '@/pages/MyReports';
 import Matches from '@/pages/Matches';
 import MatchDetails from '@/pages/MatchDetails';
 import ClaimItem from '@/pages/ClaimItem';
-import EvidenceStatus from '@/pages/EvidenceStatus';
+import EvidenceStatus from '@/components/EvidenceStatus';
 import Notifications from '@/pages/Notifications';
-import HandoverStatus from '@/pages/HandoverStatus';
+import HandoverStatus from '@/components/HandoverStatus';
 import Profile from '@/pages/Profile';
 import AdminDashboard from '@/pages/AdminDashboard';
 import AdminReports from '@/pages/AdminReports';
 import AdminClaims from '@/pages/AdminClaims';
 import AdminHandovers from '@/pages/AdminHandovers';
-import EnterpriseTelemetryViewer from './EnterpriseTelemetryViewer';
-import EnterpriseAdminDashboard from './EnterpriseAdminDashboard';
-import SmartTagGenerator from './SmartTagGenerator';
-import SafeChatWindow from './SafeChatWindow';
-import DigitalHandoverCertificate from './DigitalHandoverCertificate';
-import PrivacyPolicy from './PrivacyPolicy';
+import EnterpriseTelemetryViewer from '@/pages/EnterpriseTelemetryViewer';
+import EnterpriseAdminDashboard from '@/pages/EnterpriseAdminDashboard';
+import SmartTagGenerator from '@/components/SmartTagGenerator';
+import SafeChatWindow from '@/components/SafeChatWindow';
+import DigitalHandoverCertificate from '@/components/DigitalHandoverCertificate';
+import PrivacyPolicy from '@/pages/PrivacyPolicy';
 
 const AppBackButtonHandler = () => {
   const navigate = useNavigate();
@@ -157,20 +158,24 @@ const AuthenticatedApp = () => {
   );
 };
 
+
+
 function App() {
   return (
-    <RenderBootProvider>
-      <AuthProvider>
-        <QueryClientProvider client={queryClientInstance}>
-          <Router>
-            <ScrollToTop />
-            <AppBackButtonHandler />
-            <AuthenticatedApp />
-          </Router>
-          <Toaster />
-        </QueryClientProvider>
-      </AuthProvider>
-    </RenderBootProvider>
+    <LanguageProvider>
+      <RenderBootProvider>
+        <AuthProvider>
+          <QueryClientProvider client={queryClientInstance}>
+            <Router>
+              <ScrollToTop />
+              <AppBackButtonHandler />
+              <AuthenticatedApp />
+            </Router>
+            <Toaster />
+          </QueryClientProvider>
+        </AuthProvider>
+      </RenderBootProvider>
+    </LanguageProvider>
   );
 }
 

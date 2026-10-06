@@ -31,21 +31,27 @@ export default function SmartTagGenerator() {
     setGenerating(true);
 
     try {
+      const tagId = `FBTAG-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       const origin = (typeof window !== 'undefined' && window.location?.origin?.startsWith('https'))
         ? window.location.origin
         : 'https://findbac.onrender.com';
       const relayUrl = `${origin}/safe-chat?channel=${tagId}&item=${encodeURIComponent(itemName.trim())}`;
 
-      // Generate local QR Data URL (100% offline, zero external API calls)
-      const qrDataUrl = await QRCode.toDataURL(relayUrl, {
-        width: 320,
-        margin: 2,
-        color: {
-          dark: '#0F1F3D',
-          light: '#FFFFFF',
-        },
-        errorCorrectionLevel: 'H',
-      });
+      let qrDataUrl = '';
+      try {
+        qrDataUrl = await QRCode.toDataURL(relayUrl, {
+          width: 320,
+          margin: 2,
+          color: {
+            dark: '#0F1F3D',
+            light: '#FFFFFF',
+          },
+          errorCorrectionLevel: 'H',
+        });
+      } catch (qrErr) {
+        console.warn('Local QRCode.toDataURL failed, using high-reliability QR fallback:', qrErr);
+        qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(relayUrl)}`;
+      }
 
       const tagData = {
         tag_id: tagId,

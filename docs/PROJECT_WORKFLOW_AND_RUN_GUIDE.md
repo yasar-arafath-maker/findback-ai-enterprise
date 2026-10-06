@@ -124,18 +124,19 @@
 
 | File Path | Core Role |
 | :--- | :--- |
-| `main.jsx` | React root mounting point, initial client bridge import. |
-| `App.jsx` | Application router, layout wrapper, and route protection gates. |
-| `AuthContext.jsx` | React Context managing user profile, bearer tokens, and session state. |
-| `base44Client.js` | Universal client bridge exposing `db.auth`, `db.entities.*`, and `db.functions.*`. |
-| `networkClient.js` | Resilient fetch layer with cold-start exponential backoff and SSE streaming. |
-| `Dashboard.jsx` | Main user dashboard showing active lost/found items, quick actions, and stats. |
-| `ReportLost.jsx` | Lost item reporting form with hardware camera and geolocation trigger. |
-| `ReportFound.jsx` | Found item intake form with custody location specification. |
-| `Matches.jsx` | AI matches viewer with confidence meters and instant "Claim" triggers. |
-| `ClaimItem.jsx` | Zero-knowledge evidence submission form (invoices, serial numbers, photos). |
-| `EnterpriseAdminDashboard.jsx` | Administrative control center for reviewing claims and viewing telemetry. |
-| `HandoverStatus.jsx` | Handover tracking screen with 6-digit code reveal and SHA-256 receipt certificate. |
+| `src/main.jsx` | React root mounting point, initial client bridge import. |
+| `src/App.jsx` | Application router, layout wrapper, and route protection gates. |
+| `src/context/LanguageContext.jsx` | Multi-lingual i18n context (English, Spanish, Hindi, French, German). |
+| `src/components/LanguageSelector.jsx` | Dropdown UI component for switching languages dynamically. |
+| `src/context/AuthContext.jsx` | React Context managing user profile, bearer tokens, and session state. |
+| `src/api/base44Client.js` | Universal client bridge exposing `db.auth`, `db.entities.*`, and `db.functions.*`. |
+| `src/api/networkClient.js` | Resilient fetch layer with cold-start exponential backoff and SSE streaming. |
+| `src/pages/Dashboard.jsx` | Main user dashboard showing active lost/found items, quick actions, and stats. |
+| `src/pages/ReportWizard.jsx` | Lost & Found reporting form with hardware camera and geolocation trigger. |
+| `src/pages/Matches.jsx` | AI matches viewer with confidence meters and instant "Claim" triggers. |
+| `src/pages/ClaimItem.jsx` | Zero-knowledge evidence submission form (invoices, serial numbers, photos). |
+| `src/pages/AdminDashboard.jsx` | Administrative control center for reviewing claims and viewing telemetry. |
+| `src/components/DigitalHandoverCertificate.jsx` | Handover tracking screen with 6-digit code reveal and SHA-256 receipt certificate. |
 
 ### 2.2 Client-Side Authentication Flow (`AuthContext.jsx` & `base44Client.js`)
 1. When the app boots, `AuthContext.jsx` calls `db.auth.me()`.

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { db } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { useTranslation } from "@/context/LanguageContext";
+import LanguageSelector from "@/components/LanguageSelector";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +12,8 @@ import { UserPlus, Mail, Lock, Loader2, User, Phone, UserCheck, Zap, ShieldCheck
 import AuthLayout from "@/components/AuthLayout";
 import { toast } from "@/components/ui/use-toast";
 import { safeReturnTo } from "@/lib/authReturnTo";
-import NativePermissionsModal from "@/NativePermissionsModal";
-import { fetchNativeSimPhoneNumber } from "./nativePluginsHelper";
+import NativePermissionsModal from "@/components/NativePermissionsModal";
+import { fetchNativeSimPhoneNumber } from "@/lib/nativePluginsHelper";
 
 const COUNTRY_CODES = [
   { code: "+91", flag: "🇮🇳", name: "India" },
@@ -29,6 +31,7 @@ export default function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { checkUserAuth } = useAuth();
+  const { t } = useTranslation();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -135,30 +138,34 @@ export default function Register() {
   };
 
   return (
-    <AuthLayout
-      icon={UserPlus}
-      title="Create your account"
-      subtitle="Register into Supabase database with role-based permissions"
-      footer={
-        <>
-          Already registered in the database?{" "}
-          <Link
-            to={"/login" + (requestedReturnTo !== "/" ? "?returnTo=" + encodeURIComponent(requestedReturnTo) : "")}
-            className="text-primary font-medium hover:underline"
-          >
-            Log in here
-          </Link>
-        </>
-      }
-    >
-      {searchParams.get('email') && (
-        <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs">
-          <p className="font-semibold">Completing Registration</p>
-          <p className="mt-0.5 text-blue-700">
-            Pre-filled with credentials not found during login: <span className="font-mono font-bold">{email}</span>
-          </p>
-        </div>
-      )}
+    <div className="relative">
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSelector variant="outline" size="sm" />
+      </div>
+      <AuthLayout
+        icon={UserPlus}
+        title={t('register.title') || "Create your account"}
+        subtitle={t('register.subtitle') || "Register into Supabase database with role-based permissions"}
+        footer={
+          <>
+            {t('register.has_account') || "Already registered in the database?"}{" "}
+            <Link
+              to={"/login" + (requestedReturnTo !== "/" ? "?returnTo=" + encodeURIComponent(requestedReturnTo) : "")}
+              className="text-primary font-medium hover:underline"
+            >
+              {t('register.login_here') || "Log in here"}
+            </Link>
+          </>
+        }
+      >
+        {searchParams.get('email') && (
+          <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs">
+            <p className="font-semibold">Completing Registration</p>
+            <p className="mt-0.5 text-blue-700">
+              Pre-filled with credentials not found during login: <span className="font-mono font-bold">{email}</span>
+            </p>
+          </div>
+        )}
 
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-semibold">
@@ -361,11 +368,11 @@ export default function Register() {
         </Button>
       </form>
 
-      {/* Permissions Modal */}
       <NativePermissionsModal
         isOpen={permissionsModalOpen}
         onClose={() => setPermissionsModalOpen(false)}
       />
     </AuthLayout>
+    </div>
   );
 }

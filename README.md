@@ -73,17 +73,74 @@ npm run dev
 
 ## 📱 Mobile Build Workflow (Capacitor)
 
-FindBack AI uses Capacitor to provide native camera and GPS integration on Android and iOS devices.
+FindBack AI Enterprise uses Capacitor to provide native camera, geolocation, haptics, and status bar integration on Android devices.
+
+### ⚡ Single-Command Builds (Recommended)
+
+- **Build Signed Release AAB Bundle & APK (Play Store / Production):**
+  ```bash
+  npm run android:release
+  ```
+
+- **Build Debug APK (Local Testing):**
+  ```bash
+  npm run android:build
+  ```
+
+---
+
+### 🛠️ Step-by-Step Build Commands
 
 ```bash
-# 1. Build web production bundle
+# 1. Install dependencies
+npm install
+
+# 2. Build web production bundle
 npm run build
 
-# 2. Sync web assets with native mobile projects
-npx cap sync
+# 3. Sync web assets & native plugins with Capacitor
+npx cap sync android
 
-# 3. Open Android Studio to build native APK/AAB
+# 4. (Optional) Open in Android Studio
 npx cap open android
+```
+
+> **Important:** Always use `npx cap sync android` instead of `npx cap copy android` when native plugins or code dependencies change. `sync` updates both the compiled web assets and native plugin dependencies.
+
+---
+
+### 📦 Generated Output Binaries
+
+- **Play Store Signed Release Bundle (AAB):**
+  ```text
+  android/app/build/outputs/bundle/release/app-release.aab
+  ```
+
+- **Signed Release APK (Direct Sideloading / Testing):**
+  ```text
+  android/app/build/outputs/apk/release/app-release.apk
+  ```
+
+- **Debug APK:**
+  ```text
+  android/app/build/outputs/apk/debug/app-debug.apk
+  ```
+
+---
+
+### 🧹 Refresh / Clean Build Instructions
+
+To perform a completely fresh clean build of the native Android artifacts:
+
+```bash
+npm install
+npm run build
+npx cap sync android
+
+cd android
+gradlew clean
+gradlew assembleRelease bundleRelease
+cd ..
 ```
 
 ---

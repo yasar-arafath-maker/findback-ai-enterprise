@@ -4,7 +4,7 @@
  * Run: node tests/findback_audit.test.js
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -15,15 +15,15 @@ import {
   confidenceLevel,
   isViableCandidate,
   preRankScore,
-} from '../matchScore.js';
+} from '../src/lib/matchScore.js';
 
 import {
   haversineDistanceKm,
   computeSpatialProximityScore,
   latLngToSpatialCell,
-} from '../spatialIndexer.js';
+} from '../src/lib/spatialIndexer.js';
 
-import { evaluateABAC } from '../abacEngine.js';
+import { evaluateABAC } from '../src/lib/abacEngine.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = (p) => resolve(__dirname, '..', p);
@@ -44,7 +44,15 @@ function test(id, desc, fn) {
 }
 
 // ── source loaders ───────────────────────────────────────────────────────
-const src = (name) => readFileSync(root(name), 'utf8');
+const src = (name) => {
+  if (existsSync(root(name))) return readFileSync(root(name), 'utf8');
+  const subDirs = ['src', 'src/context', 'src/components', 'src/pages', 'src/lib', 'src/api', 'src/components/ui', 'entities', 'docs', 'scripts', 'backend'];
+  for (const dir of subDirs) {
+    const tryP = root(`${dir}/${name}`);
+    if (existsSync(tryP)) return readFileSync(tryP, 'utf8');
+  }
+  return readFileSync(root(name), 'utf8');
+};
 const schema = (name) => JSON.parse(src(name).replace(/\/\/.*$/gm, '')); // strip // comments
 
 const pkgJson = JSON.parse(src('package.json'));

@@ -46,7 +46,7 @@ export default function PrivacyPolicy() {
             <div className="text-xs font-mono text-slate-400 pt-2 flex items-center gap-4">
               <span>Effective Date: <strong>{lastUpdated}</strong></span>
               <span>•</span>
-              <span>Version: <strong>1.4.0</strong></span>
+              <span>Version: <strong>1.5.0</strong></span>
             </div>
           </div>
         </div>

@@ -703,6 +703,38 @@ const standaloneAuthClient = {
           }
           saveList('OwnershipEvidence', evidenceList);
 
+          // Update Lost & Found reports status in database to 'claim_submitted' until owner/admin verifies
+          if (targetClaim.lost_report_id) {
+            let losts = getList('LostReports');
+            let lIdx = losts.findIndex(l => l.id === targetClaim.lost_report_id);
+            if (lIdx >= 0) {
+              losts[lIdx].status = 'claim_submitted';
+              saveList('LostReports', losts);
+              syncServerRequest(`/api/entities/LostReports/${targetClaim.lost_report_id}`, 'PUT', { status: 'claim_submitted' }).catch(() => null);
+            }
+          }
+          if (targetClaim.found_report_id) {
+            let founds = getList('FoundReports');
+            let fIdx = founds.findIndex(f => f.id === targetClaim.found_report_id);
+            if (fIdx >= 0) {
+              founds[fIdx].status = 'claim_submitted';
+              saveList('FoundReports', founds);
+              syncServerRequest(`/api/entities/FoundReports/${targetClaim.found_report_id}`, 'PUT', { status: 'claim_submitted' }).catch(() => null);
+            }
+          }
+
+          // Create notification alert
+          let notifs = getList('Notifications');
+          notifs.unshift({
+            id: `notif-${Date.now()}`,
+            user_id: targetClaim.claimant_id,
+            title: 'Ownership Claim Submitted',
+            message: `Your response and proof of ownership for Match ${targetClaim.match_id?.slice(0, 8) || ''} was received and stored in database. Under review by finder/admin.`,
+            is_read: false,
+            created_date: new Date().toISOString(),
+          });
+          saveList('Notifications', notifs);
+
           return { status: 'success', data: { claim: targetClaim } };
         } catch (e) {
           return { status: 'error', message: e.message };
@@ -773,6 +805,74 @@ const standaloneAuthClient = {
           return { status: 'completed', message: 'Handover verified and recovery completed!' };
         } catch (e) {
           throw new Error(e.message);
+        }
+      }
+
+      if (fnName === 'respondToMatch') {
+        try {
+          const serverRes = await syncServerRequest('/api/functions/respondToMatch', 'POST', params).catch(() => null);
+          if (serverRes && serverRes.status === 'success') return serverRes;
+
+          const { matchId, action, claimantId } = params;
+          const getList = (name) => JSON.parse(localStorage.getItem(`entity_${name}`) || '[]');
+          const saveList = (name, list) => localStorage.setItem(`entity_${name}`, JSON.stringify(list));
+
+          let matches = getList('AIMatches');
+          let match = matches.find(m => m.id === matchId);
+
+          if (action === 'confirm_claim') {
+            if (match) match.status = 'owner_confirmed';
+            saveList('AIMatches', matches);
+
+            if (match?.lost_report_id) {
+              let losts = getList('LostReports');
+              let lr = losts.find(r => r.id === match.lost_report_id);
+              if (lr) {
+                lr.status = 'claim_pending';
+                lr.owner_response_status = 'responded_claimed';
+                saveList('LostReports', losts);
+              }
+            }
+          } else if (action === 'reject_match') {
+            if (match) match.status = 'rejected_by_owner';
+            saveList('AIMatches', matches);
+
+            if (match?.lost_report_id) {
+              let losts = getList('LostReports');
+              let lr = losts.find(r => r.id === match.lost_report_id);
+              if (lr) {
+                lr.status = 'active'; // Retain stored lost report in DB active search mode
+                lr.owner_response_status = 'responded_rejected';
+                saveList('LostReports', losts);
+              }
+            }
+          } else if (action === 'request_extension') {
+            const extDate = new Date(Date.now() + 14 * 86400 * 1000).toISOString();
+            if (match?.lost_report_id) {
+              let losts = getList('LostReports');
+              let lr = losts.find(r => r.id === match.lost_report_id);
+              if (lr) {
+                lr.owner_response_status = 'retention_extended';
+                lr.owner_response_deadline = extDate;
+                lr.retention_until = extDate;
+                saveList('LostReports', losts);
+              }
+            }
+          }
+
+          return { status: 'success', action, matchId };
+        } catch (e) {
+          return { status: 'error', message: e.message };
+        }
+      }
+
+      if (fnName === 'checkRetentionPolicy') {
+        try {
+          const serverRes = await syncServerRequest('/api/functions/checkRetentionPolicy', 'POST', params).catch(() => null);
+          if (serverRes) return serverRes;
+          return { status: 'success', checkedAt: new Date().toISOString() };
+        } catch (e) {
+          return { status: 'error', message: e.message };
         }
       }
 

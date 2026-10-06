@@ -50,22 +50,72 @@ export default function NativePermissionsModal({ isOpen, onClose }) {
     setLoading(true);
     try {
       if (type === 'location') {
+        let granted = false;
         const res = await Geolocation.requestPermissions().catch(() => null);
         if (res?.location === 'granted' || res?.coarseLocation === 'granted') {
-          toast({ title: 'Location Access Granted', description: 'Coordinates can now be tagged to lost & found reports.' });
+          granted = true;
+        } else if (typeof navigator !== 'undefined') {
+          if (navigator.permissions && navigator.permissions.query) {
+            try {
+              const status = await navigator.permissions.query({ name: 'geolocation' });
+              if (status.state === 'granted') granted = true;
+            } catch (pErr) { console.debug('Permissions query error:', pErr); }
+          }
+          if (!granted && 'geolocation' in navigator) {
+            granted = await new Promise((resolve) => {
+              navigator.geolocation.getCurrentPosition(
+                () => resolve(true),
+                (err) => {
+                  // Code 1 is PERMISSION_DENIED; other codes mean position unavailable but permission allowed
+                  resolve(err && err.code !== 1);
+                },
+                { timeout: 10000 }
+              );
+            });
+          }
         }
+        setPermissionsState((prev) => ({ ...prev, location: granted ? 'granted' : 'denied' }));
+        toast({
+          title: granted ? 'Location Access Granted' : 'Location Permission Prompted',
+          description: granted ? 'GPS coordinates enabled for precision spatial recovery.' : 'Please allow location permission in browser/device prompt.'
+        });
       } else if (type === 'camera') {
+        let granted = false;
         const res = await Camera.requestPermissions().catch(() => null);
         if (res?.camera === 'granted' || res?.photos === 'granted') {
-          toast({ title: 'Camera & Media Granted', description: 'Item photos can now be captured and analyzed by AI.' });
+          granted = true;
+        } else if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach((track) => track.stop());
+            granted = true;
+          } catch (camErr) {
+            console.debug('getUserMedia error:', camErr);
+            granted = false;
+          }
         }
+        setPermissionsState((prev) => ({ ...prev, camera: granted ? 'granted' : 'denied' }));
+        toast({
+          title: granted ? 'Camera Access Granted' : 'Camera Access Prompted',
+          description: granted ? 'Item photos can now be captured & uploaded.' : 'Please allow camera access in browser/device prompt.'
+        });
       } else if (type === 'notifications') {
+        let notifStatus = 'prompt';
         const res = await safeRequestNotificationPermissions();
         if (res === 'granted') {
-          toast({ title: 'Notifications Enabled', description: 'You will receive real-time updates for AI match alerts.' });
+          notifStatus = 'granted';
+        } else if (typeof window !== 'undefined' && 'Notification' in window) {
+          const perm = await Notification.requestPermission();
+          notifStatus = perm;
+        } else {
+          notifStatus = 'granted';
         }
+        setPermissionsState((prev) => ({ ...prev, notifications: notifStatus }));
+        toast({
+          title: notifStatus === 'granted' ? 'Notifications Enabled' : 'Notification Settings Saved',
+          description: notifStatus === 'granted' ? 'Real-time alert notifications active.' : 'Notification settings updated.'
+        });
       }
-      await checkAllPermissions();
     } catch (e) {
       console.warn(`[PermissionRequest] ${type} failed:`, e);
     } finally {

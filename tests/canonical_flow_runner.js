@@ -17,7 +17,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = p => resolve(__dirname, '..', p);
 
 // Validate critical source files are present before running the demo
-const REQUIRED_FILES = ['abacEngine.js', 'cryptoAudit.js', 'matchScore.js', 'spatialIndexer.js', 'perceptualHash.js'];
+const REQUIRED_FILES = ['src/lib/abacEngine.js', 'src/lib/cryptoAudit.js', 'src/lib/matchScore.js', 'src/lib/spatialIndexer.js', 'src/lib/perceptualHash.js'];
 for (const file of REQUIRED_FILES) {
   try {
     readFileSync(root(file), 'utf8');

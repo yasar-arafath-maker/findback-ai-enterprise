@@ -1,46 +1,46 @@
 # 🚀 FINDBACK AI ENTERPRISE (ZEXO)
-## எளிய முறையில் ப்ராஜெக்ட்டை இயக்கும் முழுமையான வழிகாட்டி (Step-by-Step Run Guide)
+## Step-by-Step Complete Application Run & Deployment Guide
 
 ---
 
-> **இந்தக் கோப்பின் நோக்கம்:**  
-> FindBack AI ப்ராஜெக்ட்டை உங்கள் கம்ப்யூட்டரில் ஆரம்பம் முதல் இறுதி வரை எந்தப் பிழையும் (Error) இல்லாமல் எளிதாக ரன் செய்வதற்கும், பிரவுசரில் டெஸ்ட் செய்வதற்கும், மற்றும் Android APK உருவாக்குவதற்குமான மிக மிகத் தெளிவான (Crystal-Clear) தமிழ் & ஆங்கில வழிகாட்டி.
+> **Purpose of this Document:**  
+> This guide provides a crystal-clear, step-by-step procedure for setting up, running, testing, multi-lingual usage, and building native Android APKs for the FindBack AI Enterprise platform without any setup or runtime errors.
 
 ---
 
-## 📋 உள்ளடக்க அட்டவணை (Quick Index)
-1. **முன் தேவைகள் (Prerequisites Checklist)**
-2. **படி 1: லைவ் Supabase டேட்டாபேஸை தயார் செய்தல் (`init_db.js`)**
-3. **படி 2: Backend சர்வரை துவக்குதல் (`server.js` - Port 5000)**
-4. **படி 3: Frontend Vite ஆப்பை துவக்குதல் (`npm run dev` - Port 5173)**
-5. **படி 4: பிரவுசரில் நேரடி டெஸ்டிங் செய்தல் (Live Testing Guide)**
-6. **படி 5: அனைத்து செக்யூரிட்டி & யூனிட் டெஸ்ட்களை சரிபார்த்தல் (`npm test`)**
-7. **படி 6: Android Mobile APK உருவாக்குதல் (Capacitor Build)**
-8. **⚠️ அடிக்கடி வரும் சந்தேகங்களும் உடனடி தீர்வுகளும் (Troubleshooting)**
+## 📋 Quick Index
+1. **Prerequisites Checklist**
+2. **Step 1: Provision & Initialize Supabase Database (`backend/init_db.js`)**
+3. **Step 2: Start Backend Server (`backend/server.js` - Port 5000)**
+4. **Step 3: Start Frontend Vite Application (`npm run dev` - Port 5173)**
+5. **Step 4: Live Browser Testing & Multi-Lingual Feature Verification**
+6. **Step 5: Run Automated Security & Integration Test Suite (`npm test`)**
+7. **Step 6: Build Native Android APK (`Capacitor Android Build`)**
+8. **⚠️ Troubleshooting & Common Fixes**
 
 ---
 
-# 1. முன் தேவைகள் (Prerequisites Checklist)
+# 1. Prerequisites Checklist
 
-கட்டளைகளை இயக்குவதற்கு முன், உங்கள் கணினியில் இவை உள்ளதா என்பதை உறுதிப்படுத்திக் கொள்ளுங்கள்:
-* **Node.js:** v18 அல்லது v20+ நிறுவப்பட்டிருக்க வேண்டும் (`node -v` என்று அடித்துப் பார்க்கலாம்).
-* **Git:** நிறுவப்பட்டிருக்க வேண்டும் (`git -v`).
-* **VS Code / Cursor / Terminal:** இரண்டு டெர்மினல் விண்டோக்கள் (Terminal Tabs) தேவைப்படும்.
+Before executing the setup commands, verify that your machine has the following tools installed:
+* **Node.js:** v18.0.0 or v20+ recommended (`node -v`).
+* **Git:** Installed and configured (`git --version`).
+* **Terminal / IDE:** VS Code, Cursor, or dual terminal windows/tabs.
 
 ---
 
-# 2. படி 1: லைவ் Supabase டேட்டாபேஸை தயார் செய்தல் (Init Supabase DB)
+# 2. Step 1: Provision & Initialize Supabase Database
 
-இந்த கமாண்ட், கிளவுடில் உள்ள Supabase PostgreSQL டேட்டாபேஸுடன் இணைந்து, தேவைப்படும் **10 முக்கிய அட்டவணைகளையும் (Tables & Indexes)** தானாக உருவாக்கி, டெமோவிற்கான மாதிரித் தரவுகளையும் (Sample Users & Reports) உள்ளீடு செய்யும்.
+This command connects to the live Supabase PostgreSQL cluster, executes the database schema ([`schema.sql`](file:///o:/New%20folder/findback-ai-enterprise/backend/schema.sql)), creates all **10 production tables & indexes**, and seeds initial sample dataset (Users, Lost Reports, Found Reports, AI Matches, Claims, and Handovers).
 
-### 💻 நீங்கள் இயக்க வேண்டிய கமாண்ட்:
-VS Code-ல் டெர்மினலைத் திறந்து (மெயின் போல்டர் `D:\findit`-ல் இருக்க வேண்டும்):
+### 💻 Command to Run:
+Open a terminal in the project root directory:
 
 ```bash
 node backend/init_db.js
 ```
 
-### ✅ வெற்றிகரமாக முடிந்தால் டெர்மினலில் வரும் வெளியீடு (Expected Output):
+### ✅ Expected Output:
 ```text
 ╔══════════════════════════════════════════════════════════════╗
 ║       FindBack AI - Supabase PostgreSQL Database Setup       ║
@@ -70,24 +70,20 @@ node backend/init_db.js
 🎉 Live Supabase Database is 100% Initialized and Ready for Production!
 ```
 
-> 💡 **குறிப்பு:** இந்த கமாண்டை நீங்கள் முதல் முறை ப்ராஜெக்ட் அமைக்கும் போது அல்லது டேட்டாபேஸை ரீசெட் செய்ய நினைக்கும் போது ஒருமுறை இயக்கினால் போதுமானது!
-
 ---
 
-# 3. படி 2: Backend சர்வரை துவக்குதல் (Port 5000)
+# 3. Step 2: Start Backend Microservice (Port 5000)
 
-இது Node.js REST API சர்வர் ஆகும். இதுவே AI மேட்சிங், OTP சரிபார்ப்பு, மற்றும் கிரிப்டோகிராஃபிக் ஹேண்டோவர் (SHA-256) பரிவர்த்தனைகளை கையாளுகிறது.
+The Node.js Express backend handles REST API requests, AI matching, email OTP verification, Server-Sent Events (SSE), and cryptographic handover receipts.
 
-### 💻 நீங்கள் இயக்க வேண்டிய கமாண்ட்:
-முதல் டெர்மினலில் (Terminal 1) பின்வரும் கமாண்டுகளை இயக்கவும்:
+### 💻 Command to Run:
+In **Terminal 1**, execute:
 
 ```bash
-cd d:\findit\backend
-node server.js
+node backend/server.js
 ```
-*(அல்லது மெயின் ரூட் போல்டரில் இருந்து: `node backend/server.js`)*
 
-### ✅ வெற்றிகரமாக இயங்கினால் வரும் வெளியீடு:
+### ✅ Expected Output:
 ```text
 [PostgreSQL] Configured connection pool for DATABASE_URL
 ================================================================
@@ -99,144 +95,129 @@ node server.js
 ✅ [PostgreSQL] Database schema verified/initialized from schema.sql
 ```
 
-### 🌐 Backend சரியாக வேலை செய்கிறதா என்று சோதிக்க:
-உங்கள் பிரவுசரில் இந்த லிங்க்கை திறந்து பார்க்கவும்:
-👉 **[https://findback-ai-backend.onrender.com/api/health](https://findback-ai-backend.onrender.com/api/health)**
-
-**பிரவுசரில் வரும் பதில் (JSON Output):**
-```json
-{
-  "status": "online",
-  "service": "FindBack AI Enterprise Backend",
-  "environment": "production",
-  "database_engine": "postgresql_connected",
-  "uptime_seconds": 12,
-  "active_connections": 0
-}
-```
-> ⚠️ **முக்கியம்:** இந்த டெர்மினலை மூடக்கூடாது (Do NOT close this terminal). பேக்கெண்ட் பின்னணியில் தொடர்ந்து ஓடிக்கொண்டிருக்க வேண்டும்!
+### 🌐 Live Health Check Endpoint:
+You can verify backend operation by visiting:
+👉 **[https://findbac-backend.onrender.com/api/health](https://findbac-backend.onrender.com/api/health)**
 
 ---
 
-# 4. படி 3: Frontend Vite ஆப்பை துவக்குதல்
+# 4. Step 3: Start Frontend Vite Application (Port 5173)
 
-இப்போது Frontend UI ஆப்பை இயக்க வேண்டும்.
-
-### 💻 நீங்கள் இயக்க வேண்டிய கமாண்ட்:
-VS Code-ல் **புதிய டெர்மினல் டேப் (New Terminal - Terminal 2)** திறந்து, மெயின் போல்டரில் பின்வருமாறு இயக்கவும்:
+### 💻 Command to Run:
+Open a **new terminal tab (Terminal 2)** in the root directory and execute:
 
 ```bash
 npm run dev
 ```
 
----
-
-# 5. படி 4: பிரவுசரில் நேரடி டெஸ்டிங் செய்தல் (Live Testing Guide)
-
-இப்போது உங்கள் Google Chrome அல்லது Edge பிரவுசரை திறந்து பின்வரும் பக்கங்களை பார்வையிடவும்:
-
-### 🔗 1. பயனர் பக்கம் (User Main App):
-👉 **[https://findback-ai.onrender.com](https://findback-ai.onrender.com)**
-* **டாஷ்போர்டு:** தொலைந்த பொருட்கள் மற்றும் கண்டெடுக்கப்பட்ட பொருட்களின் விவரங்கள் அழகாக தோன்றும்.
-* **பொருளை ரிப்போர்ட் செய்ய (Report Lost / Found):**
-  * மேல் உள்ள "Report Lost" பட்டனை கிளிக் செய்து கேமரா படம் அல்லது லொகேஷன் கொடுத்து புதிய பொருளைப் பதிவு செய்யலாம்.
-* **AI Matches பக்கம்:**
-  * இடது மெனுவில் உள்ள **"AI Matches"**-ஐ கிளிக் செய்தால், செயற்கை நுண்ணறிவு கணக்கிட்ட Confidence சதவீதத்துடன் (எ.கா: 85% Match) பொருட்கள் மேட்ச் ஆகி காட்டும்!
-* **Claim செய்தல்:**
-  * மேட்ச் ஆன பொருளுக்கு நேராக உள்ள **"Claim Item"** கிளிக் செய்து உரிமையாளருக்கான ஆதாரத்தை (பில், ரசீது அல்லது குறிப்பு) பதிவேற்றலாம்.
-
-### 🔗 2. நிர்வாகி பக்கம் (Enterprise Admin Console):
-👉 **[https://findback-ai.onrender.com/enterprise-admin](https://findback-ai.onrender.com/enterprise-admin)**
-* **செக்யூரிட்டி ஆபீசர் / அட்மின் டாஷ்போர்டு:**
-  * பயனர்கள் கோரிய உரிமைகோரல்களை (Claims) சரிபார்த்து **"Approve"** அல்லது **"Reject"** செய்யலாம்.
-  * அப்ரூவ் செய்தவுடன் சிஸ்டம் ஒரு **6-இலக்க ரகசிய OTP (Verification Code)**-ஐ உருவாக்கும்.
-  * அந்த OTP-ஐ கொடுத்து ஹேண்டோவரை முடிக்கும் போது, ஒரு **டிஜிட்டல் SHA-256 கிரிப்டோகிராஃபிக் சான்றிதழ்** திரையில் உருவாகும்!
+The Vite dev server will start at `http://localhost:5173/`.
 
 ---
 
-# 6. படி 5: அனைத்து செக்யூரிட்டி & யூனிட் டெஸ்ட்களை சரிபார்த்தல் (`npm test`)
+# 5. Step 4: Live Browser Testing & Multi-Lingual Feature Verification
 
-ப்ராஜெக்ட்டில் உள்ள அனைத்து பாதுகாப்புக் கட்டுப்பாடுகள், RLS கொள்கைகள், மற்றும் AI சமன்பாடுகள் சரியாக உள்ளதா என்பதை தானியங்கி டெஸ்ட் மூலம் நிரூபிக்கலாம்.
+Open your browser (Chrome, Edge, or Firefox) and navigate to the application:
 
-### 💻 நீங்கள் இயக்க வேண்டிய கமாண்ட்:
-மெயின் போல்டரில் (`d:\findit`) டெர்மினலில் இயக்கவும்:
+### 🔗 1. Main User Application:
+👉 **[https://findbac.onrender.com](https://findbac.onrender.com)** (or `http://localhost:5173`)
 
+* **🌐 Multi-Lingual Support (5 Languages):**  
+  Click the **Language Selector (🌐)** dropdown in the top navbar or sidebar to dynamically switch the entire interface between:
+  1. 🇺🇸 **English (`en`)**
+  2. 🇪🇸 **Spanish (`es`)**
+  3. 🇮🇳 **Hindi (`hi`)**
+  4. 🇫🇷 **French (`fr`)**
+  5. 🇩🇪 **German (`de`)**
+* **🖼️ App Icon & Favicon:**  
+  The browser tab displays the official `public/favicon.png` icon.
+* **Dashboard:** View active lost and found reports, metrics, and recent activity.
+* **Report Wizard:** Click **"Report Lost Item"** or **"Report Found Item"** to attach hardware camera photos and GPS location markers.
+* **AI Matches:** View candidate item matches with confidence percentages (e.g., 85% Match).
+* **Claim Item:** Submit private ownership evidence (invoices, serial numbers, unique marks).
+
+### 🔗 2. Enterprise Admin Command Center:
+👉 **[https://findbac.onrender.com/admin](https://findbac.onrender.com/admin)**
+* **Admin Review:** Security officers review pending claims and approve or reject them.
+* **Handover Verification Code:** Upon approval, a 6-digit high-entropy code is generated.
+* **SHA-256 Recovery Certificate:** Entering the code generates an immutable SHA-256 digital recovery certificate on screen.
+
+---
+
+# 6. Step 5: Run Automated Security & Integration Test Suite (`npm test`)
+
+Validate RLS policies, access control gates, AI formulas, and cryptographic state transitions using the automated test suite.
+
+### 💻 Command to Run:
 ```bash
 npm test
 ```
 
-### ✅ வெற்றிகரமாக முடிந்தால் வரும் வெளியீடு:
+### ✅ Expected Output:
 ```text
 ══════════════════════════════════════════════════════════════
   EXECUTIVE SUMMARY
 ══════════════════════════════════════════════════════════════
-  Total  : 26
-  PASSED : 26
+  Total  : 32
+  PASSED : 32
   FAILED : 0
   RATE   : 100%
 ══════════════════════════════════════════════════════════════
 
-  ALL 26 TEST CASES PASSED! FindBack AI is production-ready.
+  ALL 32 TEST CASES PASSED! FindBack AI is production-ready.
 ```
-> 🎯 **குறிப்பு:** இந்த 26 டெஸ்ட்களும் பாஸ் ஆவது உங்கள் ப்ராஜெக்ட்டின் தரத்திற்கு மிகப்பெரிய பலம்!
 
 ---
 
-# 7. படி 6: Android Mobile APK உருவாக்குதல் (Capacitor Native Build)
+# 7. Step 6: Build Native Android APK (Capacitor Native Build)
 
-இந்த வெப் அப்ளிகேஷனை ஒரு மொபைல் ஆண்ட்ராய்டு ஆப்பாக (`.apk`) மாற்றுவதற்கான எளிய படிகள்:
+To build a native Android APK (`.apk`):
 
-### 💻 நீங்கள் இயக்க வேண்டிய கமாண்டுகள் (வரிசையாக):
+### 💻 Sequential Commands:
 
-#### 1. பிரொடக்ஷன் பண்டிலை பில்ட் செய்தல்:
+#### 1. Build Production Frontend Bundle:
 ```bash
 npm run build
 ```
-*(இது உங்கள் React கோப்புகளை அதிவேக `dist/` ஃபோல்டராக மாற்றும்)*
+*(Compiles React components into `./dist`)*
 
-#### 2. வெப் கோப்புகளை ஆண்ட்ராய்டுடன் இணைத்தல்:
+#### 2. Sync Web Assets & Native Plugins:
 ```bash
 npx cap sync android
 ```
-*(இது Capacitor கேமரா மற்றும் GPS பிளக்கின்களை ஆண்ட்ராய்டுடன் ஒத்திசைக்கும்)*
 
-#### 3. ஆண்ட்ராய்டு ஸ்டுடியோவில் திறத்தல்:
+#### 3. Open Android Studio:
 ```bash
 npx cap open android
 ```
-*(உங்கள் கணினியில் Android Studio தானாகத் திறக்கும்)*
 
-### 📱 Android Studio-வில் APK எடுக்கும் முறை:
-1. Android Studio திறந்ததும், Gradle Sync முடியும் வரை 1 நிமிடம் காத்திருக்கவும்.
-2. மேலே உள்ள மெனுவில் **Build** $\rightarrow$ **Build Bundle(s) / APK(s)** $\rightarrow$ **Build APK(s)** என்பதை கிளிக் செய்யவும்.
-3. சில வினாடிகளில் வலது கீழ் மூலையில் **"locate"** என்ற லிங்க் வரும். அதை கிளிக் செய்தால் உங்கள் **`app-debug.apk`** கோப்பு கிடைக்கும்!
-4. அதை உங்கள் ஆண்ட்ராய்டு போனில் இன்ஸ்டால் செய்து கேமரா மற்றும் GPS வசதியுடன் பயன்படுத்தலாம்.
+#### 4. Generate APK in Android Studio:
+1. Allow Gradle sync to complete in Android Studio.
+2. In the top menu, select **Build** $\rightarrow$ **Build Bundle(s) / APK(s)** $\rightarrow$ **Build APK(s)**.
+3. Once completed, click **locate** to access your compiled `app-debug.apk` file.
 
 ---
 
-# 8. ⚠️ அடிக்கடி வரும் சந்தேகங்களும் உடனடி தீர்வுகளும் (Troubleshooting)
+# 8. ⚠️ Troubleshooting & Common Fixes
 
-### கேள்வி 1: `Port 5000 is already in use` என்று எரர் வந்தால் என்ன செய்வது?
-* **காரணம்:** ஏற்கனவே பின்னணியில் ஒரு Node சர்வர் ஓடிக்கொண்டிருக்கிறது.
-* **தீர்வு (PowerShell-ல் அடிக்கவும்):**
+### Issue 1: `Port 5000 is already in use`
+* **Cause:** An existing background Node.js process is bound to port 5000.
+* **Fix (PowerShell):**
   ```powershell
   Get-Process node | Stop-Process -Force
   ```
-  இதன் பின் மீண்டும் `node backend/server.js` இயக்கினால் சர்வர் சுத்தமாக துவங்கும்.
+  Then re-run `node backend/server.js`.
 
-### கேள்வி 2: பிரவுசரில் `404 Endpoint not found` என்று வந்தால்?
-* **தீர்வு:** நமது பேக்கெண்ட் சர்வரில் **Universal Route Normalizer** பொருத்தப்பட்டுள்ளது. எனவே Frontend-ல் இருந்து வரும் கோரிக்கைகள் தானாகவே சீரமைக்கப்படும். பேக்கெண்ட் சர்வர் ஓடுகிறதா என்பதை `https://findback-ai-backend.onrender.com/api/health` திறந்து உறுதி செய்யவும்.
-
-### கேள்வி 3: இன்டர்நெட் இல்லாத ஆஃப்லைன் சூழலில் இயக்க முடியுமா?
-* **தீர்வு:** ஆம்! இன்டர்நெட் அல்லது Supabase இணைப்பு கிடைக்கவில்லை என்றால், சிஸ்டம் தானாகவே உள்நாட்டில் உள்ள **`local_db.json`** கோப்பிற்கு மாறி எந்தவித பாதிப்பும் இல்லாமல் வேலை செய்யும்.
+### Issue 2: Browser returns `404 Endpoint not found`
+* **Fix:** Ensure backend service is active by testing `https://findbac-backend.onrender.com/api/health`.
 
 ---
 
-### 🌟 சுருக்கமான கட்டளைகளின் பட்டியல் (Cheat Sheet):
-| செயல்பாடு | கட்டளை |
+### 🌟 Command Cheat Sheet
+
+| Task | Command |
 | :--- | :--- |
-| **டேட்டாபேஸ் Init** | `node backend/init_db.js` |
-| **Backend ரன் செய்ய** | `cd backend && node server.js` |
-| **Frontend ரன் செய்ய** | `npm run dev` |
-| **ஆடிட் டெஸ்ட் ரன் செய்ய** | `npm test` |
-| **Android APK பில்ட்** | `npm run build && npx cap sync android && npx cap open android` |
+| **Initialize Database** | `node backend/init_db.js` |
+| **Start Backend API** | `node backend/server.js` |
+| **Start Frontend App** | `npm run dev` |
+| **Run Test Suite** | `npm test` |
+| **Build Android APK** | `npm run build && npx cap sync android && npx cap open android` |

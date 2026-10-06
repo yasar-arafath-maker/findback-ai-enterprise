@@ -21,6 +21,10 @@ export default function ReportWizard() {
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsStatus, setGpsStatus] = useState('');
 
+  const now = new Date();
+  const defaultDate = now.toISOString().split('T')[0];
+  const defaultTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
   const [form, setForm] = useState({
     category: '',
     title: '',
@@ -31,8 +35,8 @@ export default function ReportWizard() {
     location_text: '',
     location_lat: null,
     location_lng: null,
-    date: '',
-    time: '',
+    date: defaultDate,
+    time: defaultTime,
     current_holder_location: '',
     files: [],
     previews: [],
@@ -74,11 +78,15 @@ export default function ReportWizard() {
     setError('');
     try {
       const res = await capturePhoto({ source: sourceType, quality: 90 });
-      if (res.file) {
-        const newFiles = [...form.files, res.file].slice(0, 4);
-        const newPreviews = [...form.previews, res.dataUrl || URL.createObjectURL(res.file)].slice(0, 4);
-        setForm((f) => ({ ...f, files: newFiles, previews: newPreviews }));
-      } else if (res.error) {
+      if (res && (res.file || res.dataUrl)) {
+        const fileObj = res.file || new File([], `captured_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        const previewUrl = res.dataUrl || res.webPath || (res.file ? URL.createObjectURL(res.file) : '');
+        setForm((f) => ({
+          ...f,
+          files: [...f.files, fileObj].slice(0, 4),
+          previews: [...f.previews, previewUrl].slice(0, 4),
+        }));
+      } else if (res && res.error) {
         setError(res.error);
       }
     } catch (err) {
@@ -95,6 +103,19 @@ export default function ReportWizard() {
       ...f,
       files: [...f.files, ...selectedFiles].slice(0, 4),
       previews: [...f.previews, ...newPreviews].slice(0, 4),
+    }));
+    if (e.target) e.target.value = '';
+  };
+
+  const handleFetchCurrentDateTime = () => {
+    const d = new Date();
+    const isoDate = d.toISOString().split('T')[0];
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    setForm((f) => ({
+      ...f,
+      date: isoDate,
+      time: `${hours}:${minutes}`,
     }));
   };
 
@@ -152,7 +173,7 @@ export default function ReportWizard() {
       const duplicate = (own || []).find((r) => Math.abs(new Date(r.lost_date || r.found_date) - new Date(form.date)) <= 172800000);
 
       // Auto-extract AI visual tags & brand signatures
-      const { analyzeItemImage } = await import('./aiVisionTagger.js');
+      const { analyzeItemImage } = await import('@/lib/aiVisionTagger.js');
       const aiAnalysis = analyzeItemImage(form.title, form.description, form.category);
 
       const payload = {
@@ -187,7 +208,7 @@ export default function ReportWizard() {
       // Trigger Smart GPS Geo-Fencing Radius Alerts
       if (report?.id && form.location_lat && form.location_lng) {
         try {
-          const { checkGeoFenceAlerts } = await import('./geoFencingAlerts.js');
+          const { checkGeoFenceAlerts } = await import('@/lib/geoFencingAlerts.js');
           const existingList = lost
             ? await db.entities.FoundReports.filter({}, '-created_date', 50).catch(() => [])
             : await db.entities.LostReports.filter({}, '-created_date', 50).catch(() => []);
@@ -325,34 +346,41 @@ export default function ReportWizard() {
               </Button>
             </div>
 
-            {/* Traditional File Input Fallback */}
-            <div className="mt-4">
-              <Label className="text-xs text-slate-500">Or choose files from your device:</Label>
-              <Input
-                className="mt-1.5 text-xs"
-                type="file"
-                accept="image/*"
-                multiple
-                disabled={form.files.length >= 4}
-                onChange={handleFileInputChange}
-              />
+            {/* Custom Styled Photo Upload Dropzone / Button */}
+            <div className="mt-4 p-4 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/70 text-center hover:bg-slate-100/80 transition-colors cursor-pointer">
+              <label htmlFor="wizard-photo-input" className="cursor-pointer block">
+                <ImageIcon className="mx-auto h-8 w-8 text-blue-500 mb-1" />
+                <span className="text-xs font-bold text-slate-800">
+                  {form.files.length >= 4 ? 'Maximum 4 Photos Attached' : 'Click to Upload Photo / Select Image File'}
+                </span>
+                <p className="text-[11px] text-slate-500 mt-0.5">Supports PNG, JPG, WEBP formats up to 10MB</p>
+                <input
+                  id="wizard-photo-input"
+                  className="hidden"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={form.files.length >= 4}
+                  onChange={handleFileInputChange}
+                />
+              </label>
             </div>
 
             {/* Image Previews Grid */}
             {form.previews.length > 0 && (
               <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {form.previews.map((src, i) => (
-                  <div key={i} className="relative group rounded-xl overflow-hidden border border-slate-200 aspect-square bg-slate-50">
+                  <div key={i} className="relative group rounded-xl overflow-hidden border border-slate-200 aspect-square bg-slate-50 shadow-sm">
                     <img src={src} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
                     {i === 0 && (
-                      <span className="absolute top-1.5 left-1.5 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                        Cover
+                      <span className="absolute top-1.5 left-1.5 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow">
+                        Cover Photo
                       </span>
                     )}
                     <button
                       type="button"
                       onClick={() => handleRemovePhoto(i)}
-                      className="absolute top-1.5 right-1.5 bg-red-600 text-white p-1 rounded-full opacity-80 hover:opacity-100 transition"
+                      className="absolute top-1.5 right-1.5 bg-red-600 text-white p-1 rounded-full opacity-90 hover:opacity-100 transition shadow"
                       title="Remove image"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -362,15 +390,32 @@ export default function ReportWizard() {
               </div>
             )}
 
-            <p className="mt-3 text-xs text-slate-500 font-medium">
-              {form.files.length}/4 photo(s) selected
-            </p>
+            <div className="mt-4 flex items-center justify-between p-2.5 rounded-lg bg-blue-50/60 border border-blue-100 text-xs text-blue-900 font-medium">
+              <span>{form.files.length} of 4 photo(s) selected</span>
+              {form.files.length > 0 && (
+                <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Ready for Upload
+                </span>
+              )}
+            </div>
           </div>
         )}
 
         {step === 4 && (
           <div className="space-y-5">
-            <h2 className="text-xl font-bold">Where and when?</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold">Where and when?</h2>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleFetchCurrentDateTime}
+                className="text-xs border-blue-300 text-blue-700 bg-blue-50/80 hover:bg-blue-100 flex items-center gap-1.5"
+              >
+                <RefreshCw className="h-3.5 w-3.5 text-blue-600" />
+                <span>Fetch Current Date & Time</span>
+              </Button>
+            </div>
 
             <Field label={`${lost ? 'Lost' : 'Found'} location (Address / Landmark)`} value={form.location_text} onChange={(v) => set('location_text', v)} />
 

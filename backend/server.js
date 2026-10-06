@@ -981,6 +981,156 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // ── Serverless Functions: Owner Response to Lost Item Match ──
+  if ((pathname === '/api/functions/respondToMatch' || pathname === '/functions/respondToMatch') && req.method === 'POST') {
+    try {
+      const params = await parseBody(req);
+      const { matchId, action, notes, claimantId } = params;
+      if (!matchId || !action) {
+        return sendJSON(res, 400, { error: 'matchId and action (confirm_claim | reject_match | request_extension) required' });
+      }
+
+      const now = new Date().toISOString();
+      let matchObj = null;
+
+      if (isDbConnected()) {
+        const mRes = await query('SELECT * FROM ai_matches WHERE id = $1', [matchId]);
+        if (mRes.rows.length === 0) return sendJSON(res, 404, { error: 'Match record not found' });
+        matchObj = mRes.rows[0];
+
+        if (action === 'confirm_claim') {
+          await query('UPDATE ai_matches SET status = $1 WHERE id = $2', ['owner_confirmed', matchId]);
+          if (matchObj.lost_report_id) {
+            await query('UPDATE lost_reports SET status = $1, owner_response_status = $2, updated_date = CURRENT_TIMESTAMP WHERE id = $3', ['claim_pending', 'responded_claimed', matchObj.lost_report_id]);
+          }
+          if (matchObj.found_report_id) {
+            await query('UPDATE found_reports SET owner_response_status = $1, updated_date = CURRENT_TIMESTAMP WHERE id = $2', ['responded_claimed', matchObj.found_report_id]);
+          }
+          await query(
+            `INSERT INTO notifications (id, user_id, type, title, message, related_entity_type, related_entity_id, is_read, created_date)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, false, CURRENT_TIMESTAMP)`,
+            [`notif-${Date.now()}`, claimantId || 'user-default', 'claim_initiated', 'Claim Confirmed', 'You confirmed ownership. Item is stored in database pending admin verification.', 'ai_matches', matchId]
+          );
+        } else if (action === 'reject_match') {
+          await query('UPDATE ai_matches SET status = $1 WHERE id = $2', ['rejected_by_owner', matchId]);
+          if (matchObj.lost_report_id) {
+            // Keep lost item stored in DB active so it continues searching for matches
+            await query('UPDATE lost_reports SET status = $1, owner_response_status = $2, updated_date = CURRENT_TIMESTAMP WHERE id = $3', ['active', 'responded_rejected', matchObj.lost_report_id]);
+          }
+          await query(
+            `INSERT INTO notifications (id, user_id, type, title, message, related_entity_type, related_entity_id, is_read, created_date)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, false, CURRENT_TIMESTAMP)`,
+            [`notif-${Date.now()}`, claimantId || 'user-default', 'match_rejected', 'Match Dismissed', 'You flagged this match as not your item. Your report remains stored in the database searching for new matches.', 'ai_matches', matchId]
+          );
+        } else if (action === 'request_extension') {
+          const extensionDate = new Date(Date.now() + 14 * 86400 * 1000).toISOString();
+          if (matchObj.lost_report_id) {
+            await query('UPDATE lost_reports SET owner_response_status = $1, owner_response_deadline = $2, retention_until = $2, updated_date = CURRENT_TIMESTAMP WHERE id = $3', ['retention_extended', extensionDate, matchObj.lost_report_id]);
+          }
+          if (matchObj.found_report_id) {
+            await query('UPDATE found_reports SET owner_response_status = $1, owner_response_deadline = $2, retention_until = $2, updated_date = CURRENT_TIMESTAMP WHERE id = $3', ['retention_extended', extensionDate, matchObj.found_report_id]);
+          }
+        }
+      } else {
+        fallbackDbStore = loadFallbackDb();
+        if (!fallbackDbStore.AIMatches) fallbackDbStore.AIMatches = [];
+        matchObj = fallbackDbStore.AIMatches.find(m => m.id === matchId);
+        if (!matchObj) return sendJSON(res, 404, { error: 'Match record not found' });
+
+        if (action === 'confirm_claim') {
+          matchObj.status = 'owner_confirmed';
+          if (fallbackDbStore.LostReports) {
+            const lr = fallbackDbStore.LostReports.find(r => r.id === matchObj.lost_report_id);
+            if (lr) {
+              lr.status = 'claim_pending';
+              lr.owner_response_status = 'responded_claimed';
+            }
+          }
+          if (fallbackDbStore.FoundReports) {
+            const fr = fallbackDbStore.FoundReports.find(r => r.id === matchObj.found_report_id);
+            if (fr) fr.owner_response_status = 'responded_claimed';
+          }
+        } else if (action === 'reject_match') {
+          matchObj.status = 'rejected_by_owner';
+          if (fallbackDbStore.LostReports) {
+            const lr = fallbackDbStore.LostReports.find(r => r.id === matchObj.lost_report_id);
+            if (lr) {
+              lr.status = 'active'; // Retain stored lost report in active state
+              lr.owner_response_status = 'responded_rejected';
+            }
+          }
+        } else if (action === 'request_extension') {
+          const extensionDate = new Date(Date.now() + 14 * 86400 * 1000).toISOString();
+          if (fallbackDbStore.LostReports) {
+            const lr = fallbackDbStore.LostReports.find(r => r.id === matchObj.lost_report_id);
+            if (lr) {
+              lr.owner_response_status = 'retention_extended';
+              lr.owner_response_deadline = extensionDate;
+              lr.retention_until = extensionDate;
+            }
+          }
+        }
+        saveFallbackDb(fallbackDbStore, 'AIMatches');
+      }
+
+      broadcastEvent('OWNER_RESPONSE_UPDATED', { matchId, action });
+      return sendJSON(res, 200, { status: 'success', action, matchId, timestamp: now });
+    } catch (err) {
+      return sendJSON(res, 500, { error: err.message });
+    }
+  }
+
+  // ── Serverless Functions: Check Database Retention & Owner Expiry ──
+  if ((pathname === '/api/functions/checkRetentionPolicy' || pathname === '/functions/checkRetentionPolicy') && req.method === 'POST') {
+    try {
+      const now = new Date();
+      let expiredCount = 0;
+
+      if (isDbConnected()) {
+        const lostRes = await query(`SELECT * FROM lost_reports WHERE status = 'active' OR owner_response_status = 'notified'`);
+        for (const report of lostRes.rows) {
+          if (report.retention_until && new Date(report.retention_until) < now && report.owner_response_status !== 'responded_claimed') {
+            await query(`UPDATE lost_reports SET status = 'expired_unclaimed', owner_response_status = 'expired_unclaimed', updated_date = CURRENT_TIMESTAMP WHERE id = $1`, [report.id]);
+            expiredCount++;
+          }
+        }
+
+        const foundRes = await query(`SELECT * FROM found_reports WHERE status = 'active' OR owner_response_status = 'notified'`);
+        for (const report of foundRes.rows) {
+          if (report.retention_until && new Date(report.retention_until) < now && report.owner_response_status !== 'responded_claimed') {
+            await query(`UPDATE found_reports SET status = 'expired_unclaimed', owner_response_status = 'expired_unclaimed', updated_date = CURRENT_TIMESTAMP WHERE id = $1`, [report.id]);
+            expiredCount++;
+          }
+        }
+      } else {
+        fallbackDbStore = loadFallbackDb();
+        if (fallbackDbStore.LostReports) {
+          fallbackDbStore.LostReports.forEach(r => {
+            if (r.retention_until && new Date(r.retention_until) < now && r.owner_response_status !== 'responded_claimed') {
+              r.status = 'expired_unclaimed';
+              r.owner_response_status = 'expired_unclaimed';
+              expiredCount++;
+            }
+          });
+        }
+        if (fallbackDbStore.FoundReports) {
+          fallbackDbStore.FoundReports.forEach(r => {
+            if (r.retention_until && new Date(r.retention_until) < now && r.owner_response_status !== 'responded_claimed') {
+              r.status = 'expired_unclaimed';
+              r.owner_response_status = 'expired_unclaimed';
+              expiredCount++;
+            }
+          });
+        }
+        saveFallbackDb(fallbackDbStore, 'LostReports');
+      }
+
+      return sendJSON(res, 200, { status: 'success', expiredCount, checkedAt: now.toISOString() });
+    } catch (err) {
+      return sendJSON(res, 500, { error: err.message });
+    }
+  }
+
   // ── Privacy PII Masking Utility ──
   const maskPiiContent = (text) => {
     if (!text || typeof text !== 'string') return text;
@@ -1103,7 +1253,7 @@ const server = http.createServer(async (req, res) => {
           return sendJSON(res, 200, result.rows);
         }
 
-        // POST create entity
+        // POST create / upsert entity (ensures zero data loss on sync / duplicate IDs)
         if (req.method === 'POST') {
           const body = await parseBody(req);
           const newItemId = body.id || `${tableName}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -1113,10 +1263,15 @@ const server = http.createServer(async (req, res) => {
           const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
           const values = Object.values(data).map(v => typeof v === 'object' && v !== null ? JSON.stringify(v) : v);
 
-          const insertSql = `INSERT INTO ${tableName} (${cols.join(', ')}) VALUES (${placeholders}) RETURNING *`;
+          const updateClauses = cols.filter(c => c !== 'id').map(c => `${c} = EXCLUDED.${c}`).join(', ');
+          const insertSql = updateClauses.length > 0
+            ? `INSERT INTO ${tableName} (${cols.join(', ')}) VALUES (${placeholders}) ON CONFLICT (id) DO UPDATE SET ${updateClauses}, updated_date = CURRENT_TIMESTAMP RETURNING *`
+            : `INSERT INTO ${tableName} (${cols.join(', ')}) VALUES (${placeholders}) ON CONFLICT (id) DO NOTHING RETURNING *`;
+
           const result = await query(insertSql, values);
+          const returnedRow = result.rows[0] || data;
           broadcastEvent('ENTITY_CREATED', { entity: entityName, id: newItemId });
-          return sendJSON(res, 201, result.rows[0]);
+          return sendJSON(res, 201, returnedRow);
         }
 
         // PUT update entity
@@ -1173,15 +1328,29 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST') {
       const body = await parseBody(req);
-      const newItem = {
-        id: body.id || `${entityName.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        created_date: new Date().toISOString(),
-        status: 'active',
-        ...body,
-      };
-      fallbackDbStore[fallbackKey].push(newItem);
+      const itemId = body.id || `${entityName.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      const existingIdx = fallbackDbStore[fallbackKey].findIndex((x) => x.id === itemId);
+
+      let savedItem;
+      if (existingIdx >= 0) {
+        fallbackDbStore[fallbackKey][existingIdx] = {
+          ...fallbackDbStore[fallbackKey][existingIdx],
+          ...body,
+          updated_date: new Date().toISOString(),
+        };
+        savedItem = fallbackDbStore[fallbackKey][existingIdx];
+      } else {
+        savedItem = {
+          id: itemId,
+          created_date: new Date().toISOString(),
+          status: 'active',
+          ...body,
+        };
+        fallbackDbStore[fallbackKey].push(savedItem);
+      }
+
       saveFallbackDb(fallbackDbStore, fallbackKey);
-      return sendJSON(res, 201, newItem);
+      return sendJSON(res, 201, savedItem);
     }
 
     if (req.method === 'PUT' && id) {

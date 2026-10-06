@@ -3,7 +3,7 @@ export default function Brand({ light = false }) {
   return (
     <div className="flex items-center gap-2 font-bold tracking-tight">
       <img
-        src="/z_icon_cropped.png"
+        src="/favicon.png"
         alt="FindBack AI Logo"
         className="h-9 w-9 rounded-xl object-cover shadow-sm border border-blue-500/20"
       />

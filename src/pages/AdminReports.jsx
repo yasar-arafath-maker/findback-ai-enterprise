@@ -259,6 +259,31 @@ export default function AdminReports() {
               <option value="closed">Closed</option>
             </select>
           </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const res = await db.functions.invoke('checkRetentionPolicy', {});
+                setFeedback({
+                  type: 'success',
+                  text: `Database retention policy checked. ${res?.expiredCount || 0} overdue items expired.`
+                });
+                loadData();
+              } catch (e) {
+                setFeedback({ type: 'error', text: e.message || 'Retention check failed.' });
+              } finally {
+                setBusy(false);
+              }
+            }}
+            disabled={busy}
+            className="h-9 text-xs border-indigo-200 bg-indigo-50/60 text-indigo-800 hover:bg-indigo-100"
+          >
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 text-indigo-600 ${busy ? 'animate-spin' : ''}`} />
+            Sweep DB Retention Policy
+          </Button>
         </div>
 
         {/* Search Bar */}

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { db } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
+import { useTranslation } from "@/context/LanguageContext";
+import LanguageSelector from "@/components/LanguageSelector";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,12 +11,13 @@ import { Label } from "@/components/ui/label";
 import { LogIn, Mail, Lock, Loader2, Fingerprint, ShieldCheck } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import { safeReturnTo } from "@/lib/authReturnTo";
-import { safeEnableBiometrics, safeAuthenticateBiometric, safeStorage } from "@/nativePluginsHelper";
+import { safeEnableBiometrics, safeAuthenticateBiometric, safeStorage } from "@/lib/nativePluginsHelper";
 import { toast } from "@/components/ui/use-toast";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { checkUserAuth } = useAuth();
+  const { user: currentUser, isAuthenticated, checkUserAuth } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [userNotFound, setUserNotFound] = useState(false);
@@ -29,6 +32,12 @@ export default function Login() {
   const returnTo = safeReturnTo(searchParams?.get('returnTo'));
 
   useEffect(() => {
+    if (isAuthenticated && currentUser) {
+      routeUserByRole(currentUser);
+    }
+  }, [isAuthenticated, currentUser]);
+
+  useEffect(() => {
     async function checkBio() {
       const bioEnabled = await safeStorage.get('findback_biometric_enabled');
       if (bioEnabled === 'true') {
@@ -40,12 +49,16 @@ export default function Login() {
 
   const routeUserByRole = (user) => {
     const userRole = user?.role || 'user';
+    let target = returnTo;
+    if (!target || target === '/' || target.includes('/login') || target.includes('/register') || target.includes('/forgot-password') || target.includes('/reset-password')) {
+      target = '/dashboard';
+    }
     if (userRole === 'admin') {
       navigate('/enterprise-admin', { replace: true });
     } else if (userRole === 'campus' || userRole === 'officer' || userRole === 'authority') {
       navigate('/authority-handover', { replace: true });
     } else {
-      navigate(returnTo !== '/' ? returnTo : '/dashboard', { replace: true });
+      navigate(target, { replace: true });
     }
   };
 
@@ -62,16 +75,19 @@ export default function Login() {
       if (res?.access_token) {
         db.auth.setToken(res.access_token);
       }
-      await checkUserAuth();
 
-      // Check if user has already enabled biometrics
-      const bioEnabled = await safeStorage.get('findback_biometric_enabled');
-      if (!bioEnabled && res?.user) {
-        setPendingUserRes(res);
-        setShowBiometricModal(true);
-      } else {
-        routeUserByRole(res?.user);
+      // If the response contains user data, route immediately
+      if (res?.user) {
+        clearTimeout(slowTimer);
+        setLoading(false);
+        setSlowLoading(false);
+        routeUserByRole(res.user);
+        return;
       }
+
+      // Otherwise refresh auth state - the useEffect watching isAuthenticated/currentUser will route
+      await checkUserAuth();
+      // routeUserByRole will be triggered by the useEffect on [isAuthenticated, currentUser]
     } catch (err) {
       if (err?.code === 'USER_NOT_FOUND' || err?.status === 404 || err?.message?.toLowerCase().includes('not found')) {
         setUserNotFound(true);
@@ -127,22 +143,26 @@ export default function Login() {
   };
 
   return (
-    <AuthLayout
-      icon={LogIn}
-      title="Welcome back"
-      subtitle="Log in to your account with verified credentials"
-      footer={
-        <>
-          Don't have an account?{" "}
-          <Link
-            to={"/register" + (returnTo !== "/" ? "?returnTo=" + encodeURIComponent(returnTo) : "")}
-            className="text-primary font-medium hover:underline"
-          >
-            Create one
-          </Link>
-        </>
-      }
-    >
+    <div className="relative">
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSelector variant="outline" size="sm" />
+      </div>
+      <AuthLayout
+        icon={LogIn}
+        title={t('login.title') || "Welcome back"}
+        subtitle={t('login.subtitle') || "Log in to your account with verified credentials"}
+        footer={
+          <>
+            {t('login.no_account') || "Don't have an account?"}{" "}
+            <Link
+              to={"/register" + (returnTo !== "/" ? "?returnTo=" + encodeURIComponent(returnTo) : "")}
+              className="text-primary font-medium hover:underline"
+            >
+              {t('login.create_one') || "Create one"}
+            </Link>
+          </>
+        }
+      >
       {userNotFound && (
         <div className="mb-5 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 shadow-sm animate-fade-in-up">
           <div className="flex items-start gap-3">
@@ -282,5 +302,6 @@ export default function Login() {
         </div>
       )}
     </AuthLayout>
+    </div>
   );
 }
