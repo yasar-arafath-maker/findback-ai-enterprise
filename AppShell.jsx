@@ -1,25 +1,38 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { db } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
-import { LayoutDashboard, Search, PlusCircle, Bell, User, ShieldCheck, LogOut, QrCode, MessageSquare, Award } from 'lucide-react';
+import { 
+  LayoutDashboard, Search, PlusCircle, Bell, User, ShieldCheck, 
+  LogOut, QrCode, MessageSquare, Award, CheckCircle2, Users, Activity 
+} from 'lucide-react';
 import Brand from '@/components/Brand';
 
-const links = [
+const userLinks = [
   ['/dashboard', 'Overview', LayoutDashboard],
-  ['/report/lost', 'Report', PlusCircle],
-  ['/reports', 'My reports', Search],
-  ['/matches', 'Matches', ShieldCheck],
+  ['/report/lost', 'Report Lost', PlusCircle],
+  ['/reports', 'My Reports', Search],
+  ['/matches', 'AI Matches', ShieldCheck],
   ['/smart-tag', 'Smart QR Tag', QrCode],
   ['/safe-chat', 'Safe Chat', MessageSquare],
   ['/authority-handover', 'Police Receipt', Award],
   ['/notifications', 'Alerts', Bell],
-  ['/profile', 'Profile', User],
+  ['/profile', 'My Profile', User],
+];
+
+const adminLinks = [
+  ['/admin', 'Admin Overview', LayoutDashboard],
+  ['/admin/claims', 'Claim Review Queue', CheckCircle2],
+  ['/admin/handovers', 'Supervised Handovers', ShieldCheck],
+  ['/admin/reports', 'All Reports Audit', Search],
+  ['/enterprise-admin', 'Enterprise Governance', Users],
+  ['/admin/telemetry', 'System Telemetry', Activity],
 ];
 
 export default function AppShell() {
   const { user: authUser, logout } = useAuth();
   const [user, setUser] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -28,35 +41,64 @@ export default function AppShell() {
     })();
   }, [authUser]);
 
+  // Poll for unread notifications for the current user
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const u = authUser || (await db.auth.me().catch(() => null));
+        if (u) {
+          const list = await db.entities.Notifications.filter({ user_id: u.id, is_read: false }).catch(() => []);
+          setUnreadCount(list?.length || 0);
+        }
+      } catch {}
+    };
+    fetchUnread();
+    const timer = setInterval(fetchUnread, 4000);
+    return () => clearInterval(timer);
+  }, [authUser]);
+
+  const isAdmin = user?.role === 'admin';
+  const activeLinks = isAdmin ? adminLinks : userLinks;
+
   return (
     <div className="min-h-screen bg-slate-50/50">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-800 bg-[#0F1F3D] p-5 md:flex shadow-xl">
         <Brand light />
-        <nav className="mt-10 space-y-1">
-          {links.map(([to, label, Icon]) => (
+
+        <div className="mt-6 mb-2 px-1">
+          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+            isAdmin ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30' : 'bg-blue-400/20 text-blue-300 border border-blue-400/30'
+          }`}>
+            {isAdmin ? '🛡️ Admin Workspace' : '👤 User Workspace'}
+          </span>
+        </div>
+
+        <nav className="mt-2 space-y-1">
+          {activeLinks.map(([to, label, Icon]) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-all ${
+                `flex items-center justify-between rounded-xl px-3.5 py-3 text-sm font-medium transition-all ${
                   isActive
-                    ? 'bg-blue-600/30 text-white border-l-4 border-blue-500 font-semibold shadow-inner'
+                    ? isAdmin
+                      ? 'bg-amber-500/20 text-amber-200 border-l-4 border-amber-400 font-semibold shadow-inner'
+                      : 'bg-blue-600/30 text-white border-l-4 border-blue-500 font-semibold shadow-inner'
                     : 'text-slate-300 hover:bg-white/5 hover:text-white'
                 }`
               }
             >
-              <Icon className="h-4 w-4" />
-              {label}
+              <div className="flex items-center gap-3">
+                <Icon className="h-4 w-4" />
+                <span>{label}</span>
+              </div>
+              {label === 'Alerts' && unreadCount > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-sm animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
             </NavLink>
           ))}
-          {user?.role === 'admin' && (
-            <NavLink
-              to="/admin"
-              className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-amber-300 hover:bg-amber-400/10"
-            >
-              <ShieldCheck className="h-4 w-4" /> Admin Supervisor
-            </NavLink>
-          )}
         </nav>
 
         {/* User Role Card */}
@@ -114,7 +156,7 @@ export default function AppShell() {
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-around border-t border-slate-200 bg-white/95 backdrop-blur-md p-2 md:hidden shadow-lg">
-        {links.slice(0, 5).map(([to, label, Icon]) => (
+        {activeLinks.slice(0, 5).map(([to, label, Icon]) => (
           <NavLink
             key={to}
             to={to}

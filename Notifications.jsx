@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { db } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import PageHeader from '@/components/PageHeader';
@@ -67,6 +68,18 @@ export default function Notifications() {
                   <div>
                     <p className="text-sm font-semibold text-slate-900">{n.title}</p>
                     <p className="mt-1 text-sm text-slate-600 leading-relaxed">{n.message}</p>
+                    {n.type === 'claim_approved' && (
+                      <div className="mt-3">
+                        <Link
+                          to="/handover"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-green-700 transition"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          View Handover & 6-Digit Verification Code ↗
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {!n.is_read && <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600 animate-pulse" />}

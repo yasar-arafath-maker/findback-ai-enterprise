@@ -748,16 +748,32 @@ const server = http.createServer(async (req, res) => {
         const claimRes = await query('SELECT * FROM claims WHERE id = $1', [claimId]);
         const claim = claimRes.rows[0];
 
+        if (decision === 'approve') {
+          await query(
+            `INSERT INTO handovers (id, claim_id, cert_id, item_name, lost_owner_id, found_reporter_id, scheduled_location,
+              scheduled_datetime, status, verification_code, admin_supervised, created_date)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '1 day', 'scheduled', $8, true, CURRENT_TIMESTAMP)`,
+            [
+              handoverId, claimId, `ZEXO-CERT-${Math.floor(10000000 + Math.random() * 90000000)}`,
+              'Recovered Item', claim?.claimant_id || 'user-sarah-101', 'user-priya-109',
+              'Central Campus Security Office Desk 1', code
+            ]
+          ).catch(() => {});
+        }
+
+        // Insert instant notification for the claimant into PostgreSQL
         await query(
-          `INSERT INTO handovers (id, claim_id, cert_id, item_name, lost_owner_id, found_reporter_id, scheduled_location,
-            scheduled_datetime, status, verification_code, admin_supervised, created_date)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '1 day', 'scheduled', $8, true, CURRENT_TIMESTAMP)`,
+          `INSERT INTO notifications (id, user_id, type, title, message, related_entity_type, related_entity_id, is_read, created_date)
+           VALUES ($1, $2, $3, $4, $5, 'Claims', $6, false, CURRENT_TIMESTAMP)`,
           [
-            handoverId, claimId, `ZEXO-CERT-${Math.floor(10000000 + Math.random() * 90000000)}`,
-            'Recovered Item', claim?.claimant_id || 'user-sarah-101', 'user-priya-109',
-            'Central Campus Security Office Desk 1', code
+            `notif-${Date.now()}`,
+            claim?.claimant_id || 'user-sarah-101',
+            statusVal === 'approved' ? 'claim_approved' : 'claim_update',
+            statusVal === 'approved' ? '🎉 Claim Approved! Handover Scheduled' : 'Claim Review Update',
+            statusVal === 'approved' ? `Your claim #${claimId.slice(-6)} has been verified! Handover verification code is ${code}.` : `Admin note: ${notes || statusVal}`,
+            claimId
           ]
-        );
+        ).catch(() => {});
 
         return sendJSON(res, 200, { status: statusVal, handoverId, code });
       }
@@ -765,6 +781,7 @@ const server = http.createServer(async (req, res) => {
       fallbackDbStore = loadFallbackDb();
       if (!fallbackDbStore.Claims) fallbackDbStore.Claims = [];
       if (!fallbackDbStore.Handovers) fallbackDbStore.Handovers = [];
+      if (!fallbackDbStore.Notifications) fallbackDbStore.Notifications = [];
 
       const c = fallbackDbStore.Claims.find(x => x.id === claimId);
       if (c) {
@@ -792,8 +809,23 @@ const server = http.createServer(async (req, res) => {
         admin_supervised: true,
         created_date: new Date().toISOString(),
       };
-      fallbackDbStore.Handovers.push(handover);
-      saveFallbackDb(fallbackDbStore, 'Handovers');
+      if (decision === 'approve') {
+        fallbackDbStore.Handovers.push(handover);
+        saveFallbackDb(fallbackDbStore, 'Handovers');
+      }
+
+      fallbackDbStore.Notifications.unshift({
+        id: `notif-${Date.now()}`,
+        user_id: ownerId,
+        type: statusVal === 'approved' ? 'claim_approved' : 'claim_update',
+        title: statusVal === 'approved' ? '🎉 Claim Approved! Handover Scheduled' : 'Claim Review Update',
+        message: statusVal === 'approved' ? `Your claim #${claimId.slice(-6)} has been verified! Handover verification code is ${code}.` : `Admin note: ${notes || statusVal}`,
+        related_entity_type: 'Claims',
+        related_entity_id: claimId,
+        is_read: false,
+        created_date: new Date().toISOString(),
+      });
+      saveFallbackDb(fallbackDbStore, 'Notifications');
 
       return sendJSON(res, 200, { status: statusVal, handoverId, code });
     } catch (err) {

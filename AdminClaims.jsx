@@ -134,6 +134,35 @@ export default function AdminClaims() {
         }
       } catch (err) {}
 
+      // 4. Create instant alert notification for claimant so they know immediately
+      const claimantId = selected.claimant_id || 'user-sarah-101';
+      const notifItem = {
+        id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        user_id: claimantId,
+        type: decision === 'approve' ? 'claim_approved' : decision === 'reject' ? 'claim_rejected' : 'evidence_requested',
+        title: decision === 'approve'
+          ? '🎉 Claim Approved! Handover Scheduled'
+          : decision === 'reject'
+          ? '❌ Claim Rejected by Security Admin'
+          : '⚠️ Additional Evidence Requested by Admin',
+        message: decision === 'approve'
+          ? `Your claim #${selected.id.slice(-6)} has been verified and approved by the campus security desk! A supervised handover is scheduled at Central Campus Security Desk. Check your Handover status for the verification code.`
+          : `Reviewer update on claim #${selected.id.slice(-6)}: ${notes || 'Status updated.'}`,
+        related_entity_type: 'Claims',
+        related_entity_id: selected.id,
+        is_read: false,
+        created_date: new Date().toISOString(),
+      };
+
+      await db.entities.Notifications.create(notifItem).catch(() => {});
+
+      try {
+        const rawN = localStorage.getItem('entity_Notifications');
+        const nList = rawN ? JSON.parse(rawN) : [];
+        nList.unshift(notifItem);
+        localStorage.setItem('entity_Notifications', JSON.stringify(nList));
+      } catch {}
+
       const successLabels = {
         approve: 'Claim approved! Supervised handover has been initiated.',
         reject: 'Claim rejected.',
