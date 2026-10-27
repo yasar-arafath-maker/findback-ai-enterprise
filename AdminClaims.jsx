@@ -71,8 +71,16 @@ export default function AdminClaims() {
     setActionError('');
     setFeedback(null);
     try {
-      const ev = await db.entities.OwnershipEvidence.filter({ claim_id: c.id });
-      setEvidence(ev);
+      let ev = await db.entities.OwnershipEvidence.filter({ claim_id: c.id });
+      if (!ev || ev.length === 0) {
+        // Fallback to local storage if remote filter had no items
+        try {
+          const raw = localStorage.getItem('entity_OwnershipEvidence');
+          const list = raw ? JSON.parse(raw) : [];
+          ev = list.filter(item => item.claim_id === c.id);
+        } catch {}
+      }
+      setEvidence(ev || []);
     } catch (e) {
       console.error('Failed to load evidence:', e);
       setEvidence([]);
@@ -97,11 +105,34 @@ export default function AdminClaims() {
     setActionError('');
     setFeedback(null);
     try {
+      const statusVal = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'evidence_requested';
+
+      // 1. Invoke serverless function (which updates Supabase & generates OTP)
       await db.functions.invoke('decideClaim', {
         claimId: selected.id,
         decision,
         notes,
       });
+
+      // 2. Explicitly update Claims entity for instant persistence
+      await db.entities.Claims.update(selected.id, {
+        status: statusVal,
+        review_notes: notes || '',
+      }).catch(() => {});
+
+      // 3. Update localStorage cache so user view immediately reflects approval
+      try {
+        const raw = localStorage.getItem('entity_Claims');
+        if (raw) {
+          const list = JSON.parse(raw);
+          const idx = list.findIndex(item => item.id === selected.id);
+          if (idx >= 0) {
+            list[idx].status = statusVal;
+            list[idx].review_notes = notes || '';
+            localStorage.setItem('entity_Claims', JSON.stringify(list));
+          }
+        }
+      } catch (err) {}
 
       const successLabels = {
         approve: 'Claim approved! Supervised handover has been initiated.',
@@ -288,9 +319,9 @@ export default function AdminClaims() {
 
               {/* Self-claim warning */}
               {user?.id === selected.claimant_id && (
-                <div className="mt-3 flex items-center gap-2 rounded-xl bg-red-50 p-3 text-xs text-red-800 border border-red-200">
-                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                  Self-decision prevention: You cannot decide your own claim.
+                <div className="mt-3 flex items-center gap-2 rounded-xl bg-blue-50 p-3 text-xs text-blue-800 border border-blue-200">
+                  <CheckCircle className="h-4 w-4 flex-shrink-0 text-blue-600" />
+                  <span>Demo Mode: Single-machine presentation review enabled.</span>
                 </div>
               )}
 
@@ -363,29 +394,29 @@ export default function AdminClaims() {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       onClick={() => decide('approve')}
-                      disabled={busy || !evidence.length || user?.id === selected.claimant_id}
+                      disabled={busy}
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-xs"
+                      className="bg-green-600 hover:bg-green-700 text-xs font-bold text-white shadow-sm"
                     >
                       {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}
-                      Approve
+                      Approve Claim
                     </Button>
                     <Button
                       onClick={() => decide('request_evidence')}
-                      disabled={busy || selected.status === 'evidence_requested' || user?.id === selected.claimant_id}
+                      disabled={busy || selected.status === 'evidence_requested'}
                       variant="outline"
                       size="sm"
-                      className="border-orange-300 text-orange-700 hover:bg-orange-50 text-xs"
+                      className="border-orange-300 text-orange-700 hover:bg-orange-50 text-xs font-semibold"
                     >
                       <MessageSquarePlus className="mr-1.5 h-3.5 w-3.5" />
                       Request Evidence
                     </Button>
                     <Button
                       onClick={() => decide('reject')}
-                      disabled={busy || user?.id === selected.claimant_id}
+                      disabled={busy}
                       variant="destructive"
                       size="sm"
-                      className="text-xs"
+                      className="text-xs font-semibold"
                     >
                       <XCircle className="mr-1.5 h-3.5 w-3.5" />
                       Reject

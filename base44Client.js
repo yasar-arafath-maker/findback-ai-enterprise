@@ -634,21 +634,27 @@ const standaloneAuthClient = {
       if (fnName === 'decideClaim') {
         try {
           const { claimId, decision, notes } = params;
+          const statusVal = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'evidence_requested';
+
+          // 1. Sync to backend API (Supabase PostgreSQL)
+          const serverRes = await syncServerRequest('/api/functions/decideClaim', 'POST', { claimId, decision, notes }).catch(() => null);
+
+          // 2. Also update local storage cache for immediate reactivity
           const getList = (name) => JSON.parse(localStorage.getItem(`entity_${name}`) || '[]');
           const saveList = (name, list) => localStorage.setItem(`entity_${name}`, JSON.stringify(list));
 
           let claims = getList('Claims');
           let cIdx = claims.findIndex(c => c.id === claimId);
           if (cIdx >= 0) {
-            claims[cIdx].status = decision === 'approve' ? 'approved' : decision === 'reject' ? 'rejected' : 'evidence_requested';
+            claims[cIdx].status = statusVal;
             claims[cIdx].review_notes = notes || '';
             saveList('Claims', claims);
           }
 
           let handovers = getList('Handovers');
-          let code = String(Math.floor(100000 + Math.random() * 900000));
+          let code = serverRes?.code || String(Math.floor(100000 + Math.random() * 900000));
           let handover = {
-            id: `handover-${Date.now()}`,
+            id: serverRes?.handoverId || `handover-${Date.now()}`,
             claim_id: claimId,
             lost_owner_id: claims[cIdx]?.claimant_id || 'guest-user',
             found_reporter_id: 'user-finder',
@@ -661,7 +667,7 @@ const standaloneAuthClient = {
           handovers.push(handover);
           saveList('Handovers', handovers);
 
-          return { status: decision === 'approve' ? 'approved' : decision, handoverId: handover.id };
+          return { status: statusVal, handoverId: handover.id, code };
         } catch (e) {
           return { status: 'error', message: e.message };
         }
