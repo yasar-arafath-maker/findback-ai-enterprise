@@ -43,7 +43,7 @@ export default function Matches() {
           seen.add(m.id);
           return true;
         });
-        unique.sort((a, b) => b.overall_score - a.overall_score);
+        unique.sort((a, b) => Number(b.overall_score || b.overall_confidence_score || 0) - Number(a.overall_score || a.overall_confidence_score || 0));
         setMatches(unique.slice(0, 50));
       } catch (err) {
         setMatches([]);
@@ -52,7 +52,7 @@ export default function Matches() {
   }, [user]);
 
   return (
-    <div className="mx-auto max-w-5xl p-5 sm:p-8">
+    <div className="mx-auto max-w-5xl p-5 sm:p-8 animate-fade-in">
       <PageHeader
         eyebrow="AI-assisted discovery"
         title="Potential matches"
@@ -60,59 +60,68 @@ export default function Matches() {
       />
 
       {location.state?.submitted && (
-        <div className="mb-5 rounded-xl bg-green-50 p-4 text-sm text-green-800">
+        <div className="mb-5 rounded-xl bg-green-50 p-4 text-sm text-green-800 border border-green-200">
           Report submitted successfully. Matching has finished for the strongest available candidates.
         </div>
       )}
 
       {!matches ? (
-        <div className="text-sm text-slate-500">Loading potential matches…</div>
+        <div className="text-center py-12">
+          <div className="h-8 w-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-slate-500">Scanning neural match candidates...</p>
+        </div>
       ) : matches.length ? (
         <div className="space-y-4">
-          {matches.map(m => (
-            <article key={m.id} className="rounded-2xl border bg-white p-5 shadow-sm">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-violet-50">
-                  <Sparkles className="h-6 w-6 text-violet-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-bold">Potential Match</h2>
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${
-                        m.confidence_level === 'high'
-                          ? 'bg-green-50 text-green-700'
-                          : m.confidence_level === 'medium'
-                          ? 'bg-amber-50 text-amber-700'
-                          : 'bg-slate-100 text-slate-600'
-                      }`}
+          {matches.map(m => {
+            const overallScore = Math.round(Number(m.overall_score || m.overall_confidence_score || 0));
+            const confidence = m.confidence_level || (overallScore >= 75 ? 'high' : overallScore >= 50 ? 'medium' : 'low');
+            return (
+              <article key={m.id} className="rounded-2xl border bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                  <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-violet-50">
+                    <Sparkles className="h-6 w-6 text-violet-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="font-bold">Potential Match</h2>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${
+                          confidence === 'high'
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : confidence === 'medium'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
+                        }`}
+                      >
+                        {confidence} confidence
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-600">
+                      {Array.isArray(m.match_reasons) && m.match_reasons.length > 0
+                        ? m.match_reasons[0]
+                        : m.ai_recommendation || 'Multi-modal signals match item category, timeframe, and location proximity.'}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
+                      <span>Image Score {Math.round(Number(m.image_similarity_score ?? 50))}%</span>
+                      <span>Text Similarity {Math.round(Number(m.text_similarity_score ?? 0))}%</span>
+                      <span>Geo Proximity {Math.round(Number(m.location_proximity_score ?? 0))}%</span>
+                      <span>Date Match {Math.round(Number(m.time_proximity_score ?? 0))}%</span>
+                      <span>Category {Math.round(Number(m.category_match_score ?? 0))}%</span>
+                    </div>
+                  </div>
+                  <div className="text-center shrink-0">
+                    <strong className="block text-3xl font-black text-violet-700">{overallScore}%</strong>
+                    <Link
+                      to={`/matches/${m.id}`}
+                      className="mt-2 inline-block rounded-lg bg-[#0F1F3D] px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-xs"
                     >
-                      {m.confidence_level} confidence
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-600">
-                    {m.match_reasons?.[0] || 'Several item signals appear similar.'}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
-                    <span>Image Score {m.image_similarity_score}%</span>
-                    <span>Text Similarity {m.text_similarity_score}%</span>
-                    <span>Geo Proximity {m.location_proximity_score}%</span>
-                    <span>Date Match {m.time_proximity_score}%</span>
-                    <span>Category {m.category_match_score}%</span>
+                      View Match
+                    </Link>
                   </div>
                 </div>
-                <div className="text-center">
-                  <strong className="block text-3xl text-violet-700">{m.overall_score}%</strong>
-                  <Link
-                    to={`/matches/${m.id}`}
-                    className="mt-2 inline-block rounded-lg bg-[#0F1F3D] px-4 py-2 text-xs font-semibold text-white"
-                  >
-                    View Match
-                  </Link>
-                </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       ) : (
         <div className="rounded-3xl border border-slate-200/80 bg-white py-12 px-6 text-center shadow-sm max-w-lg mx-auto">

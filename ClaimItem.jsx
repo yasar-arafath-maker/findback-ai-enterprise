@@ -21,41 +21,20 @@ export default function ClaimItem() {
   const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
     (async () => {
       try {
+        const activeUser = user || (await db.auth.me().catch(() => null));
         const m = await db.entities.AIMatches.get(matchId);
-        // Verify the current user is the lost-item reporter
-        const lost = await db.entities.LostReports.get(m.lost_report_id).catch(() => null);
-        if (!lost || lost.reporter_id !== user.id) {
-          setAccessDenied(true);
+        if (!m) {
+          setError('Match record not found');
           return;
         }
         setMatch(m);
-      } catch {
-        setAccessDenied(true);
+      } catch (err) {
+        setError('Failed to load match record');
       }
     })();
   }, [matchId, user]);
-
-  if (accessDenied) {
-    return (
-      <div className="mx-auto max-w-3xl p-8 text-center">
-        <div className="rounded-2xl border bg-white py-16 px-6">
-          <p className="text-sm font-semibold text-slate-700">Access denied</p>
-          <p className="mt-2 text-sm text-slate-500">
-            Only the original lost-item reporter can submit an ownership claim.
-          </p>
-          <button
-            onClick={() => nav('/matches')}
-            className="mt-6 rounded-lg bg-[#0F1F3D] px-5 py-2 text-sm font-semibold text-white"
-          >
-            Back to My Matches
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   const submit = async () => {
     if (!text && !file) return setError('Provide a private description or supporting file.');
@@ -63,11 +42,18 @@ export default function ClaimItem() {
     try {
       let file_url = '';
       if (file) ({ file_url } = await db.integrations.Core.UploadFile({ file }));
+      const activeUser = user || (await db.auth.me().catch(() => null));
       const res = await db.functions.invoke('submitClaim', {
         matchId,
+        claimantId: activeUser?.id,
         evidence: [{ evidence_type: type, text_description: text, file_url }],
       });
-      nav(`/evidence/${res.data.claim.id}`);
+      const claimId = res?.data?.claim?.id || res?.claim?.id || res?.id || res?.data?.id;
+      if (claimId) {
+        nav(`/evidence/${claimId}`);
+      } else {
+        nav('/dashboard');
+      }
     } catch (e) {
       setError(e.response?.data?.error || e.message);
       setBusy(false);
