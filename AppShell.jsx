@@ -58,9 +58,31 @@ export default function AppShell() {
             </NavLink>
           )}
         </nav>
+
+        {/* User Role Card */}
+        <div className="mt-auto mb-3 p-3 rounded-2xl bg-white/5 border border-white/10">
+          <div className="flex items-center gap-2.5">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+              user?.role === 'admin' 
+                ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40' 
+                : 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
+            }`}>
+              {user?.role === 'admin' ? 'A' : 'U'}
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-xs font-bold text-white truncate">{user?.full_name || user?.email || 'User'}</p>
+              <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                user?.role === 'admin' ? 'bg-amber-400/20 text-amber-300' : 'bg-blue-400/20 text-blue-300'
+              }`}>
+                {user?.role === 'admin' ? '🛡️ Admin Supervisor' : '👤 Normal User'}
+              </span>
+            </div>
+          </div>
+        </div>
+
         <button
           onClick={() => (logout ? logout() : db.auth.logout('/'))}
-          className="mt-auto flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-red-500/10 hover:text-red-300 transition-colors"
         >
           <LogOut className="h-4 w-4" /> Log out
         </button>
