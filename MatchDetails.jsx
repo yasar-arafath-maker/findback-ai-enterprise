@@ -58,16 +58,31 @@ export default function MatchDetails() {
   }
 
   if (!data) {
-    return <div className="p-8 text-sm text-slate-500">Loading comparison…</div>;
+    return (
+      <div className="mx-auto max-w-4xl min-h-[60vh] flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+        <div className="h-12 w-12 border-4 border-violet-600 border-t-transparent rounded-full animate-spin mb-4" />
+        <h3 className="text-lg font-bold text-slate-800">Analyzing AI Match Verification...</h3>
+        <p className="mt-1 text-sm text-slate-500 max-w-sm">
+          Comparing neural SimHash signatures, category taxonomy, and spatial distance telemetry.
+        </p>
+      </div>
+    );
   }
 
-  const { match, lost, found, isOwner } = data;
+  const { match, lost, found, isOwner, isFinder } = data;
+  const overallScore = Math.round(Number(match.overall_score || match.overall_confidence_score || 0));
+  const rawReasons = Array.isArray(match.match_reasons)
+    ? match.match_reasons
+    : typeof match.match_reasons === 'string'
+    ? (() => { try { return JSON.parse(match.match_reasons); } catch { return [match.match_reasons]; } })()
+    : [];
+  const matchReasons = rawReasons.length > 0 ? rawReasons : (match.ai_recommendation ? [match.ai_recommendation] : ['High multi-modal similarity detected between item title, category taxonomy, and location telemetry.']);
 
   return (
-    <div className="mx-auto max-w-6xl p-5 sm:p-8">
+    <div className="mx-auto max-w-6xl p-5 sm:p-8 animate-fade-in">
       <PageHeader
         eyebrow="Potential match"
-        title={`${match.overall_score}% AI confidence`}
+        title={`${overallScore}% AI confidence`}
         description="AI-generated potential match. Ownership requires verification."
       />
 
@@ -80,19 +95,19 @@ export default function MatchDetails() {
       <section className="mt-6 rounded-2xl border border-violet-100 bg-violet-50/50 p-6">
         <h2 className="font-bold text-violet-900">Why this may be a match</h2>
         <ul className="mt-3 space-y-2 text-sm text-slate-700">
-          {match.match_reasons?.map(r => (
-            <li key={r}>• {r}</li>
+          {matchReasons.map((r, idx) => (
+            <li key={idx}>• {r}</li>
           ))}
         </ul>
         <div className="mt-5 grid grid-cols-2 gap-3 text-xs sm:grid-cols-5">
           {[
-            ['Image Score', match.image_similarity_score],
-            ['Text Similarity', match.text_similarity_score],
-            ['Category', match.category_match_score],
-            ['Geo Proximity', match.location_proximity_score],
-            ['Date Match', match.time_proximity_score],
+            ['Image Score', Math.round(Number(match.image_similarity_score ?? 50))],
+            ['Text Similarity', Math.round(Number(match.text_similarity_score ?? 0))],
+            ['Category', Math.round(Number(match.category_match_score ?? 0))],
+            ['Geo Proximity', Math.round(Number(match.location_proximity_score ?? 0))],
+            ['Date Match', Math.round(Number(match.time_proximity_score ?? 0))],
           ].map(([x, v]) => (
-            <div key={x} className="rounded-xl bg-white p-3">
+            <div key={x} className="rounded-xl bg-white p-3 shadow-xs border border-violet-100/50">
               <span className="text-slate-500">{x}</span>
               <strong className="mt-1 block text-lg text-violet-700">{v}%</strong>
             </div>

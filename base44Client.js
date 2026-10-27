@@ -120,6 +120,17 @@ const candidateBaseUrls = () => {
     list.push(_cachedWorkingBaseUrl);
   }
 
+  // 1. Highest Priority: Production Environment URL (Vite Cloud backend)
+  try {
+    const envUrl = typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_BACKEND_URL) : null;
+    if (envUrl) {
+      const clean = envUrl.trim().replace(/\/+$/, '');
+      const domain = clean.endsWith('/api') ? clean.slice(0, -4) : clean;
+      list.push(domain);
+    }
+  } catch (e) {}
+
+  // 2. Custom local storage IP if specified by developer for mobile device testing
   try {
     if (typeof localStorage !== 'undefined') {
       const customIp = localStorage.getItem('zexo_backend_ip') || localStorage.getItem('SERVER_IP');
@@ -131,30 +142,23 @@ const candidateBaseUrls = () => {
     }
   } catch (e) {}
 
-  if (typeof window !== 'undefined' && window.location?.hostname) {
-    const host = window.location.hostname;
-    if (host && host !== '127.0.0.1' && host !== 'localhost') {
-      list.push(`http://${host}:5000`);
+  const isHttps = typeof window !== 'undefined' && window.location?.protocol === 'https:';
+
+  // 3. Only attempt plain HTTP localhost candidates if running in HTTP or native emulator
+  if (!isHttps) {
+    if (typeof window !== 'undefined' && window.location?.hostname) {
+      const host = window.location.hostname;
+      if (host && host !== '127.0.0.1' && host !== 'localhost') {
+        list.push(`http://${host}:5000`);
+      }
+    }
+
+    list.push('http://localhost:5000');
+
+    if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform()) {
+      list.push('http://10.0.2.2:5000');
     }
   }
-
-  // Local development fallback
-  list.push('http://localhost:5000');
-
-  // Capacitor Android Native Emulator fallback
-  if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform()) {
-    list.push('http://10.0.2.2:5000');
-  }
-
-  // Production Render Cloud backend fallback
-  try {
-    const envUrl = typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_BACKEND_URL) : null;
-    if (envUrl) {
-      const clean = envUrl.trim().replace(/\/+$/, '');
-      const domain = clean.endsWith('/api') ? clean.slice(0, -4) : clean;
-      list.push(domain);
-    }
-  } catch (e) {}
 
   return Array.from(new Set(list));
 };
@@ -413,12 +417,14 @@ const standaloneAuthClient = {
       },
       get: async (id) => {
         try {
-          const serverItem = await syncServerRequest(`/api/entities/${entityName}/${id}`, 'GET');
-          if (serverItem) return serverItem;
-
-          const raw = localStorage.getItem(`entity_${entityName}`);
+          const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(`entity_${entityName}`) : null;
           const list = raw ? JSON.parse(raw) : [];
-          return list.find(item => item.id === id) || null;
+          const localItem = list.find(item => item.id === id);
+
+          const serverItem = await syncServerRequest(`/api/entities/${entityName}/${id}`, 'GET');
+          if (serverItem && !serverItem.error) return serverItem;
+
+          return localItem || null;
         } catch (e) { return null; }
       },
       create: async (data) => {
