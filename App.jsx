@@ -65,8 +65,6 @@ const AuthenticatedApp = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/enterprise-admin" element={<EnterpriseAdminDashboard />} />
-      <Route path="/admin-console" element={<EnterpriseAdminDashboard />} />
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route element={<AppShell />}>
           <Route path="/dashboard" element={<Dashboard />} />
@@ -88,6 +86,8 @@ const AuthenticatedApp = () => {
             <Route path="/admin/claims" element={<AdminClaims />} />
             <Route path="/admin/handovers" element={<AdminHandovers />} />
             <Route path="/admin/telemetry" element={<EnterpriseTelemetryViewer />} />
+            <Route path="/enterprise-admin" element={<EnterpriseAdminDashboard />} />
+            <Route path="/admin-console" element={<EnterpriseAdminDashboard />} />
           </Route>
         </Route>
       </Route>

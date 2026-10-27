@@ -4,12 +4,26 @@ const config: CapacitorConfig = {
   appId: 'com.findback.ai.app',
   appName: 'FindBack AI',
   webDir: 'dist',
+  server: {
+    androidScheme: 'https'
+  },
   plugins: {
     Camera: {
       permissions: ['camera', 'photos']
     },
     Geolocation: {
       permissions: ['location']
+    },
+    SplashScreen: {
+      launchShowDuration: 2000,
+      launchAutoHide: true,
+      backgroundColor: '#0f172a',
+      androidSplashResourceName: 'splash',
+      showSpinner: false
+    },
+    StatusBar: {
+      style: 'DARK',
+      backgroundColor: '#0f172a'
     }
   }
 };

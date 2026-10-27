@@ -17,7 +17,7 @@ if %errorlevel% neq 0 (
 echo [+] Node.js Environment Verified.
 echo.
 echo [2/3] Starting Local Backend Server Persistence Engine (Port 5000)...
-start "ZEXO Backend Persistence Server (Port 5000)" cmd /k "cd /d %~dp0 && node server.js"
+start "ZEXO Backend Persistence Server (Port 5000)" cmd /k "cd /d %~dp0 && node backend/server.js"
 
 timeout /t 2 /nobreak >nul
 

@@ -509,6 +509,61 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // ── File & Image Upload Endpoint (/api/upload or /upload) ──
+  if ((pathname === '/api/upload' || pathname === '/upload') && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const fileData = body.file || body.dataUrl || body.image || body.file_url;
+      if (!fileData) return sendJSON(res, 400, { error: 'No image data provided' });
+      return sendJSON(res, 200, { status: 'success', file_url: fileData });
+    } catch (err) {
+      return sendJSON(res, 500, { error: err.message });
+    }
+  }
+
+  // ── Safe Chat Messages Endpoint (/api/chat/:channelId/messages) ──
+  const chatMatch = pathname.match(/^(?:\/api)?\/chat\/([^\/]+)\/messages$/i);
+  if (chatMatch) {
+    const channelId = chatMatch[1];
+    fallbackDbStore = loadFallbackDb();
+    if (!fallbackDbStore.ChatMessages) fallbackDbStore.ChatMessages = {};
+    if (!fallbackDbStore.ChatMessages[channelId]) fallbackDbStore.ChatMessages[channelId] = [];
+
+    if (req.method === 'GET') {
+      return sendJSON(res, 200, fallbackDbStore.ChatMessages[channelId]);
+    }
+    if (req.method === 'POST') {
+      const body = await parseBody(req);
+      const newMsg = {
+        id: Date.now(),
+        channel_id: channelId,
+        sender: body.sender || 'Anonymous User',
+        text: body.text || '',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: new Date().toISOString(),
+      };
+      fallbackDbStore.ChatMessages[channelId].push(newMsg);
+      saveFallbackDb(fallbackDbStore, 'ChatMessages');
+      broadcastEvent('CHAT_MESSAGE_SENT', { channelId, message: newMsg });
+      return sendJSON(res, 201, newMsg);
+    }
+  }
+
+  // ── Privacy Masked Call Session Endpoint (/api/call/session) ──
+  if ((pathname === '/api/call/session' || pathname === '/call/session') && req.method === 'POST') {
+    const body = await parseBody(req);
+    const sessionId = `CALL-RELAY-${Date.now()}`;
+    return sendJSON(res, 200, {
+      status: 'initiated',
+      session_id: sessionId,
+      relay_number: '+1 (800) 555-ZEXO',
+      virtual_token: Math.random().toString(36).substring(2, 10).toUpperCase(),
+      caller: body.caller || 'Verified User',
+      callee: body.callee || 'Finder Relay',
+      expires_in_minutes: 15,
+    });
+  }
+
   // ── Serverless Functions: Multi-Modal AI Matching ──
   if ((pathname === '/api/functions/runMatching' || pathname === '/functions/runMatching') && req.method === 'POST') {
     try {
@@ -638,11 +693,17 @@ const server = http.createServer(async (req, res) => {
 
       fallbackDbStore = loadFallbackDb();
       if (!fallbackDbStore.Claims) fallbackDbStore.Claims = [];
+      if (!fallbackDbStore.OwnershipEvidence) fallbackDbStore.OwnershipEvidence = [];
+
+      const existingMatch = (fallbackDbStore.AIMatches || []).find(m => m.id === matchId);
+      const targetLostId = existingMatch?.lost_report_id || 'lost-seed-101';
+      const targetFoundId = existingMatch?.found_report_id || 'found-seed-201';
+
       const newClaim = {
         id: claimId,
         match_id: matchId,
-        lost_report_id: 'lost-seed-101',
-        found_report_id: 'found-seed-201',
+        lost_report_id: targetLostId,
+        found_report_id: targetFoundId,
         claimant_id: cid,
         claimant_notes: claimantNotes || 'Claim filed',
         status: 'submitted',
@@ -650,7 +711,22 @@ const server = http.createServer(async (req, res) => {
         created_date: new Date().toISOString(),
       };
       fallbackDbStore.Claims.push(newClaim);
+
+      for (const ev of evidence) {
+        fallbackDbStore.OwnershipEvidence.push({
+          id: `ev-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          claim_id: claimId,
+          uploaded_by: cid,
+          evidence_type: ev.evidence_type || 'description',
+          text_description: ev.text_description || '',
+          file_url: ev.file_url || '',
+          verified: true,
+          created_date: new Date().toISOString(),
+        });
+      }
+
       saveFallbackDb(fallbackDbStore, 'Claims');
+      saveFallbackDb(fallbackDbStore, 'OwnershipEvidence');
 
       return sendJSON(res, 201, { status: 'success', data: { claim: newClaim } });
     } catch (err) {
@@ -696,13 +772,19 @@ const server = http.createServer(async (req, res) => {
         c.review_notes = notes || '';
       }
 
+      const foundReport = (fallbackDbStore.FoundReports || []).find(f => f.id === c?.found_report_id);
+      const lostReport = (fallbackDbStore.LostReports || []).find(l => l.id === c?.lost_report_id);
+      const itemName = foundReport?.title || lostReport?.title || 'Recovered Item';
+      const finderId = foundReport?.finder_id || 'user-finder';
+      const ownerId = c?.claimant_id || lostReport?.reporter_id || 'user-owner';
+
       const handover = {
         id: handoverId,
         claim_id: claimId,
         cert_id: `ZEXO-CERT-${Math.floor(10000000 + Math.random() * 90000000)}`,
-        item_name: 'Recovered Item',
-        lost_owner_id: c?.claimant_id || 'user-sarah-101',
-        found_reporter_id: 'user-priya-109',
+        item_name: itemName,
+        lost_owner_id: ownerId,
+        found_reporter_id: finderId,
         scheduled_location: 'Central Campus Security Office Desk 1',
         scheduled_datetime: new Date(Date.now() + 86400000).toISOString(),
         status: 'scheduled',
@@ -835,10 +917,37 @@ const server = http.createServer(async (req, res) => {
 
       if (fallbackDbStore.Claims) {
         const c = fallbackDbStore.Claims.find(x => x.id === handover.claim_id);
-        if (c) c.status = 'completed';
+        if (c) {
+          c.status = 'completed';
+          if (fallbackDbStore.LostReports && c.lost_report_id) {
+            const l = fallbackDbStore.LostReports.find(x => x.id === c.lost_report_id);
+            if (l) l.status = 'closed';
+          }
+          if (fallbackDbStore.FoundReports && c.found_report_id) {
+            const f = fallbackDbStore.FoundReports.find(x => x.id === c.found_report_id);
+            if (f) f.status = 'returned';
+          }
+        }
       }
 
+      if (!fallbackDbStore.AdminActions) fallbackDbStore.AdminActions = [];
+      fallbackDbStore.AdminActions.push({
+        id: `act-${Date.now()}`,
+        admin_id: 'admin-default-1',
+        action_type: 'handover_completed',
+        target_entity_type: 'Handovers',
+        target_entity_id: handover.id,
+        notes: `SHA256:${receiptHash}`,
+        created_date: now,
+      });
+
       saveFallbackDb(fallbackDbStore, 'Handovers');
+      saveFallbackDb(fallbackDbStore, 'Claims');
+      saveFallbackDb(fallbackDbStore, 'LostReports');
+      saveFallbackDb(fallbackDbStore, 'FoundReports');
+      saveFallbackDb(fallbackDbStore, 'AdminActions');
+
+      broadcastEvent('HANDOVER_COMPLETED', { handover_id: handover.id, receipt_hash: receiptHash });
       return sendJSON(res, 200, { status: 'completed', receipt_hash: receiptHash, message: 'Handover verified and recovery completed!' });
     } catch (err) {
       return sendJSON(res, 500, { error: err.message });

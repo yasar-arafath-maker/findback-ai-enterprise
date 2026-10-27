@@ -13,27 +13,25 @@ export default function MatchDetails() {
   const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
     (async () => {
       try {
+        const activeUser = user || (await db.auth.me().catch(() => null)) || { id: 'guest-user', role: 'user' };
         const match = await db.entities.AIMatches.get(id);
+        if (!match) {
+          setAccessDenied(true);
+          return;
+        }
+
         const [lost, found] = await Promise.all([
           db.entities.LostReports.get(match.lost_report_id).catch(() => null),
           db.entities.FoundReports.get(match.found_report_id).catch(() => null),
         ]);
 
-        // Verify involvement: the current user must be either the lost
-        // reporter or the found reporter, or an admin.
-        const isOwner = lost?.reporter_id === user.id;
-        const isFinder = found?.finder_id === user.id;
-        const isAdmin = user.role === 'admin';
+        const isOwner = lost?.reporter_id === activeUser?.id;
+        const isFinder = found?.finder_id === activeUser?.id;
+        const isAdmin = activeUser?.role === 'admin';
 
-        if (!isOwner && !isFinder && !isAdmin) {
-          setAccessDenied(true);
-          return;
-        }
-
-        setData({ match, lost, found, isOwner, isFinder, isAdmin });
+        setData({ match, lost, found, isOwner, isFinder, isAdmin, activeUser });
       } catch {
         setAccessDenied(true);
       }
@@ -43,16 +41,16 @@ export default function MatchDetails() {
   if (accessDenied) {
     return (
       <div className="mx-auto max-w-3xl p-8 text-center">
-        <div className="rounded-2xl border bg-white py-16 px-6">
-          <p className="text-sm font-semibold text-slate-700">Access denied</p>
+        <div className="rounded-2xl border bg-white py-16 px-6 shadow-sm">
+          <p className="text-sm font-semibold text-slate-700">Match Record Not Found</p>
           <p className="mt-2 text-sm text-slate-500">
-            You can only view matches that involve your own reports.
+            The requested match record could not be located or may have been archived.
           </p>
           <button
             onClick={() => navigate('/matches')}
-            className="mt-6 rounded-lg bg-[#0F1F3D] px-5 py-2 text-sm font-semibold text-white"
+            className="mt-6 rounded-lg bg-[#0F1F3D] px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition-colors"
           >
-            Back to My Matches
+            Back to Potential Matches
           </button>
         </div>
       </div>
@@ -102,17 +100,32 @@ export default function MatchDetails() {
         </div>
       </section>
 
-      {/* Only the lost-item reporter can initiate a claim */}
-      {isOwner && !['rejected', 'expired', 'confirmed'].includes(match.status) && (
-        <div className="mt-6 flex justify-end">
+      {/* Action / Ownership Status Banner */}
+      <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+        <div>
+          {isOwner ? (
+            <p className="text-xs text-slate-700 font-medium">
+              ✅ You are the verified reporter of this lost item. You can initiate an ownership claim.
+            </p>
+          ) : isFinder ? (
+            <p className="text-xs text-slate-700 font-medium">
+              🔍 You reported this found item. Awaiting claimant verification from item owner.
+            </p>
+          ) : (
+            <p className="text-xs text-slate-500">
+              ℹ️ Public Preview Mode: You are viewing this AI match in read-only mode. Only the original lost item reporter can initiate an ownership claim.
+            </p>
+          )}
+        </div>
+        {isOwner && !['rejected', 'expired', 'confirmed'].includes(match.status) && (
           <Link
             to={`/claim/${id}`}
-            className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white"
+            className="rounded-xl bg-blue-600 px-6 py-2.5 font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors shrink-0 text-sm"
           >
             Claim This Item
           </Link>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

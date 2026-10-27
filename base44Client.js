@@ -41,10 +41,12 @@ const devBypassDb = {
     resetPassword: async () => ({ status: 'reset' }),
   },
   entities: new Proxy({}, {
-    get: () => ({
+    get: (target, entityName) => ({
       filter: async () => [],
+      list: async () => [],
       get: async () => null,
       create: async (data) => ({ id: 'mock-id-' + Date.now(), ...data }),
+      bulkCreate: async (items = []) => items.map(data => ({ id: 'mock-id-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6), ...data })),
       update: async (id, data) => ({ id, ...data }),
       delete: async () => ({}),
     }),
@@ -110,16 +112,13 @@ import { categoryScore, temporalScore, computeOverallScore } from './matchScore.
 import { generateTextFingerprint, compareTextFingerprints } from './textFingerprint.js';
 import { computeSpatialProximityScore } from './spatialIndexer.js';
 
+let _cachedWorkingBaseUrl = null;
+
 const candidateBaseUrls = () => {
   const list = [];
-  try {
-    const envUrl = typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_BACKEND_URL) : null;
-    if (envUrl) {
-      const clean = envUrl.trim().replace(/\/+$/, '');
-      const domain = clean.endsWith('/api') ? clean.slice(0, -4) : clean;
-      list.push(domain);
-    }
-  } catch (e) {}
+  if (_cachedWorkingBaseUrl) {
+    list.push(_cachedWorkingBaseUrl);
+  }
 
   try {
     if (typeof localStorage !== 'undefined') {
@@ -134,14 +133,28 @@ const candidateBaseUrls = () => {
 
   if (typeof window !== 'undefined' && window.location?.hostname) {
     const host = window.location.hostname;
-    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+    if (host && host !== '127.0.0.1' && host !== 'localhost') {
       list.push(`http://${host}:5000`);
     }
   }
 
-  list.push('http://172.17.42.232:5000');
-  list.push('http://10.0.2.2:5000');
+  // Local development fallback
   list.push('http://localhost:5000');
+
+  // Capacitor Android Native Emulator fallback
+  if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform()) {
+    list.push('http://10.0.2.2:5000');
+  }
+
+  // Production Render Cloud backend fallback
+  try {
+    const envUrl = typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_API_BASE_URL || import.meta.env?.VITE_BACKEND_URL) : null;
+    if (envUrl) {
+      const clean = envUrl.trim().replace(/\/+$/, '');
+      const domain = clean.endsWith('/api') ? clean.slice(0, -4) : clean;
+      list.push(domain);
+    }
+  } catch (e) {}
 
   return Array.from(new Set(list));
 };
@@ -210,11 +223,12 @@ const syncServerRequest = async (path, method = 'GET', body = null) => {
     for (const baseUrl of urls) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
         const targetUrl = `${baseUrl.replace(/\/api$/, '')}${cleanPath}`;
         const res = await fetch(targetUrl, { ...opts, signal: controller.signal }).catch(() => null);
         clearTimeout(timeoutId);
         if (res && res.ok) {
+          _cachedWorkingBaseUrl = baseUrl;
           return await res.json();
         }
       } catch (err) {}
@@ -277,11 +291,12 @@ const standaloneAuthClient = {
     },
     loginViaEmailPassword: async (email, password, extraData = {}) => {
       const fullName = extraData?.full_name || extraData?.name || extraData?.fullName || (email ? email.split('@')[0] : 'User');
+      const isAdminEmail = ['admin@findback.app', 'admin@zexo.app'].includes(String(email).toLowerCase().trim());
       const user = {
         id: 'user-' + Date.now(),
         email: email || 'user@example.com',
         full_name: fullName,
-        role: email?.includes('admin') ? 'admin' : 'user',
+        role: isAdminEmail ? 'admin' : 'user',
         account_status: 'active',
       };
       const token = 'token_' + Date.now();
@@ -393,6 +408,9 @@ const standaloneAuthClient = {
           return list.slice(0, limit);
         } catch (e) { return []; }
       },
+      list: async (orderBy = '', limit = 100) => {
+        return standaloneAuthClient.entities[entityName].filter({}, orderBy, limit);
+      },
       get: async (id) => {
         try {
           const serverItem = await syncServerRequest(`/api/entities/${entityName}/${id}`, 'GET');
@@ -412,9 +430,17 @@ const standaloneAuthClient = {
           localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
         } catch (e) {}
 
-        // Directly sync new record to local_db.json on server.js!
+        // Directly sync new record to server.js
         const serverItem = await syncServerRequest(`/api/entities/${entityName}`, 'POST', newItem);
         return serverItem || newItem;
+      },
+      bulkCreate: async (items = []) => {
+        const results = [];
+        for (const item of items) {
+          const res = await standaloneAuthClient.entities[entityName].create(item);
+          results.push(res);
+        }
+        return results;
       },
       update: async (id, data) => {
         let updatedItem = null;
@@ -431,7 +457,7 @@ const standaloneAuthClient = {
           localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
         } catch (e) {}
 
-        // Directly sync update to local_db.json on server.js!
+        // Directly sync update to server.js
         await syncServerRequest(`/api/entities/${entityName}/${id}`, 'PUT', data);
         return updatedItem || { id, ...data };
       },
@@ -443,17 +469,42 @@ const standaloneAuthClient = {
           localStorage.setItem(`entity_${entityName}`, JSON.stringify(list));
         } catch (e) {}
 
-        // Directly sync delete to local_db.json on server.js!
+        // Directly sync delete to server.js
         await syncServerRequest(`/api/entities/${entityName}/${id}`, 'DELETE');
         return { id, deleted: true };
       },
     }),
   }),
   integrations: {
-    Core: { UploadFile: async () => ({ file_url: '' }) },
+    Core: {
+      UploadFile: async ({ file }) => {
+        if (!file) return { file_url: '' };
+        return new Promise((resolve) => {
+          try {
+            if (typeof FileReader !== 'undefined') {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve({ file_url: e.target?.result || '' });
+              reader.onerror = () => resolve({ file_url: '' });
+              reader.readAsDataURL(file);
+            } else {
+              resolve({ file_url: '' });
+            }
+          } catch (e) {
+            resolve({ file_url: '' });
+          }
+        });
+      },
+    },
   },
   functions: {
     invoke: async (fnName, params = {}) => {
+      try {
+        const remoteRes = await syncServerRequest(`/api/functions/${fnName}`, 'POST', params);
+        if (remoteRes && remoteRes.status !== 'error') {
+          return remoteRes;
+        }
+      } catch (err) {}
+
       if (fnName === 'runMatching') {
         try {
           const { reportId, reportType } = params;
