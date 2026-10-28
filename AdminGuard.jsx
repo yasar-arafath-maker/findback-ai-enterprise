@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
  */
 export default function AdminGuard() {
   const { user, isAuthenticated, isLoadingAuth, authChecked, logout } = useAuth();
+  // Resilience fallback: u?.role==='admin' | .catch(()=>setState('denied')) | 'loading'
 
   if (isLoadingAuth || !authChecked) {
     return (
