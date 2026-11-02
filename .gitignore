@@ -24,6 +24,8 @@ android/app/build/
 android/build/
 android/.gradle/
 .gradle/
+.gradle_cache/
+temp/
 *.apk
 tests/*.txt
 tests/*.out
